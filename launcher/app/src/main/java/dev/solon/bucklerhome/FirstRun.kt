@@ -56,6 +56,7 @@ fun FirstRunScreen(
     val context = LocalContext.current
     var step by remember { mutableStateOf(FirstRunStep.WELCOME) }
     var cover by remember { mutableStateOf(CoverLayout.BANNER) }
+    var tileSize by remember { mutableStateOf(TileSize.MEDIUM) }
     var watchNext by remember { mutableStateOf(true) }
     var suggested by remember { mutableStateOf(true) }
     var recents by remember { mutableStateOf(false) }
@@ -70,7 +71,7 @@ fun FirstRunScreen(
             ShelfConfig("recents", ShelfType.RECENTS, "Recent", enabled = recents),
             ShelfConfig("library", ShelfType.LIBRARY, "Library", enabled = library),
         )
-        HomeLayout.save(context, HomeLayout(layout = cover, shelves = shelves))
+        HomeLayout.save(context, HomeLayout(layout = cover, shelves = shelves, tileSize = tileSize))
         markFirstRunDone(context)
         onContinue()
     }
@@ -98,17 +99,12 @@ fun FirstRunScreen(
             FirstRunStep.LAYOUT -> {
                 StepHeader("Cover layout", "2/4")
                 Body("How should apps and Up Next cards look?")
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                LayoutPicker(cover, tileSize) { cover = it }
+                Spacer(modifier = Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CoverLayout.entries.forEach { style ->
-                        LayoutChoice(
-                            label = when (style) {
-                                CoverLayout.ICON -> "Icon"
-                                CoverLayout.POSTER -> "Poster"
-                                CoverLayout.BANNER -> "Banner"
-                            },
-                            selected = cover == style,
-                        ) { cover = style }
+                    TileSize.entries.forEach { size ->
+                        SettingsAction("${size.label} apps", selected = size == tileSize) { tileSize = size }
                     }
                 }
                 Spacer(modifier = Modifier.height(28.dp))
@@ -134,7 +130,7 @@ fun FirstRunScreen(
             FirstRunStep.DONE -> {
                 StepHeader("You're set", "4/4")
                 Body(
-                    "Edit Home anytime from the footer. Long-press or Menu to pin apps.\n" +
+                    "Edit Home anytime with the pencil icon in the header. Long-press or Menu to pin apps.\n" +
                         "Buckler can push layout defaults after setup on your PC.",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -176,29 +172,6 @@ private fun Body(text: String) {
         lineHeight = 28.sp,
     )
     Spacer(modifier = Modifier.height(32.dp))
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun LayoutChoice(label: String, selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.width(160.dp),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) ColorBrand else ColorFooter,
-            focusedContainerColor = ColorBrand,
-            contentColor = if (selected) ColorOnBrand else ColorText,
-            focusedContentColor = ColorOnBrand,
-        ),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Medium,
-        )
-    }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

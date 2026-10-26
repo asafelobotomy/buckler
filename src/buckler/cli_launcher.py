@@ -19,9 +19,12 @@ from buckler.home_layout import (
 )
 from buckler.launcher_ops import (
     build_launcher,
+    grant_media_access,
+    grant_settings_access,
     handover,
     home_is_ours,
     install_launcher,
+    push_screensaver_photos,
     verify_launcher_installed,
 )
 from buckler.policy import OUR_LAUNCHER
@@ -52,6 +55,39 @@ def launcher_install(ctx: click.Context) -> None:
         raise click.ClickException(str(exc)) from exc
     click.echo(out)
     click.echo(f"installed={verify_launcher_installed(make_adb(ctx.obj['host']))}")
+
+
+@launcher_group.command("photos")
+@click.argument("files", nargs=-1, required=True, type=click.Path(path_type=Path))
+@click.pass_context
+def launcher_photos(ctx: click.Context, files: tuple[Path, ...]) -> None:
+    """Push jpg/png/webp files for the "My photos" screensaver."""
+    try:
+        pushed = push_screensaver_photos(make_adb(ctx.obj["host"]), list(files))
+    except (AdbError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"pushed {len(pushed)} photo(s) to {pushed[0].rsplit('/', 1)[0]}")
+
+
+@launcher_group.command("media-access")
+@click.pass_context
+def launcher_media_access(ctx: click.Context) -> None:
+    """Grant the header Now Playing panel access to media sessions."""
+    try:
+        click.echo(grant_media_access(make_adb(ctx.obj["host"])) or "granted")
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+@launcher_group.command("grant-settings")
+@click.pass_context
+def launcher_grant_settings(ctx: click.Context) -> None:
+    """Let Settings change the screensaver delay / off switch and mono audio (one-time)."""
+    try:
+        for command in grant_settings_access(make_adb(ctx.obj["host"])):
+            click.echo(f"ok: {command}")
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 @launcher_group.command("verify")

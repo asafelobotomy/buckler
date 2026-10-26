@@ -11,13 +11,14 @@ fun HomeMenuHost(
     onLayoutChange: (HomeLayout) -> Unit,
     onOpen: (ShelfItem) -> Unit,
     onChangeCover: (ShelfItem) -> Unit,
+    onMove: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val pkg = item.packageName
     val pins = layout.appsPackages()
     val pinned = pkg != null && pkg in pins
-    val index = if (pkg != null) pins.indexOf(pkg) else -1
+    val appsShelfShown = layout.shelves.any { it.type == ShelfType.APPS && it.enabled }
 
     fun edit(next: HomeLayout) {
         HomeLayout.save(context, next)
@@ -28,8 +29,7 @@ fun HomeMenuHost(
     AppMenuDialog(
         item = item,
         pinned = pinned,
-        canMoveLeft = pinned && index > 0,
-        canMoveRight = pinned && index < pins.lastIndex,
+        canMove = pinned && pins.size > 1 && appsShelfShown,
         canUninstall = canUninstallPackage(context, pkg),
         onOpen = {
             onOpen(item)
@@ -45,8 +45,10 @@ fun HomeMenuHost(
             onDismiss()
         },
         onPin = { pkg?.let { edit(layout.withPinned(it)) } ?: onDismiss() },
-        onMoveLeft = { pkg?.let { edit(layout.withMovedPinned(it, -1)) } ?: onDismiss() },
-        onMoveRight = { pkg?.let { edit(layout.withMovedPinned(it, 1)) } ?: onDismiss() },
+        onMove = {
+            pkg?.let(onMove)
+            onDismiss()
+        },
         onDismiss = onDismiss,
     )
 }

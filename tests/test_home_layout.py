@@ -45,3 +45,13 @@ def test_rejects_non_string_packages() -> None:
     doc["shelves"][1]["packages"] = ["ok", 3]
     with pytest.raises(HomeLayoutError, match="packages"):
         validate_home_layout(doc)
+
+
+def test_tile_size_is_optional_and_validated() -> None:
+    validate_home_layout(default_home_layout())
+    doc = default_home_layout()
+    doc["tile_size"] = "large"
+    validate_home_layout(doc)
+    doc["tile_size"] = "huge"
+    with pytest.raises(HomeLayoutError, match="tile_size"):
+        validate_home_layout(doc)

@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         HomeLayout.importIfPresent(this)
+        AppearanceStore.ensureLoaded(this)
         setContent {
             BucklerHomeTheme {
                 var showFirstRun by remember { mutableStateOf(isFirstRunPending(this)) }

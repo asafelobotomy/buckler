@@ -32,12 +32,25 @@ buckler launcher verify
 buckler home write && buckler home push   # layout defaults → import on HOME resume
 ```
 
-On TV: first-run picks cover layout + shelves; **Edit Home** in the footer adjusts later.
+On TV: first-run picks cover layout + shelves; the pencil icon in the Home header (**Edit Home**) adjusts later.
 
-### buckler-home 0.5.0 smoke
+### buckler-home 0.8.0 smoke
 
-- Header shows Buckler mark + `buckler-home`
-- Footer **Settings** → Buckler Settings (not only stock); stock Settings still reachable inside
+- Header: logo + clock with date and weather, Now Playing (only while playing), network / VPN icons, pencil / bag / gear icons, news ticker line
+- Header gear → Buckler Settings (not only stock); stock Settings still reachable inside
+- Default scheme is Buckler (teal / sage); changing scheme recolours the header mark and the app-list icon / banner
+- Settings → Header: each element toggles on its own; Header: Off leaves only shelves, and ◀ on a shelf still offers Settings
+- Settings → Screensaver → Now Playing with music playing (album art) and over a paused YouTube video (thumbnail, Paused)
+- Settings → Screensaver: Preview 3D Maze, 3D Pipes, Mystify, Starfield (clock overlay toggles)
+- Settings → Header: 12/24 h and date format apply to Home; set a city and weather appears; news source cycles
+- Play music in any app: Now Playing shows title and prev / play-pause / next work (after media access is granted)
+- Network icon opens network settings; VPN icon opens the VPN app
+- Menu → Move: menu closes, ◀ ▶ slide the tile, OK places it (does not launch), Back cancels
+- Settings → Screensaver: Preview each style (clock, DVD, online photos, My photos)
+- Settings → Screensaver → Start after: presets, Custom… (step buttons) and Off apply (after `buckler launcher grant-settings`)
+- Settings → Appearance: each colour scheme, font, layout and app size changes Home immediately
+- Settings → Accessibility: high contrast, strong focus outline, text size, reduce motion, speak focused item
+- ◀ on the first tile of a shelf: Move shelf (▲ ▼ / OK / Back), Hide shelf, Edit Home
 - Long-press / Menu: Open, Change cover, Remove, Uninstall (user apps), Info
 - Change cover works **without** linking accounts (icon / banner / curated)
 - Settings → Covers: Connect SteamGridDB (QR) / Connect IGDB (device code when `TWITCH_CLIENT_ID` set)

@@ -90,7 +90,7 @@ fun EditHomeScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "Layout, shelves, and apps pins · Back to finish",
+                    text = "Layout, app size, shelves and app pins · Back to finish",
                     color = ColorMuted,
                     fontSize = 15.sp,
                     modifier = Modifier.padding(top = 4.dp),
@@ -102,28 +102,24 @@ fun EditHomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(text = "Cover layout", color = ColorSection, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CoverLayout.entries.forEach { style ->
-                Chip(
-                    label = style.name.lowercase().replaceFirstChar { it.titlecase() },
-                    selected = layout.layout == style,
-                ) {
-                    persist(layout.copy(layout = style))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(text = "Shelves", color = ColorSection, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            item {
+                LayoutAndSizePickers(
+                    style = layout.layout,
+                    tileSize = layout.tileSize,
+                    onStyle = { persist(layout.copy(layout = it)) },
+                    onSize = { persist(layout.copy(tileSize = it)) },
+                )
+            }
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(text = "Shelves", color = ColorSection, fontSize = 14.sp)
+            }
             itemsIndexed(layout.shelves, key = { _, s -> s.id }) { index, shelf ->
                 ShelfEditRow(
                     shelf = shelf,

@@ -1,18 +1,20 @@
 package dev.solon.bucklerhome
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.semantics.contentDescription
@@ -20,26 +22,45 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 
-private const val LIBRARY_COLUMNS = 5
+private val TileGap = 12.dp
+
+/** What a shelf needs from Home besides its content; grouped so call sites stay readable. */
+class ShelfActions(
+    val onLaunch: (ShelfItem) -> Unit,
+    val onLongPress: (ShelfItem) -> Unit,
+    /** Left pressed on the first tile of the shelf. */
+    val onShelfMenu: () -> Unit,
+)
+
+/** Focus bookkeeping while an app or a whole shelf is being moved. */
+class ShelfFocus(
+    /** First tile of the first shelf, so the header's Down key has a target. */
+    val first: FocusRequester?,
+    /** Overrides [first] on the first tile of this shelf while it is being moved. */
+    val shelfRequester: FocusRequester? = null,
+    val movingShelf: Boolean = false,
+    val movingPackage: String? = null,
+    /** Tile that owns [moveFocus]: the moved app, until focus has settled after a place / cancel. */
+    val focusPackage: String? = null,
+    val moveFocus: FocusRequester? = null,
+)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ShelfSection(
     shelf: ResolvedShelf,
     coverLayout: CoverLayout,
-    firstFocus: FocusRequester?,
-    onLaunch: (ShelfItem) -> Unit,
-    onLongPress: (ShelfItem) -> Unit,
+    tileSize: TileSize,
+    actions: ShelfActions,
+    focus: ShelfFocus,
 ) {
     Column {
         Text(
-            text = shelf.config.title,
-            color = ColorSection,
+            text = if (focus.movingShelf) "▲▼  ${shelf.config.title}" else shelf.config.title,
+            color = if (focus.movingShelf) ColorBrand else ColorSection,
             fontSize = 14.sp,
             modifier = Modifier
                 .padding(bottom = 10.dp)
@@ -57,11 +78,27 @@ fun ShelfSection(
             return
         }
         if (shelf.config.type == ShelfType.LIBRARY) {
-            LibraryGrid(shelf.items, coverLayout, onLaunch, onLongPress)
+            LibraryGrid(shelf.items, coverLayout, tileSize, actions, focus)
         } else {
-            ShelfRow(shelf.items, coverLayout, firstFocus, onLaunch, onLongPress)
+            val isApps = shelf.config.type == ShelfType.APPS
+            ShelfRow(
+                items = shelf.items,
+                coverLayout = coverLayout,
+                tileSize = tileSize,
+                actions = actions,
+                focus = if (isApps) focus else focus.withoutAppMove(),
+            )
         }
     }
+}
+
+private fun ShelfFocus.withoutAppMove() =
+    ShelfFocus(first = first, shelfRequester = shelfRequester, movingShelf = movingShelf)
+
+private fun ShelfFocus.firstTileRequester(index: Int, item: ShelfItem): FocusRequester? = when {
+    focusPackage != null && item.packageName == focusPackage -> moveFocus
+    index == 0 -> shelfRequester ?: first
+    else -> null
 }
 
 private fun emptyShelfHint(type: ShelfType): String = when (type) {
@@ -74,25 +111,34 @@ private fun emptyShelfHint(type: ShelfType): String = when (type) {
 private fun LibraryGrid(
     items: List<ShelfItem>,
     coverLayout: CoverLayout,
-    onLaunch: (ShelfItem) -> Unit,
-    onLongPress: (ShelfItem) -> Unit,
+    tileSize: TileSize,
+    actions: ShelfActions,
+    focus: ShelfFocus,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 360.dp)
-            .verticalScroll(rememberScrollState()),
-    ) {
-        items.chunked(LIBRARY_COLUMNS).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { item ->
-                    CoverTile(
-                        item = item,
-                        layout = coverLayout,
-                        onLaunch = { onLaunch(item) },
-                        onLongPress = { onLongPress(item) },
-                    )
+    val tileWidth = coverSize(coverLayout, tileSize).width
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        // As many tiles per row as fit, so Small shows more and Large fewer.
+        val columns = ((maxWidth + TileGap) / (tileWidth + TileGap)).toInt().coerceAtLeast(1)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(TileGap),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 360.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            items.chunked(columns).forEachIndexed { rowIndex, row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(TileGap)) {
+                    row.forEachIndexed { col, item ->
+                        CoverTile(
+                            item = item,
+                            layout = coverLayout,
+                            tileSize = tileSize,
+                            onLaunch = { actions.onLaunch(item) },
+                            onLongPress = { actions.onLongPress(item) },
+                            onLeftEdge = if (col == 0) actions.onShelfMenu else null,
+                            focusRequester = if (rowIndex == 0 && col == 0) focus.shelfRequester ?: focus.first else null,
+                        )
+                    }
                 }
             }
         }
@@ -103,12 +149,20 @@ private fun LibraryGrid(
 private fun ShelfRow(
     items: List<ShelfItem>,
     coverLayout: CoverLayout,
-    firstFocus: FocusRequester?,
-    onLaunch: (ShelfItem) -> Unit,
-    onLongPress: (ShelfItem) -> Unit,
+    tileSize: TileSize,
+    actions: ShelfActions,
+    focus: ShelfFocus,
 ) {
+    val listState = rememberLazyListState()
+    val trackIndex = items.indexOfFirst { focus.focusPackage != null && it.packageName == focus.focusPackage }
+    // Keep the moved tile composed and on screen as it slides, and after a cancel snaps it back;
+    // a tile scrolled out of the lazy window would drop D-pad focus.
+    LaunchedEffect(trackIndex) {
+        if (trackIndex >= 0) listState.animateScrollToItem((trackIndex - 1).coerceAtLeast(0))
+    }
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        state = listState,
+        horizontalArrangement = Arrangement.spacedBy(TileGap),
         contentPadding = PaddingValues(end = 16.dp),
     ) {
         // Item ids are de-duplicated in Shelves; duplicate LazyRow keys would crash.
@@ -116,32 +170,13 @@ private fun ShelfRow(
             CoverTile(
                 item = item,
                 layout = coverLayout,
-                onLaunch = { onLaunch(item) },
-                onLongPress = { onLongPress(item) },
-                focusRequester = if (index == 0) firstFocus else null,
+                tileSize = tileSize,
+                onLaunch = { actions.onLaunch(item) },
+                onLongPress = { actions.onLongPress(item) },
+                onLeftEdge = if (index == 0) actions.onShelfMenu else null,
+                focusRequester = focus.firstTileRequester(index, item),
+                moving = focus.movingPackage != null && item.packageName == focus.movingPackage,
             )
         }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun HeaderButton(label: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.width(150.dp),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = ColorFooter,
-            focusedContainerColor = ColorBrand,
-            contentColor = ColorText,
-            focusedContentColor = ColorOnBrand,
-        ),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-            fontSize = 15.sp,
-        )
     }
 }

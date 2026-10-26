@@ -122,16 +122,14 @@ fun AppTile(
 fun AppMenuDialog(
     item: ShelfItem,
     pinned: Boolean,
-    canMoveLeft: Boolean,
-    canMoveRight: Boolean,
+    canMove: Boolean,
     canUninstall: Boolean,
     onOpen: () -> Unit,
     onChangeCover: () -> Unit,
     onRemove: () -> Unit,
     onUninstall: () -> Unit,
     onPin: () -> Unit,
-    onMoveLeft: () -> Unit,
-    onMoveRight: () -> Unit,
+    onMove: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var showInfo by remember { mutableStateOf(false) }
@@ -166,7 +164,7 @@ fun AppMenuDialog(
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
                 )
                 // One wrapping flow: every action stays on screen and reachable by D-pad,
-                // however many of Remove / Move left / Move right / Uninstall apply.
+                // however many of Remove / Move / Uninstall apply.
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -176,8 +174,7 @@ fun AppMenuDialog(
                     SettingsAction("Info") { showInfo = true }
                     if (pinned) {
                         SettingsAction("Remove", onClick = onRemove)
-                        if (canMoveLeft) SettingsAction("Move left", onClick = onMoveLeft)
-                        if (canMoveRight) SettingsAction("Move right", onClick = onMoveRight)
+                        if (canMove) SettingsAction("Move", onClick = onMove)
                     } else if (item.packageName != null) {
                         SettingsAction("Pin to Apps", onClick = onPin)
                     }

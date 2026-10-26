@@ -99,6 +99,54 @@ def home_is_ours(adb: Adb) -> bool:
     return adb.home_package() == OUR_LAUNCHER
 
 
+PHOTOS_DIR = f"/sdcard/Android/data/{OUR_LAUNCHER}/files/screensaver"
+MEDIA_LISTENER = f"{OUR_LAUNCHER}/{OUR_LAUNCHER}.NowPlayingListener"
+PHOTO_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".webp"})
+
+
+def push_screensaver_photos(adb: Adb, files: list[Path]) -> list[str]:
+    """Copy images into the folder the "My photos" screensaver reads; returns remote paths."""
+    bad = [f.name for f in files if f.suffix.lower() not in PHOTO_SUFFIXES]
+    if bad:
+        raise ValueError(f"not jpg/png/webp: {', '.join(bad)}")
+    missing = [str(f) for f in files if not f.is_file()]
+    if missing:
+        raise ValueError(f"no such file: {', '.join(missing)}")
+    adb.connect()
+    adb.shell("mkdir", "-p", PHOTOS_DIR)
+    pushed: list[str] = []
+    for f in files:
+        remote = f"{PHOTOS_DIR}/{f.name.replace(' ', '_')}"
+        adb.push(str(f), remote)
+        pushed.append(remote)
+    return pushed
+
+
+def grant_media_access(adb: Adb) -> str:
+    """Allow buckler-home to read media sessions (header Now Playing) without the Settings UI."""
+    adb.connect()
+    return adb.shell("cmd", "notification", "allow_listener", MEDIA_LISTENER)
+
+
+SETTINGS_APPOP = "WRITE_SETTINGS"
+SECURE_SETTINGS_PERMISSION = "android.permission.WRITE_SECURE_SETTINGS"
+
+
+def grant_settings_access(adb: Adb) -> list[str]:
+    """One-time grants so Settings can change the screensaver delay, switch it off, and set mono audio.
+
+    WRITE_SETTINGS (an appop) covers the idle delay and mono audio; WRITE_SECURE_SETTINGS covers
+    turning the screensaver off entirely. Returns the commands that ran.
+    """
+    adb.connect()
+    ran: list[str] = []
+    adb.shell("appops", "set", OUR_LAUNCHER, SETTINGS_APPOP, "allow")
+    ran.append(f"appops set {OUR_LAUNCHER} {SETTINGS_APPOP} allow")
+    adb.shell("pm", "grant", OUR_LAUNCHER, SECURE_SETTINGS_PERMISSION)
+    ran.append(f"pm grant {OUR_LAUNCHER} {SECURE_SETTINGS_PERMISSION}")
+    return ran
+
+
 @dataclass
 class HandoverResult:
     success: bool

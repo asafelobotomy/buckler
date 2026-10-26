@@ -91,7 +91,7 @@ tests/        policy / handover / journal / schema unit tests
 
 ## Launcher (buckler-home)
 
-Compose-for-TV HOME (**0.5.0**) with cover layouts, shelves, **Buckler Settings**, GitHub OTA prompts, and keyless Change cover (local + curated pack). Optional SteamGridDB / IGDB link via TV QR / device-code — not required for covers.
+Compose-for-TV HOME (**0.6.0**) with a live header, cover layouts, shelves, **Buckler Settings**, GitHub OTA prompts, and keyless Change cover (local + curated pack). Optional SteamGridDB / IGDB link via TV QR / device-code — not required for covers.
 
 ```bash
 buckler home write                 # journals/home-layout.json
@@ -103,11 +103,21 @@ buckler launcher build && buckler launcher install
 
 **Covers:** [covers/index.json](covers/index.json) and its artwork (`launcher/app/src/main/assets/covers/`, Apache-2.0 from dashboard-icons) are **bundled in the APK** — no third-party CDN at runtime. Refresh uses the GitHub Contents API when a token is linked, else raw URL, else bundled pack. Link enrichers in Settings (SteamGridDB QR; IGDB needs `TWITCH_CLIENT_ID` + Device Code Grant).
 
-**Long-press / Menu:** Open, Change cover, Remove (unpin), Uninstall, Info, Pin / move.
+**Long-press / Menu:** Open, Change cover, Remove (unpin), Uninstall, Info, Pin, **Move** (closes the menu; ◀ ▶ slide the app along Apps, OK places it, Back cancels).
+
+**Shelves:** press ◀ on the first tile of any shelf for *Move shelf* (▲ ▼ reorder, OK places, Back cancels), *Hide shelf*, *Edit Home* or *Settings*.
+
+**Header** (Settings → Header): one quiet row — logo, clock with date and weather (☀ 14°), a **Now Playing** mini player in the middle (only while something plays), then network icon (Wi-Fi / Ethernet → network settings), VPN icon (opens your VPN app, else VPN settings) and Edit Home / Play Store / Settings icons — with a dim news ticker underneath. Every piece can be switched off on its own, or the whole header (Home then shows only shelves; Settings stays under ◀ on any shelf). Clock in 12 h or 24 h and six date formats; weather from [Open-Meteo](https://open-meteo.com) (pick a city, no key); news from public RSS feeds (BBC, NPR, Guardian, Al Jazeera, Hacker News); Now Playing has previous / play-pause / next for whatever app is playing and needs media access: Header → *Grant media access*, or `buckler launcher media-access`. Android cannot embed another app's video in the launcher, so video apps show as a controllable session; apps that support picture-in-picture still float over Home in the system PiP window.
+
+**Screensaver** (Settings → Screensaver): drifting clock, **DVD bounce**, **Now Playing** (album art for music, artwork for films and TV, the thumbnail and channel for YouTube, a LIVE card for Twitch and TiviMate; video apps drop their session when covered, so the last thing seen in the past 30 minutes is shown as paused), retro **3D Maze**, **3D Pipes**, **Mystify** and **Starfield** (drawn in code, no bundled art), online photos by category (Nature, Cityscape, Seascape, Landmarks, Sky & space, Wildlife — Wikimedia Commons featured pictures, credited on screen), or **My photos**: upload from a phone via QR (Settings → Screensaver → Upload from phone) or `buckler launcher photos *.jpg`. `buckler screensaver` makes it the system screensaver; *Preview* shows it immediately. **Start after** 60 / 90 / 120 s, 5 / 10 / 15 min, 1 hour, a custom time, or Off (changing it needs a one-time `buckler launcher grant-settings`).
+
+**Appearance** (Settings → Appearance): colour scheme (**Buckler** teal and sage — the default — Light, Dark, Gruvbox, SNES UK, SNES US, SHIELD; the app icon and TV banner follow the scheme via activity-aliases, regenerate them with `python scripts/gen_icons.py`), font (System, Atkinson Hyperlegible, Condensed, Serif, Playful, Monospace), Home layout (Icon / Poster / Banner, shown as pictures) and app size (Small / Medium / Large, all layouts; stored as `tile_size` in the layout file).
+
+**Accessibility** (Settings → Accessibility): high contrast, strong focus outline, reduced motion, spoken focus (text-to-speech reads the focused item), text size, and shortcuts to TalkBack and system captions; mono audio is a one-tap toggle once `grant-settings` has run.
 
 **DNS:** `buckler dns status` (alias `get`) / `set --hostname …` / `off`.
 
-Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.5.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, and optional linked APIs — no ads. Release APKs are signed with `launcher/keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; git-ignored) when present, otherwise with the machine-local debug key — OTA updates only install over an APK signed with the same key. Switching keys means one uninstall/reinstall. Backups are disabled (tokens live in encrypted prefs). Feeds and artwork must be `https://`.
+Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.8.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, header weather/news, online screensaver photos and optional linked APIs; `ACCESS_NETWORK_STATE` for the Wi-Fi / Ethernet / VPN icons — no ads, no account telemetry. Release APKs are signed with `launcher/keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; git-ignored) when present, otherwise with the machine-local debug key — OTA updates only install over an APK signed with the same key. Switching keys means one uninstall/reinstall. Backups are disabled (tokens live in encrypted prefs). Feeds and artwork must be `https://`.
 
 ## Development
 

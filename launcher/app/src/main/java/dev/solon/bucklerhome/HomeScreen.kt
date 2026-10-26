@@ -1,40 +1,30 @@
 package dev.solon.bucklerhome
 
-import android.content.Intent
-import androidx.compose.foundation.Image
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -51,20 +41,38 @@ fun HomeScreen(
     var homeLayout by remember { mutableStateOf<HomeLayout?>(null) }
     var apps by remember { mutableStateOf<List<LaunchableApp>?>(null) }
     var shelves by remember { mutableStateOf<List<ResolvedShelf>>(emptyList()) }
-    var clock by remember { mutableStateOf(currentClock()) }
-    var date by remember { mutableStateOf(currentDate()) }
+    var config by remember { mutableStateOf(DisplayPrefs.load(context)) }
     var editTarget by remember { mutableStateOf<ShelfItem?>(null) }
     var changeCoverTarget by remember { mutableStateOf<ShelfItem?>(null) }
     var coverVersion by remember { mutableStateOf(0) }
-    var updateRelease by remember { mutableStateOf<GitHubRelease?>(null) }
+    var updateDismissed by remember { mutableStateOf<GitHubRelease?>(null) }
+    val availableUpdate by rememberAvailableUpdate(resumeTick)
     var initialFocusDone by remember { mutableStateOf(false) }
     val firstFocus = remember { FocusRequester() }
-    val brandMark: Painter = painterResource(R.drawable.ic_buckler_mark)
+    val move = remember { MoveMode() }
+    val moveFocus = remember { FocusRequester() }
+    var refocusTick by remember { mutableStateOf(0) }
+    var focusPkg by remember { mutableStateOf<String?>(null) }
+    var settleTick by remember { mutableStateOf(0) }
+    val shelfMove = remember { MoveMode(vertical = true) }
+    val shelfRequester = remember { FocusRequester() }
+    var focusShelfId by remember { mutableStateOf<String?>(null) }
+    var shelfSettleTick by remember { mutableStateOf(0) }
+    var shelfMenu by remember { mutableStateOf<ShelfConfig?>(null) }
+    val listState = rememberLazyListState()
+
+    val weather by rememberWeather(config.weatherPlace)
+    val headlines by rememberHeadlines(config.news?.takeIf { config.showsNews })
+    val net by rememberNetState()
+    val clockText by rememberClockText(config)
+    val (clock, date) = clockText
+    val nowPlaying = rememberNowPlaying(config.showsNowPlaying, resumeTick)
 
     LaunchedEffect(resumeTick, layoutVersion) {
         homeLayout = withContext(Dispatchers.IO) { HomeLayout.load(context) }
     }
     LaunchedEffect(resumeTick) {
+        config = DisplayPrefs.load(context)
         apps = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }
     }
 
@@ -80,29 +88,123 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            clock = currentClock()
-            date = currentDate()
-            delay(15_000)
-        }
-    }
-
-    LaunchedEffect(resumeTick) {
-        if (!UpdateChecker.shouldAutoCheck(context)) return@LaunchedEffect
-        val result = withContext(Dispatchers.IO) {
-            UpdateChecker.check(context, force = false)
-        }
-        if (result is UpdateCheckResult.Available) {
-            updateRelease = result.release
-        }
-    }
-
     // Focus the first tile once; later reloads (cover/pin edits) must not steal focus.
     LaunchedEffect(shelves) {
         if (!initialFocusDone && shelves.any { it.items.isNotEmpty() }) {
             initialFocusDone = true
             runCatching { firstFocus.requestFocus() }
+        }
+    }
+
+    fun stepMove(delta: Int) {
+        val pkg = move.target ?: return
+        val current = homeLayout ?: return
+        val next = current.withMovedPinned(pkg, delta)
+        if (next == current) return
+        homeLayout = next
+        shelves = shelves.withAppsOrder(next.appsPackages())
+    }
+
+    fun placeMove() {
+        homeLayout?.let { HomeLayout.save(context, it) }
+        move.end(placedWithSelect = true)
+        settleTick++
+    }
+
+    fun cancelMove() {
+        move.original?.let { original ->
+            homeLayout = original
+            shelves = shelves.withAppsOrder(original.appsPackages())
+        }
+        move.end(placedWithSelect = false)
+        settleTick++
+    }
+
+    fun applyShelfOrder(next: HomeLayout) {
+        homeLayout = next
+        val order = next.shelves.map { it.id }
+        shelves = shelves.sortedBy { order.indexOf(it.config.id) }
+    }
+
+    fun stepShelf(delta: Int) {
+        val id = shelfMove.target ?: return
+        val current = homeLayout ?: return
+        val next = current.withMovedShelf(id, delta, visibleIds = shelves.map { it.config.id }.toSet())
+        if (next != current) applyShelfOrder(next)
+    }
+
+    fun placeShelf() {
+        homeLayout?.let { HomeLayout.save(context, it) }
+        shelfMove.end(placedWithSelect = true)
+        shelfSettleTick++
+    }
+
+    fun cancelShelfMove() {
+        shelfMove.original?.let { applyShelfOrder(it) }
+        shelfMove.end(placedWithSelect = false)
+        shelfSettleTick++
+    }
+
+    fun hideShelf(config: ShelfConfig) {
+        val current = homeLayout ?: return
+        val next = current.copy(shelves = current.shelves.map { if (it.id == config.id) it.copy(enabled = false) else it })
+        HomeLayout.save(context, next)
+        homeLayout = next
+        refocusTick++
+    }
+
+    // Removing/pinning from the menu can delete the focused tile; hand focus back to the first one.
+    LaunchedEffect(refocusTick) {
+        if (refocusTick > 0) {
+            delay(250)
+            runCatching { firstFocus.requestFocus() }
+        }
+    }
+
+    BackHandler(enabled = move.active) { cancelMove() }
+    BackHandler(enabled = shelfMove.active) { cancelShelfMove() }
+    LaunchedEffect(shelfMove.target) {
+        val id = shelfMove.target
+        if (id != null) {
+            focusShelfId = id
+            delay(150)
+            runCatching { shelfRequester.requestFocus() }
+        }
+    }
+    // Keep the moving shelf on screen (a shelf scrolled out of the list would drop focus).
+    val movingShelfIndex = shelves.indexOfFirst { it.config.id == focusShelfId }
+    LaunchedEffect(movingShelfIndex, focusShelfId) {
+        if (movingShelfIndex >= 0) {
+            val index = movingShelfIndex + if (homeLayout?.layout == CoverLayout.BANNER) 1 else 0
+            val info = listState.layoutInfo
+            val shown = info.visibleItemsInfo.firstOrNull { it.index == index }
+            val fullyVisible = shown != null && shown.offset >= 0 && shown.offset + shown.size <= info.viewportEndOffset
+            if (!fullyVisible) listState.animateScrollToItem(index)
+        }
+    }
+    LaunchedEffect(shelfSettleTick) {
+        if (shelfSettleTick > 0) {
+            delay(400)
+            runCatching { shelfRequester.requestFocus() }
+            delay(300)
+            focusShelfId = null
+        }
+    }
+    LaunchedEffect(move.target) {
+        if (move.active) {
+            focusPkg = move.target
+            // Let the app menu finish closing so it does not take focus back from the tile.
+            delay(150)
+            runCatching { moveFocus.requestFocus() }
+        }
+    }
+    // After placing or cancelling, make sure the tile (which may have jumped back) still has focus.
+    LaunchedEffect(settleTick) {
+        if (settleTick > 0) {
+            delay(350)
+            runCatching { moveFocus.requestFocus() }
+            delay(300)
+            focusPkg = null
         }
     }
 
@@ -120,94 +222,116 @@ fun HomeScreen(
     }
 
     val hero = remember(shelves, layout) { heroItem(shelves, layout) }
+    val actions = rememberHeaderActions(onOpenEditHome)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(HomeBgBrush)
-            .padding(horizontal = 56.dp, vertical = 36.dp),
+            .moveModeKeys(move, onStep = ::stepMove, onPlace = ::placeMove)
+            .moveModeKeys(shelfMove, onStep = ::stepShelf, onPlace = ::placeShelf)
+            .padding(horizontal = 56.dp, vertical = 28.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = brandMark,
-                    contentDescription = "Buckler",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .padding(end = 12.dp),
-                )
-                Column {
-                    Text(
-                        text = "buckler-home",
-                        color = ColorBrand,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = clock,
-                        color = ColorText,
-                        fontSize = 40.sp,
-                        fontWeight = FontWeight.Light,
-                    )
-                    Text(text = date, color = ColorMuted, fontSize = 14.sp)
-                }
-            }
-            // Header actions sit above the shelves, so D-pad Up from the first row reaches them.
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HeaderButton("Settings") {
-                    safeLaunch(
-                        context,
-                        Intent(context, BucklerSettingsActivity::class.java),
-                        "Buckler Settings",
-                    )
-                }
-                playStoreLaunchIntent(context.packageManager)?.let { play ->
-                    HeaderButton("Play Store") {
-                        safeLaunch(context, play, "Play Store")
-                    }
-                }
-                HeaderButton("Edit Home", onOpenEditHome)
-            }
+        if (config.headerVisible) {
+            HomeHeader(
+                clock = clock,
+                date = date,
+                config = config,
+                weather = weather,
+                headlines = headlines,
+                net = net,
+                nowPlaying = nowPlaying,
+                actions = actions,
+                below = firstFocus,
+            )
+            Spacer(modifier = Modifier.height(14.dp))
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         LazyColumn(
+            state = listState,
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             if (hero != null && layout.layout == CoverLayout.BANNER) {
                 item(key = "hero") {
-                    HeroBanner(item = hero, onLaunch = { launch(hero) })
+                    HeroBanner(item = hero, onLaunch = { launch(hero) }, tileSize = layout.tileSize)
                 }
             }
             items(shelves, key = { it.config.id }) { shelf ->
+                val id = shelf.config.id
                 ShelfSection(
                     shelf = shelf,
                     coverLayout = layout.layout,
-                    firstFocus = if (shelf == shelves.firstOrNull { it.items.isNotEmpty() }) {
-                        firstFocus
-                    } else {
-                        null
-                    },
-                    onLaunch = { launch(it) },
-                    onLongPress = { editTarget = it },
+                    tileSize = layout.tileSize,
+                    actions = ShelfActions(
+                        onLaunch = { launch(it) },
+                        onLongPress = { editTarget = it },
+                        onShelfMenu = { shelfMenu = shelf.config },
+                    ),
+                    focus = ShelfFocus(
+                        first = if (shelf == shelves.firstOrNull { it.items.isNotEmpty() }) firstFocus else null,
+                        shelfRequester = if (id == focusShelfId) shelfRequester else null,
+                        movingShelf = id == shelfMove.target,
+                        movingPackage = move.target,
+                        focusPackage = focusPkg,
+                        moveFocus = moveFocus,
+                    ),
                 )
             }
         }
+
+        val hint = when {
+            move.active -> "Moving app — ◀ ▶ to move · OK to place · Back to cancel"
+            shelfMove.active -> "Moving shelf — ▲ ▼ to move · OK to place · Back to cancel"
+            else -> null
+        }
+        if (hint != null) {
+            Text(
+                text = hint,
+                color = ColorBrand,
+                fontSize = 15.sp,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+    }
+
+    shelfMenu?.let { config ->
+        val visible = shelves.size
+        ShelfMenuDialog(
+            title = config.title,
+            canMove = visible > 1,
+            canHide = visible > 1,
+            onMove = {
+                shelfMenu = null
+                shelfMove.begin(config.id, layout)
+            },
+            onHide = {
+                shelfMenu = null
+                hideShelf(config)
+            },
+            onEditHome = {
+                shelfMenu = null
+                onOpenEditHome()
+            },
+            onSettings = {
+                shelfMenu = null
+                actions.onSettings()
+            },
+            onDismiss = { shelfMenu = null },
+        )
     }
 
     editTarget?.let { item ->
         HomeMenuHost(
             item = item,
             layout = layout,
-            onLayoutChange = { homeLayout = it },
+            onLayoutChange = {
+                homeLayout = it
+                refocusTick++
+            },
             onOpen = { launch(it) },
             onChangeCover = { changeCoverTarget = it },
+            onMove = { pkg -> move.begin(pkg, layout) },
             onDismiss = { editTarget = null },
         )
     }
@@ -231,16 +355,10 @@ fun HomeScreen(
         }
     }
 
-    updateRelease?.let { release ->
+    availableUpdate?.takeIf { it != updateDismissed }?.let { release ->
         UpdateAvailableDialog(
             release = release,
-            onDismiss = { updateRelease = null },
+            onDismiss = { updateDismissed = release },
         )
     }
 }
-
-private fun currentClock(): String =
-    LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-
-private fun currentDate(): String =
-    LocalDate.now().format(DateTimeFormatter.ofPattern("EEE d MMM"))

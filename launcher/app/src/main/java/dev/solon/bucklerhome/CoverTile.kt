@@ -2,6 +2,7 @@ package dev.solon.bucklerhome
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,6 +30,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
@@ -46,10 +52,14 @@ import coil.compose.AsyncImagePainter
 
 data class CoverSize(val width: Dp, val height: Dp, val icon: Dp)
 
-fun coverSize(layout: CoverLayout): CoverSize = when (layout) {
-    CoverLayout.ICON -> CoverSize(132.dp, 148.dp, 64.dp)
-    CoverLayout.POSTER -> CoverSize(120.dp, 190.dp, 72.dp)
-    CoverLayout.BANNER -> CoverSize(220.dp, 124.dp, 48.dp)
+fun coverSize(layout: CoverLayout, tileSize: TileSize = TileSize.MEDIUM): CoverSize {
+    val base = when (layout) {
+        CoverLayout.ICON -> CoverSize(132.dp, 148.dp, 64.dp)
+        CoverLayout.POSTER -> CoverSize(120.dp, 190.dp, 72.dp)
+        CoverLayout.BANNER -> CoverSize(220.dp, 124.dp, 48.dp)
+    }
+    val k = tileSize.scale
+    return CoverSize(base.width * k, base.height * k, base.icon * k)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -61,8 +71,12 @@ fun CoverTile(
     onLongPress: () -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
+    moving: Boolean = false,
+    tileSize: TileSize = TileSize.MEDIUM,
+    /** Set on the first tile of a shelf: pressing Left there (nothing further left) opens shelf options. */
+    onLeftEdge: (() -> Unit)? = null,
 ) {
-    val size = coverSize(layout)
+    val size = coverSize(layout, tileSize)
     val bmp = remember(item.id, item.icon) {
         item.icon?.toBitmap(128, 128)?.asImageBitmap()
     }
@@ -72,15 +86,29 @@ fun CoverTile(
     val menu = rememberTvMenuInteraction(onOpen = onLaunch, onMenu = onLongPress)
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
+    val shape = RoundedCornerShape(8.dp)
+    AnnounceOnFocus(focused, item.title)
 
     var boxModifier = modifier
         .width(size.width)
         .height(size.height)
-        .scale(if (focused) 1.08f else 1f)
-        .clip(RoundedCornerShape(8.dp))
-        .background(if (focused) ColorBrand else ColorTile)
+        .scale(focusZoom(focused, 1.08f))
+        .clip(shape)
+        .background(if (focused || moving) ColorBrand else ColorTile)
+        .strongFocusRing(focused, shape)
+    if (moving) {
+        boxModifier = boxModifier.border(3.dp, ColorText, RoundedCornerShape(8.dp))
+    }
     if (focusRequester != null) {
         boxModifier = boxModifier.focusRequester(focusRequester)
+    }
+    if (onLeftEdge != null) {
+        boxModifier = boxModifier.onPreviewKeyEvent { event ->
+            if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
+            // Held Left scrolling to the start must not pop the menu; it needs a fresh press.
+            if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onLeftEdge()
+            true
+        }
     }
     boxModifier = boxModifier
         .focusable(interactionSource = interactionSource)
@@ -136,14 +164,22 @@ fun CoverTile(
             }
             Text(
                 text = item.title,
-                fontSize = 12.sp,
-                color = if (focused) ColorOnBrand else ColorText,
+                fontSize = if (tileSize == TileSize.SMALL) 11.sp else 12.sp,
+                color = if (focused || moving) ColorOnBrand else ColorText,
                 maxLines = if (layout == CoverLayout.BANNER) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp),
+            )
+        }
+        if (moving) {
+            Text(
+                text = "◀  ▶",
+                fontSize = 14.sp,
+                color = ColorOnBrand,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 2.dp),
             )
         }
     }
@@ -155,19 +191,21 @@ fun HeroBanner(
     item: ShelfItem,
     onLaunch: () -> Unit,
     modifier: Modifier = Modifier,
+    tileSize: TileSize = TileSize.MEDIUM,
 ) {
     val bmp = remember(item.id, item.icon) {
         item.icon?.toBitmap(192, 192)?.asImageBitmap()
     }
+    val scrim = LocalPalette.current.bgTop
     Surface(
         onClick = onLaunch,
         modifier = modifier
             .fillMaxWidth()
-            .height(160.dp),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+            .height((160.dp * tileSize.scale).coerceIn(128.dp, 190.dp)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = focusZoom(true, 1.02f)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = ColorTile,
-            focusedContainerColor = Color(0xFF2A3548),
+            focusedContainerColor = ColorFooter,
             contentColor = ColorText,
             focusedContentColor = ColorText,
         ),
@@ -196,7 +234,7 @@ fun HeroBanner(
                     .fillMaxSize()
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color(0xCC0B0E14), Color(0x660B0E14), Color.Transparent),
+                            listOf(scrim.copy(alpha = 0.8f), scrim.copy(alpha = 0.4f), Color.Transparent),
                         ),
                     ),
             )

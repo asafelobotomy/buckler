@@ -1,38 +1,81 @@
 package dev.solon.bucklerhome
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Density
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.ProvideTextStyle
 import androidx.tv.material3.darkColorScheme
+import androidx.tv.material3.lightColorScheme
 
-val HomeBgBrush = Brush.verticalGradient(
-    colors = listOf(Color(0xFF0B0E14), Color(0xFF161A12), Color(0xFF0B0E14)),
-)
+val LocalPalette = staticCompositionLocalOf { Palettes.of(AppTheme.BUCKLER) }
 
-/** Mustard gold from the Buckler shield mark. */
-val ColorBrand = Color(0xFFD4A84B)
-val ColorOnBrand = Color(0xFF1A1408)
-val ColorText = Color(0xFFE8ECF2)
-val ColorMuted = Color(0xFF9AA6B8)
-val ColorHint = Color(0xFF6B778A)
-/** Forest rim accent from the shield. */
-val ColorSection = Color(0xFF8FAE7A)
-val ColorTile = Color(0xFF1C2433)
-val ColorFooter = Color(0xFF243044)
+// The accessors below keep their original names, so screens stay theme-agnostic: they read the
+// palette of the enclosing BucklerHomeTheme.
+val HomeBgBrush: Brush
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.background
+
+/** Accent colour (gold in the default theme). */
+val ColorBrand: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.brand
+val ColorOnBrand: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.onBrand
+val ColorText: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.text
+val ColorMuted: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.muted
+val ColorHint: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.hint
+val ColorSection: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.section
+val ColorTile: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.tile
+val ColorFooter: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.footer
+val ColorRing: Color
+    @Composable @ReadOnlyComposable get() = LocalPalette.current.ring
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun BucklerHomeTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = ColorBrand,
-            onPrimary = ColorOnBrand,
-            surface = Color(0xFF12151C),
-            onSurface = ColorText,
-            border = Color(0xFF3A4558),
-        ),
-        content = content,
-    )
+    val appearance = AppearanceStore.config
+    val palette = remember(appearance.theme, appearance.highContrast) { Palettes.resolve(appearance) }
+    val family = appearance.font.family()
+    val system = LocalDensity.current
+    // Scale text on top of the system font scale; layout (dp) sizes stay put.
+    val density = remember(system.density, system.fontScale, appearance.textSize) {
+        Density(system.density, system.fontScale * appearance.textSize.scale)
+    }
+    val scheme = if (palette.dark) {
+        darkColorScheme(
+            primary = palette.brand,
+            onPrimary = palette.onBrand,
+            surface = palette.footer,
+            onSurface = palette.text,
+            border = palette.border,
+        )
+    } else {
+        lightColorScheme(
+            primary = palette.brand,
+            onPrimary = palette.onBrand,
+            surface = palette.footer,
+            onSurface = palette.text,
+            border = palette.border,
+        )
+    }
+    CompositionLocalProvider(LocalPalette provides palette, LocalDensity provides density) {
+        MaterialTheme(colorScheme = scheme) {
+            ProvideTextStyle(TextStyle(fontFamily = family)) {
+                content()
+            }
+        }
+    }
 }

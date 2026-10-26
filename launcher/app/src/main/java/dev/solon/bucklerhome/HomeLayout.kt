@@ -56,6 +56,7 @@ data class HomeLayout(
     val layout: CoverLayout = CoverLayout.BANNER,
     val shelves: List<ShelfConfig> = defaultShelves(),
     val suggestedFeedUrl: String? = null,
+    val tileSize: TileSize = TileSize.MEDIUM,
 ) {
     fun toJson(): JSONObject {
         val shelvesArr = JSONArray()
@@ -72,6 +73,7 @@ data class HomeLayout(
         return JSONObject()
             .put("schema", 1)
             .put("layout", layout.wire())
+            .put("tile_size", tileSize.wire())
             .put("suggested_feed_url", suggestedFeedUrl)
             .put("shelves", shelvesArr)
     }
@@ -97,6 +99,24 @@ data class HomeLayout(
         if (from < 0 || to !in pins.indices) return this
         pins[from] = pins[to].also { pins[to] = pins[from] }
         return withAppsPackages(pins)
+    }
+
+    /**
+     * Move shelf [id] up (-1) or down (+1) past the next shelf that is actually on screen.
+     * Disabled (and, via [visibleIds], empty) shelves are skipped so a press never looks like a no-op.
+     */
+    fun withMovedShelf(id: String, delta: Int, visibleIds: Set<String>? = null): HomeLayout {
+        val list = shelves.toMutableList()
+        val from = list.indexOfFirst { it.id == id }
+        if (from < 0 || delta == 0) return this
+        val step = if (delta < 0) -1 else 1
+        var to = from + step
+        while (to in list.indices && (!list[to].enabled || (visibleIds != null && list[to].id !in visibleIds))) {
+            to += step
+        }
+        if (to !in list.indices) return this
+        list.add(to, list.removeAt(from))
+        return copy(shelves = list)
     }
 
     fun withAppsPackages(packages: List<String>): HomeLayout =
@@ -157,6 +177,7 @@ data class HomeLayout(
                 // Duplicate shelf ids would crash the LazyColumn; keep the first of each.
                 shelves = shelves.distinctBy { it.id }.ifEmpty { defaultShelves() },
                 suggestedFeedUrl = feed,
+                tileSize = TileSize.fromWire(obj.optString("tile_size")),
             )
         }
 
