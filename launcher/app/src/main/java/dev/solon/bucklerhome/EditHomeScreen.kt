@@ -1,5 +1,6 @@
 package dev.solon.bucklerhome
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,11 +14,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +32,10 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Edit Home. Everything is reachable by D-pad: Done / Reset sit in the header (not below a long
+ * list), BACK saves and leaves, and each shelf row has separate Toggle / Up / Down targets.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun EditHomeScreen(
@@ -41,38 +47,69 @@ fun EditHomeScreen(
         value = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }
     }
 
+    BackHandler(onBack = onDone)
+
     fun persist(next: HomeLayout) {
         layout = next
         HomeLayout.save(context, next)
+    }
+
+    fun resetFromFileOrDefault() {
+        if (HomeLayout.importIfPresent(context)) {
+            layout = HomeLayout.load(context)
+            return
+        }
+        persist(HomeLayout.default(DockPrefs.loadPins(context)))
+    }
+
+    fun moveShelf(index: Int, delta: Int) {
+        val shelves = layout.shelves.toMutableList()
+        val target = index + delta
+        if (target !in shelves.indices) return
+        shelves[index] = shelves[target].also { shelves[target] = shelves[index] }
+        persist(layout.copy(shelves = shelves))
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(HomeBgBrush)
-            .padding(horizontal = 56.dp, vertical = 40.dp),
+            .padding(horizontal = 56.dp, vertical = 40.dp)
+            .autoFocus(),
     ) {
-        Text(
-            text = "Edit Home",
-            color = ColorBrand,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = "Layout, shelves, and apps pins",
-            color = ColorMuted,
-            fontSize = 15.sp,
-            modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text(
+                    text = "Edit Home",
+                    color = ColorBrand,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Layout, shelves, and apps pins · Back to finish",
+                    color = ColorMuted,
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Chip("Done", selected = true, onClick = onDone)
+                Chip("Reset layout", selected = false, onClick = ::resetFromFileOrDefault)
+            }
+        }
 
+        Spacer(modifier = Modifier.height(20.dp))
         Text(text = "Cover layout", color = ColorSection, fontSize = 14.sp)
         Spacer(modifier = Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CoverLayout.entries.forEach { style ->
-                val selected = layout.layout == style
                 Chip(
                     label = style.name.lowercase().replaceFirstChar { it.titlecase() },
-                    selected = selected,
+                    selected = layout.layout == style,
                 ) {
                     persist(layout.copy(layout = style))
                 }
@@ -88,121 +125,103 @@ fun EditHomeScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             itemsIndexed(layout.shelves, key = { _, s -> s.id }) { index, shelf ->
-                Surface(
-                    onClick = {
+                ShelfEditRow(
+                    shelf = shelf,
+                    canMoveUp = index > 0,
+                    canMoveDown = index < layout.shelves.lastIndex,
+                    onToggle = {
                         val shelves = layout.shelves.toMutableList()
                         shelves[index] = shelf.copy(enabled = !shelf.enabled)
                         persist(layout.copy(shelves = shelves))
                     },
-                    colors = ClickableSurfaceDefaults.colors(
-                        containerColor = ColorTile,
-                        focusedContainerColor = ColorBrand,
-                        contentColor = ColorText,
-                        focusedContentColor = ColorOnBrand,
-                    ),
-                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1.03f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = shelf.title, fontSize = 17.sp)
-                            Text(
-                                text = "${shelf.type.wire()} · ${if (shelf.enabled) "on" else "off"}",
-                                fontSize = 13.sp,
-                                color = ColorMuted,
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (index > 0) {
-                                MiniChip("Up") {
-                                    val shelves = layout.shelves.toMutableList()
-                                    val tmp = shelves[index]
-                                    shelves[index] = shelves[index - 1]
-                                    shelves[index - 1] = tmp
-                                    persist(layout.copy(shelves = shelves))
-                                }
-                            }
-                            if (index < layout.shelves.lastIndex) {
-                                MiniChip("Down") {
-                                    val shelves = layout.shelves.toMutableList()
-                                    val tmp = shelves[index]
-                                    shelves[index] = shelves[index + 1]
-                                    shelves[index + 1] = tmp
-                                    persist(layout.copy(shelves = shelves))
-                                }
-                            }
-                        }
-                    }
-                }
+                    onUp = { moveShelf(index, -1) },
+                    onDown = { moveShelf(index, 1) },
+                )
             }
-
             item {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(text = "Apps shelf pins", color = ColorSection, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Focus an app and press Select to pin/unpin",
+                    text = "Select an app to pin or unpin it",
                     color = ColorHint,
                     fontSize = 13.sp,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
             }
             itemsIndexed(
                 apps.filterNot { it.isSystem },
                 key = { _, a -> a.packageName },
             ) { _, app ->
                 val pinned = app.packageName in layout.appsPackages()
-                Surface(
-                    onClick = {
-                        val pins = layout.appsPackages().toMutableList()
-                        if (pinned) pins.remove(app.packageName) else pins.add(app.packageName)
-                        persist(layout.withAppsPackages(pins))
-                    },
-                    colors = ClickableSurfaceDefaults.colors(
-                        containerColor = if (pinned) ColorFooter else ColorTile,
-                        focusedContainerColor = ColorBrand,
-                        contentColor = ColorText,
-                        focusedContentColor = ColorOnBrand,
-                    ),
-                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1.03f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "${if (pinned) "●" else "○"}  ${app.label}",
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-                        fontSize = 15.sp,
+                PinRow(label = app.label, pinned = pinned) {
+                    persist(
+                        if (pinned) layout.withoutPinned(app.packageName) else layout.withPinned(app.packageName),
                     )
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Chip("Reset from buckler file", selected = false) {
-                val imported = HomeLayout.importIfPresent(context)
-                if (!imported) {
-                    // Re-read file even if already consumed — try again from disk
-                    val file = HomeLayout.importFile(context)
-                    if (file.isFile) {
-                        runCatching {
-                            persist(HomeLayout.fromJson(file.readText()))
-                        }
-                    } else {
-                        persist(HomeLayout.default(DockPrefs.loadPins(context)))
-                    }
-                } else {
-                    layout = HomeLayout.load(context)
-                }
-            }
-            Chip("Done", selected = true, onClick = onDone)
-        }
     }
 }
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ShelfEditRow(
+    shelf: ShelfConfig,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onToggle: () -> Unit,
+    onUp: () -> Unit,
+    onDown: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            onClick = onToggle,
+            colors = rowColors(selected = shelf.enabled),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+            modifier = Modifier.weight(1f),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
+                Text(text = shelf.title, fontSize = 17.sp)
+                Text(
+                    text = "${shelf.type.wire()} · ${if (shelf.enabled) "on — select to hide" else "off — select to show"}",
+                    fontSize = 13.sp,
+                )
+            }
+        }
+        if (canMoveUp) MiniChip("Up", onUp)
+        if (canMoveDown) MiniChip("Down", onDown)
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PinRow(label: String, pinned: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        colors = rowColors(selected = pinned),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = "${if (pinned) "●" else "○"}  $label",
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+            fontSize = 15.sp,
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun rowColors(selected: Boolean) = ClickableSurfaceDefaults.colors(
+    containerColor = if (selected) ColorFooter else ColorTile,
+    focusedContainerColor = ColorBrand,
+    contentColor = ColorText,
+    focusedContentColor = ColorOnBrand,
+)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -241,8 +260,8 @@ private fun MiniChip(label: String, onClick: () -> Unit) {
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
+            fontSize = 13.sp,
         )
     }
 }

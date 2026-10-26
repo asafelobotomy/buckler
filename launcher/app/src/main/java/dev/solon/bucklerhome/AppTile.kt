@@ -13,6 +13,8 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -115,7 +117,7 @@ fun AppTile(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AppMenuDialog(
     item: ShelfItem,
@@ -163,25 +165,26 @@ fun AppMenuDialog(
                     color = ColorMuted,
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SettingsAction("Open", focusRequester = firstFocus, onClick = onOpen)
-                        SettingsAction("Change cover", onClick = onChangeCover)
-                        SettingsAction("Info") { showInfo = true }
+                // One wrapping flow: every action stays on screen and reachable by D-pad,
+                // however many of Remove / Move left / Move right / Uninstall apply.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    SettingsAction("Open", focusRequester = firstFocus, onClick = onOpen)
+                    SettingsAction("Change cover", onClick = onChangeCover)
+                    SettingsAction("Info") { showInfo = true }
+                    if (pinned) {
+                        SettingsAction("Remove", onClick = onRemove)
+                        if (canMoveLeft) SettingsAction("Move left", onClick = onMoveLeft)
+                        if (canMoveRight) SettingsAction("Move right", onClick = onMoveRight)
+                    } else if (item.packageName != null) {
+                        SettingsAction("Pin to Apps", onClick = onPin)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (pinned) {
-                            SettingsAction("Remove", onClick = onRemove)
-                            if (canMoveLeft) SettingsAction("Move left", onClick = onMoveLeft)
-                            if (canMoveRight) SettingsAction("Move right", onClick = onMoveRight)
-                        } else if (item.packageName != null) {
-                            SettingsAction("Pin to Apps", onClick = onPin)
-                        }
-                        if (canUninstall) {
-                            SettingsAction("Uninstall", onClick = onUninstall)
-                        }
-                        SettingsAction("Close", onClick = onDismiss)
+                    if (canUninstall) {
+                        SettingsAction("Uninstall", onClick = onUninstall)
                     }
+                    SettingsAction("Close", onClick = onDismiss)
                 }
             }
         }

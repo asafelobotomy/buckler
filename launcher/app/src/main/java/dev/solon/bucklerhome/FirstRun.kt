@@ -79,7 +79,8 @@ fun FirstRunScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(HomeBgBrush)
-            .padding(horizontal = 64.dp, vertical = 48.dp),
+            .padding(horizontal = 64.dp, vertical = 48.dp)
+            .autoFocus(step),
         verticalArrangement = Arrangement.Center,
     ) {
         when (step) {

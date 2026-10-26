@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,18 +14,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -104,106 +99,75 @@ fun ConnectIgdbDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
 
 private const val GITHUB_TOKEN_URL = "https://github.com/settings/tokens?type=beta"
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ConnectGithubDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
     val context = LocalContext.current
-    var token by remember { mutableStateOf("") }
-    val qr = remember { QrBitmap.encode(GITHUB_TOKEN_URL) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            onClick = {},
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = ColorFooter,
-                focusedContainerColor = ColorFooter,
-                contentColor = ColorText,
-                focusedContentColor = ColorText,
-            ),
-            modifier = Modifier.widthIn(min = 480.dp, max = 720.dp),
-        ) {
-            Column(modifier = Modifier.padding(28.dp)) {
-                Text("Link GitHub (private repo)", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = "Scan QR → create a fine-grained PAT with Contents + Releases read → paste below.",
-                    fontSize = 14.sp,
-                    color = ColorMuted,
-                    modifier = Modifier.padding(top = 6.dp, bottom = 16.dp),
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    qr?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = "QR to GitHub token settings",
-                            modifier = Modifier.size(180.dp),
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = GITHUB_TOKEN_URL, fontSize = 12.sp, color = ColorMuted)
-                        Text(
-                            text = "Personal access token",
-                            fontSize = 13.sp,
-                            color = ColorSection,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 6.dp),
-                        )
-                        BasicTextField(
-                            value = token,
-                            onValueChange = { token = it },
-                            singleLine = true,
-                            textStyle = TextStyle(color = ColorText, fontSize = 16.sp),
-                            cursorBrush = SolidColor(ColorBrand),
-                            modifier = Modifier
-                                .widthIn(min = 240.dp)
-                                .padding(vertical = 8.dp),
-                        )
-                        error?.let {
-                            Text(text = it, color = Color(0xFFFF8A80), fontSize = 13.sp)
-                        }
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.padding(top = 16.dp),
-                        ) {
-                            SettingsAction("Link") {
-                                if (token.isBlank()) {
-                                    error = "Paste a GitHub token"
-                                    return@SettingsAction
-                                }
-                                CoverAccounts.setGithubToken(context, token)
-                                onLinked()
-                            }
-                            SettingsAction("Cancel", onClick = onDismiss)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    TokenDialog(
+        title = "Link GitHub (private repo)",
+        instructions = "Scan QR → create a fine-grained PAT with Contents + Releases read → paste below.",
+        url = GITHUB_TOKEN_URL,
+        fieldLabel = "Personal access token",
+        emptyError = "Paste a GitHub token",
+        onDismiss = onDismiss,
+        onSubmit = { token ->
+            CoverAccounts.setGithubToken(context, token)
+            onLinked()
+        },
+    )
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ConnectSgdbDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
     val context = LocalContext.current
+    TokenDialog(
+        title = "Connect SteamGridDB",
+        instructions = "Scan QR → create an API key on your phone → enter the key below.",
+        url = SteamGridDbClient.PREFERENCES_URL,
+        fieldLabel = "API key",
+        emptyError = "Paste the API key from preferences",
+        onDismiss = onDismiss,
+        onSubmit = { token ->
+            CoverAccounts.setSgdbToken(context, token)
+            onLinked()
+        },
+    )
+}
+
+/** QR + one text field + Link/Cancel. Focus starts on the field; D-pad down reaches the buttons. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TokenDialog(
+    title: String,
+    instructions: String,
+    url: String,
+    fieldLabel: String,
+    emptyError: String,
+    onDismiss: () -> Unit,
+    onSubmit: (String) -> Unit,
+) {
     var token by remember { mutableStateOf("") }
-    val qr = remember { QrBitmap.encode(SteamGridDbClient.PREFERENCES_URL) }
     var error by remember { mutableStateOf<String?>(null) }
+    val qr = remember(url) { QrBitmap.encode(url) }
+    val fieldFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        delay(60)
+        runCatching { fieldFocus.requestFocus() }
+    }
+
+    fun submit() {
+        if (token.isBlank()) {
+            error = emptyError
+        } else {
+            onSubmit(token.trim())
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            onClick = {},
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = ColorFooter,
-                focusedContainerColor = ColorFooter,
-                contentColor = ColorText,
-                focusedContentColor = ColorText,
-            ),
-            modifier = Modifier.widthIn(min = 480.dp, max = 720.dp),
-        ) {
-            Column(modifier = Modifier.padding(28.dp)) {
-                Text("Connect SteamGridDB", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        DialogPanel(minWidth = 480.dp, maxWidth = 720.dp) {
+            Column {
+                Text(title, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = ColorText)
                 Text(
-                    text = "Scan QR → create an API key on your phone → enter the key below.",
+                    text = instructions,
                     fontSize = 14.sp,
                     color = ColorMuted,
                     modifier = Modifier.padding(top = 6.dp, bottom = 16.dp),
@@ -212,43 +176,41 @@ fun ConnectSgdbDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
                     qr?.let {
                         Image(
                             bitmap = it.asImageBitmap(),
-                            contentDescription = "QR to SteamGridDB preferences",
+                            contentDescription = "QR to $title",
                             modifier = Modifier.size(180.dp),
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = SteamGridDbClient.PREFERENCES_URL, fontSize = 12.sp, color = ColorMuted)
+                        Text(text = url, fontSize = 12.sp, color = ColorMuted)
                         Text(
-                            text = "API key",
+                            text = fieldLabel,
                             fontSize = 13.sp,
                             color = ColorSection,
                             modifier = Modifier.padding(top = 16.dp, bottom = 6.dp),
                         )
-                        BasicTextField(
+                        FocusableTextField(
                             value = token,
-                            onValueChange = { token = it },
-                            singleLine = true,
-                            textStyle = TextStyle(color = ColorText, fontSize = 16.sp),
-                            cursorBrush = SolidColor(ColorBrand),
-                            modifier = Modifier
-                                .widthIn(min = 240.dp)
-                                .padding(vertical = 8.dp),
+                            onValueChange = {
+                                token = it
+                                error = null
+                            },
+                            hint = "Type or paste token",
+                            onDone = ::submit,
+                            focusRequester = fieldFocus,
                         )
                         error?.let {
-                            Text(text = it, color = Color(0xFFFF8A80), fontSize = 13.sp)
+                            Text(
+                                text = it,
+                                color = Color(0xFFFF8A80),
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
                         }
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.padding(top = 16.dp),
                         ) {
-                            SettingsAction("Link") {
-                                if (token.isBlank()) {
-                                    error = "Paste the API key from preferences"
-                                    return@SettingsAction
-                                }
-                                CoverAccounts.setSgdbToken(context, token)
-                                onLinked()
-                            }
+                            SettingsAction("Link", onClick = ::submit)
                             SettingsAction("Cancel", onClick = onDismiss)
                         }
                     }
@@ -269,18 +231,9 @@ private fun AccountConnectShell(
     error: String?,
     onDismiss: () -> Unit,
 ) {
-    Surface(
-        onClick = {},
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = ColorFooter,
-            focusedContainerColor = ColorFooter,
-            contentColor = ColorText,
-            focusedContentColor = ColorText,
-        ),
-        modifier = Modifier.widthIn(min = 480.dp, max = 720.dp),
-    ) {
-        Column(modifier = Modifier.padding(28.dp)) {
-            Text(text = title, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+    DialogPanel(minWidth = 480.dp, maxWidth = 720.dp, modifier = Modifier.autoFocus()) {
+        Column {
+            Text(text = title, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = ColorText)
             Text(
                 text = subtitle,
                 fontSize = 14.sp,
@@ -310,7 +263,7 @@ private fun AccountConnectShell(
                             modifier = Modifier.padding(top = 12.dp),
                         )
                     }
-                    SettingsAction("Cancel", onClick = onDismiss)
+                    SettingsAction("Cancel", onClick = onDismiss, modifier = Modifier.padding(top = 12.dp))
                 }
             }
         }

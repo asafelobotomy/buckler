@@ -126,10 +126,10 @@ private fun ShelfRow(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun FooterButton(label: String, onClick: () -> Unit) {
+fun HeaderButton(label: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.width(180.dp),
+        modifier = Modifier.width(150.dp),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = ColorFooter,

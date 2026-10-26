@@ -80,17 +80,12 @@ fun ChangeCoverDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            onClick = {},
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = ColorFooter,
-                focusedContainerColor = ColorFooter,
-                contentColor = ColorText,
-                focusedContentColor = ColorText,
-            ),
-            modifier = Modifier.widthIn(min = 520.dp, max = 900.dp),
+        DialogPanel(
+            minWidth = 520.dp,
+            maxWidth = 900.dp,
+            modifier = Modifier.autoFocus(key = loading),
         ) {
-            Column(modifier = Modifier.padding(28.dp)) {
+            Column {
                 Text(
                     text = "Change cover",
                     fontSize = 22.sp,

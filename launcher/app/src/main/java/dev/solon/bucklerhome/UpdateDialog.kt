@@ -38,21 +38,13 @@ fun UpdateAvailableDialog(
     var status by remember { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = { if (!busy) onDismiss() }) {
-        Surface(
-            onClick = {},
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = ColorFooter,
-                focusedContainerColor = ColorFooter,
-                contentColor = ColorText,
-                focusedContentColor = ColorText,
-            ),
-            modifier = Modifier.widthIn(min = 420.dp, max = 640.dp),
-        ) {
-            Column(modifier = Modifier.padding(28.dp)) {
+        DialogPanel(minWidth = 420.dp, maxWidth = 640.dp, modifier = Modifier.autoFocus()) {
+            Column {
                 Text(
                     text = "Update available",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
+                    color = ColorText,
                 )
                 Text(
                     text = "${release.name} (${release.tag}) · you have ${BuildConfig.VERSION_NAME}",

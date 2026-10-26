@@ -156,6 +156,22 @@ fun HomeScreen(
                     Text(text = date, color = ColorMuted, fontSize = 14.sp)
                 }
             }
+            // Header actions sit above the shelves, so D-pad Up from the first row reaches them.
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                HeaderButton("Settings") {
+                    safeLaunch(
+                        context,
+                        Intent(context, BucklerSettingsActivity::class.java),
+                        "Buckler Settings",
+                    )
+                }
+                playStoreLaunchIntent(context.packageManager)?.let { play ->
+                    HeaderButton("Play Store") {
+                        safeLaunch(context, play, "Play Store")
+                    }
+                }
+                HeaderButton("Edit Home", onOpenEditHome)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -181,26 +197,6 @@ fun HomeScreen(
                     onLaunch = { launch(it) },
                     onLongPress = { editTarget = it },
                 )
-            }
-            item(key = "footer") {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
-                ) {
-                    FooterButton("Settings") {
-                        safeLaunch(
-                            context,
-                            Intent(context, BucklerSettingsActivity::class.java),
-                            "Buckler Settings",
-                        )
-                    }
-                    playStoreLaunchIntent(context.packageManager)?.let { play ->
-                        FooterButton("Play Store") {
-                            safeLaunch(context, play, "Play Store")
-                        }
-                    }
-                    FooterButton("Edit Home", onOpenEditHome)
-                }
             }
         }
     }

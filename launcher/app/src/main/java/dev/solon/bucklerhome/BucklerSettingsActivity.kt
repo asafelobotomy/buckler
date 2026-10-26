@@ -27,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,12 +52,12 @@ class BucklerSettingsActivity : ComponentActivity() {
     }
 }
 
-private enum class SettingsPane {
-    HOME,
-    UPDATES,
-    COVERS,
-    DEVICE,
-    ABOUT,
+private enum class SettingsPane(val label: String) {
+    HOME("Home"),
+    UPDATES("Updates"),
+    COVERS("Covers"),
+    DEVICE("Device"),
+    ABOUT("About"),
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -71,12 +73,16 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var availableRelease by remember { mutableStateOf<GitHubRelease?>(null) }
     val scope = rememberCoroutineScope()
+    // Pressing Left inside a pane returns to the nav entry for that pane, not whichever is nearest.
+    val navFocus = remember { SettingsPane.entries.associateWith { FocusRequester() } }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(HomeBgBrush)
-            .padding(48.dp),
+            .padding(48.dp)
+            // Re-focus after account changes rebuild the pane and drop the focused button.
+            .autoFocus(accountTick),
     ) {
         Text(
             text = "Buckler Settings",
@@ -91,17 +97,20 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.weight(1f)) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(220.dp)) {
-                SettingsNav("Home", pane == SettingsPane.HOME) { pane = SettingsPane.HOME }
-                SettingsNav("Updates", pane == SettingsPane.UPDATES) { pane = SettingsPane.UPDATES }
-                SettingsNav("Covers", pane == SettingsPane.COVERS) { pane = SettingsPane.COVERS }
-                SettingsNav("Device", pane == SettingsPane.DEVICE) { pane = SettingsPane.DEVICE }
-                SettingsNav("About", pane == SettingsPane.ABOUT) { pane = SettingsPane.ABOUT }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.width(220.dp).trapVerticalFocus(),
+            ) {
+                SettingsPane.entries.forEach { entry ->
+                    SettingsNav(entry.label, pane == entry, navFocus.getValue(entry)) { pane = entry }
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 SettingsAction("Close", onClick = onClose)
             }
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .trapVerticalFocus(onLeft = { navFocus.getValue(pane) }),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 24.dp),
             ) {
@@ -303,10 +312,15 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun SettingsNav(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun SettingsNav(
+    label: String,
+    selected: Boolean,
+    focusRequester: FocusRequester,
+    onClick: () -> Unit,
+) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) ColorBrand else ColorTile,
