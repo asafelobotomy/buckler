@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -25,3 +26,16 @@ def test_bundled_covers_match_repo_index() -> None:
         ROOT / "launcher" / "app" / "src" / "main" / "assets" / "covers_index.json"
     ).read_text(encoding="utf-8")
     assert repo == asset
+
+
+def test_curated_covers_are_bundled_assets() -> None:
+    index = json.loads((ROOT / "covers" / "index.json").read_text(encoding="utf-8"))
+    prefix = "file:///android_asset/"
+    assets = ROOT / "launcher" / "app" / "src" / "main" / "assets"
+    for pkg, entry in index["apps"].items():
+        for kind in ("icon", "poster", "banner"):
+            url = entry.get(kind)
+            if url is None:
+                continue
+            assert url.startswith(prefix), f"{pkg}.{kind} must not use a remote URL: {url}"
+            assert (assets / url.removeprefix(prefix)).is_file(), f"{pkg}.{kind} missing asset"

@@ -37,10 +37,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -138,10 +134,6 @@ fun AppMenuDialog(
 ) {
     var showInfo by remember { mutableStateOf(false) }
     val firstFocus = remember { FocusRequester() }
-    // Long-press opens this dialog while Select is still held. Held-key auto-repeats
-    // (repeatCount > 0) and the eventual KeyUp belong to that old press; only a KeyUp that
-    // follows a fresh KeyDown (repeatCount == 0) inside this dialog may activate a button.
-    var freshSelectDown by remember { mutableStateOf(false) }
 
     if (showInfo) {
         AppInfoDialog(item = item, onDismiss = { showInfo = false })
@@ -155,25 +147,7 @@ fun AppMenuDialog(
                 .widthIn(min = 400.dp, max = 640.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(ColorFooter)
-                .onPreviewKeyEvent { event ->
-                    if (!event.key.isTvSelectKey()) return@onPreviewKeyEvent false
-                    when (event.type) {
-                        KeyEventType.KeyDown -> {
-                            if (event.isKeyRepeat()) {
-                                true
-                            } else {
-                                freshSelectDown = true
-                                false
-                            }
-                        }
-                        KeyEventType.KeyUp -> {
-                            val orphan = !freshSelectDown
-                            freshSelectDown = false
-                            orphan
-                        }
-                        else -> false
-                    }
-                }
+                .swallowOrphanSelect()
                 .padding(28.dp),
         ) {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {

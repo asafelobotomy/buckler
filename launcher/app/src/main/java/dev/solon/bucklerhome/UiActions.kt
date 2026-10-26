@@ -16,21 +16,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
-
-fun Key.isTvSelectKey(): Boolean =
-    this == Key.DirectionCenter ||
-        this == Key.Enter ||
-        this == Key.NumPadEnter ||
-        this == Key.ButtonA
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -58,14 +47,7 @@ fun SettingsAction(
     }
     actionModifier = actionModifier
         .focusable(interactionSource = interactionSource)
-        .onPreviewKeyEvent { event ->
-            if (event.type == KeyEventType.KeyUp && event.key.isTvSelectKey()) {
-                onClick()
-                true
-            } else {
-                false
-            }
-        }
+        .onSelectKeyUp(onClick)
 
     Box(modifier = actionModifier) {
         Text(

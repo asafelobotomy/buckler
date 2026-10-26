@@ -23,8 +23,16 @@ object CuratedCovers {
     private const val PREFS = "bucklerhome"
     private const val KEY_CACHE = "curated_covers_json"
     private const val KEY_FETCHED = "curated_covers_fetched_at"
+    private const val KEY_SOURCE = "curated_covers_source"
+    private const val KEY_ASSET_HASH = "curated_covers_asset_hash"
+    private const val SOURCE_ASSET = "asset"
+    private const val SOURCE_NETWORK = "network"
     private const val ASSET_NAME = "covers_index.json"
     private const val TAG = "CuratedCovers"
+
+    /** The bundled-pack freshness check runs once per process, not on every lookup. */
+    @Volatile
+    private var assetVersionChecked = false
 
     @Volatile
     private var parsedRaw: String? = null
@@ -69,6 +77,7 @@ object CuratedCovers {
             if (body.isNotBlank() && body.trimStart().startsWith("{")) {
                 prefs(context).edit()
                     .putString(KEY_CACHE, body)
+                    .putString(KEY_SOURCE, SOURCE_NETWORK)
                     .putLong(KEY_FETCHED, System.currentTimeMillis())
                     .apply()
                 return true
@@ -92,14 +101,28 @@ object CuratedCovers {
         val asset = readAsset(context) ?: return false
         prefs(context).edit()
             .putString(KEY_CACHE, asset)
+            .putString(KEY_SOURCE, SOURCE_ASSET)
+            .putInt(KEY_ASSET_HASH, asset.hashCode())
             .putLong(KEY_FETCHED, System.currentTimeMillis())
             .apply()
         return true
     }
 
     fun ensureCached(context: Context) {
-        val cached = prefs(context).getString(KEY_CACHE, null)
-        if (!cached.isNullOrBlank()) return
+        val prefs = prefs(context)
+        val cached = prefs.getString(KEY_CACHE, null)
+        if (!cached.isNullOrBlank()) {
+            // An app update may ship a newer bundled pack; only replace a bundled-origin cache.
+            if (!assetVersionChecked) {
+                assetVersionChecked = true
+                val bundledOrigin = prefs.getString(KEY_SOURCE, SOURCE_ASSET) == SOURCE_ASSET
+                val bundled = readAsset(context)
+                if (bundledOrigin && bundled != null && bundled.hashCode() != prefs.getInt(KEY_ASSET_HASH, 0)) {
+                    reloadFromAssets(context)
+                }
+            }
+            return
+        }
         if (reloadFromAssets(context)) return
         // Last resort: network (may 404 on private repos).
         val response = runCatching { HttpJson.get(BuildConfig.CURATED_COVERS_URL) }.getOrNull()

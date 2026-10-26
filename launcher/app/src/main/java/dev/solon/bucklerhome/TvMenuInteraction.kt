@@ -8,8 +8,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -50,11 +48,6 @@ fun rememberTvMenuInteraction(
     }
 }
 
-private fun Key.isMenuKey(): Boolean =
-    this == Key.Menu || this == Key.Info
-
-/** True for held-key auto-repeat KeyDown events (not a fresh press). */
-fun KeyEvent.isKeyRepeat(): Boolean = nativeKeyEvent.repeatCount > 0
 
 @Composable
 fun Modifier.tvMenuKeys(
@@ -79,7 +72,7 @@ fun Modifier.tvMenuKeys(
     return onPreviewKeyEvent { event ->
         val key = event.key
         when {
-            event.type == KeyEventType.KeyUp && key.isMenuKey() -> {
+            event.type == KeyEventType.KeyUp && key.isTvMenuKey() -> {
                 cancelLongJob()
                 selectDown = false
                 fireMenu()

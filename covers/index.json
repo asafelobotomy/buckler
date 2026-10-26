@@ -2,49 +2,44 @@
   "version": 1,
   "apps": {
     "org.jellyfin.androidtv": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/jellyfin.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/jellyfin.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/jellyfin.png"
+      "icon": "file:///android_asset/covers/jellyfin.png",
+      "poster": "file:///android_asset/covers/jellyfin.png",
+      "banner": "file:///android_asset/covers/jellyfin.png"
     },
     "com.netflix.ninja": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netflix.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netflix.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netflix.png"
+      "icon": "file:///android_asset/covers/netflix.png",
+      "poster": "file:///android_asset/covers/netflix.png",
+      "banner": "file:///android_asset/covers/netflix.png"
     },
     "com.disney.disneyplus": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/disney-plus.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/disney-plus.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/disney-plus.png"
+      "icon": "file:///android_asset/covers/disney-plus.png",
+      "poster": "file:///android_asset/covers/disney-plus.png",
+      "banner": "file:///android_asset/covers/disney-plus.png"
     },
     "com.google.android.youtube.tv": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/youtube.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/youtube.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/youtube.png"
+      "icon": "file:///android_asset/covers/youtube.png",
+      "poster": "file:///android_asset/covers/youtube.png",
+      "banner": "file:///android_asset/covers/youtube.png"
     },
     "com.spotify.tv.android": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/spotify.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/spotify.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/spotify.png"
-    },
-    "org.videolan.vlc": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/vlc.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/vlc.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/vlc.png"
+      "icon": "file:///android_asset/covers/spotify.png",
+      "poster": "file:///android_asset/covers/spotify.png",
+      "banner": "file:///android_asset/covers/spotify.png"
     },
     "tv.twitch.android.app": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/twitch.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/twitch.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/twitch.png"
+      "icon": "file:///android_asset/covers/twitch.png",
+      "poster": "file:///android_asset/covers/twitch.png",
+      "banner": "file:///android_asset/covers/twitch.png"
     },
     "com.google.android.videos": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play-movies-and-tv.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play-movies-and-tv.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play-movies-and-tv.png"
+      "icon": "file:///android_asset/covers/google-tv.png",
+      "poster": "file:///android_asset/covers/google-tv.png",
+      "banner": "file:///android_asset/covers/google-tv.png"
     },
     "com.android.vending": {
-      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play.png",
-      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play.png",
-      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play.png"
+      "icon": "file:///android_asset/covers/google-play.png",
+      "poster": "file:///android_asset/covers/google-play.png",
+      "banner": "file:///android_asset/covers/google-play.png"
     }
   }
 }

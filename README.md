@@ -101,7 +101,7 @@ buckler launcher build && buckler launcher install
 
 **OTA:** publish a GitHub Release tagged `vX.Y.Z` with a `buckler-home*.apk` asset. For a **private** repo, link a fine-grained PAT in Buckler Settings → Updates (Contents + Releases read). Public repos need no token. No release / no auth → background check stays quiet; Check now explains.
 
-**Covers:** [covers/index.json](covers/index.json) is **bundled in the APK**. Refresh uses the GitHub Contents API when a token is linked, else raw URL, else bundled pack. Link enrichers in Settings (SteamGridDB QR; IGDB needs `TWITCH_CLIENT_ID` + Device Code Grant).
+**Covers:** [covers/index.json](covers/index.json) and its artwork (`launcher/app/src/main/assets/covers/`, Apache-2.0 from dashboard-icons) are **bundled in the APK** — no third-party CDN at runtime. Refresh uses the GitHub Contents API when a token is linked, else raw URL, else bundled pack. Link enrichers in Settings (SteamGridDB QR; IGDB needs `TWITCH_CLIENT_ID` + Device Code Grant).
 
 **Long-press / Menu:** Open, Change cover, Remove (unpin), Uninstall, Info, Pin / move.
 
