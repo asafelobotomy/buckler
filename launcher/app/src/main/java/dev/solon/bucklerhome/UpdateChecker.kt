@@ -11,7 +11,12 @@ data class GitHubRelease(
     val body: String,
     val apkUrl: String?,
     val apkName: String?,
-)
+    /** API asset URL (works with PAT on private repos). */
+    val apkApiUrl: String? = null,
+) {
+    fun downloadUrl(preferApi: Boolean): String? =
+        if (preferApi) apkApiUrl ?: apkUrl else apkUrl ?: apkApiUrl
+}
 
 sealed class UpdateCheckResult {
     data class Available(val release: GitHubRelease) : UpdateCheckResult()
@@ -72,9 +77,28 @@ object UpdateChecker {
         if (!force && UpdatePrefs.isSnoozed(context)) return UpdateCheckResult.Snoozed
         UpdatePrefs.setLastCheck(context)
         val response = runCatching {
-            HttpJson.get(BuildConfig.GITHUB_RELEASES_URL)
+            HttpJson.get(
+                BuildConfig.GITHUB_RELEASES_URL,
+                headers = CoverAccounts.githubAuthHeaders(context),
+            )
         }.getOrElse {
             return UpdateCheckResult.Error(it.message ?: "Network error")
+        }
+        if (response.code == 404) {
+            // No releases, or private repo without a GitHub token.
+            val hint = if (CoverAccounts.githubToken(context).isNullOrBlank()) {
+                "No release (or private repo — add a GitHub token in Settings → Updates)"
+            } else {
+                "No GitHub releases yet — publish v${BuildConfig.VERSION_NAME} with an APK"
+            }
+            return if (force) {
+                UpdateCheckResult.Error(hint)
+            } else {
+                UpdateCheckResult.UpToDate
+            }
+        }
+        if (response.code == 401 || response.code == 403) {
+            return UpdateCheckResult.Error("GitHub auth failed — check token in Settings → Updates")
         }
         if (response.code !in 200..299) {
             return UpdateCheckResult.Error("GitHub HTTP ${response.code}")
@@ -99,24 +123,40 @@ object UpdateChecker {
     fun parseRelease(json: JSONObject): GitHubRelease? {
         val tag = json.optString("tag_name").ifBlank { return null }
         val assets = json.optJSONArray("assets") ?: JSONArray()
-        val apk = pickApkAsset(assets)
+        val apk = pickApkAsset(assets) ?: return GitHubRelease(
+            tag = tag,
+            name = json.optString("name").ifBlank { tag },
+            body = json.optString("body"),
+            apkUrl = null,
+            apkName = null,
+        )
         return GitHubRelease(
             tag = tag,
             name = json.optString("name").ifBlank { tag },
             body = json.optString("body"),
-            apkUrl = apk?.first,
-            apkName = apk?.second,
+            apkUrl = apk.browserUrl,
+            apkName = apk.name,
+            apkApiUrl = apk.apiUrl,
         )
     }
 
-    private fun pickApkAsset(assets: JSONArray): Pair<String, String>? {
-        val candidates = mutableListOf<Pair<String, String>>()
+    private data class ApkAsset(val name: String, val browserUrl: String?, val apiUrl: String?)
+
+    private fun pickApkAsset(assets: JSONArray): ApkAsset? {
+        val candidates = mutableListOf<ApkAsset>()
         for (i in 0 until assets.length()) {
             val a = assets.optJSONObject(i) ?: continue
             val name = a.optString("name")
-            val url = a.optString("browser_download_url")
-            if (!name.endsWith(".apk", ignoreCase = true) || url.isBlank()) continue
-            candidates += name to url
+            if (!name.endsWith(".apk", ignoreCase = true)) continue
+            val browser = a.optString("browser_download_url").takeIf { it.isNotBlank() }
+            val id = a.optLong("id", 0L)
+            val api = if (id > 0L) {
+                "https://api.github.com/repos/asafelobotomy/buckler/releases/assets/$id"
+            } else {
+                null
+            }
+            if (browser == null && api == null) continue
+            candidates += ApkAsset(name, browser, api)
         }
         fun score(name: String): Int = when {
             name.contains("buckler-home", ignoreCase = true) -> 0
@@ -124,7 +164,7 @@ object UpdateChecker {
             name.contains("app-release", ignoreCase = true) -> 2
             else -> 3
         }
-        return candidates.minByOrNull { score(it.first) }?.let { it.second to it.first }
+        return candidates.minByOrNull { score(it.name) }
     }
 
     fun normalizeVersion(raw: String): String =

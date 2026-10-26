@@ -65,6 +65,7 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
     var pane by remember { mutableStateOf(SettingsPane.HOME) }
     var connectIgdb by remember { mutableStateOf(false) }
     var connectSgdb by remember { mutableStateOf(false) }
+    var connectGithub by remember { mutableStateOf(false) }
     var accountTick by remember { mutableStateOf(0) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var availableRelease by remember { mutableStateOf<GitHubRelease?>(null) }
@@ -96,7 +97,7 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                 SettingsNav("Device", pane == SettingsPane.DEVICE) { pane = SettingsPane.DEVICE }
                 SettingsNav("About", pane == SettingsPane.ABOUT) { pane = SettingsPane.ABOUT }
                 Spacer(modifier = Modifier.height(12.dp))
-                SettingsAction("Close", onClose)
+                SettingsAction("Close", onClick = onClose)
             }
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -113,8 +114,17 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                             }
                         }
                         SettingsPane.UPDATES -> {
+                            key(accountTick) {
                             SectionTitle("Updates")
                             SettingsRow("Current: ${BuildConfig.VERSION_NAME}")
+                            SettingsRow(
+                                "GitHub token: " +
+                                    if (CoverAccounts.githubToken(context).isNullOrBlank()) {
+                                        "not set (needed for private-repo OTA)"
+                                    } else {
+                                        "linked"
+                                    },
+                            )
                             updateResult?.let { result ->
                                 val msg = when (result) {
                                     is UpdateCheckResult.Available -> "Update ${result.release.tag} available"
@@ -141,6 +151,18 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                                     Toast.makeText(context, "Snooze cleared", Toast.LENGTH_SHORT).show()
                                 }
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                if (CoverAccounts.githubToken(context).isNullOrBlank()) {
+                                    SettingsAction("Link GitHub token") { connectGithub = true }
+                                } else {
+                                    SettingsAction("Disconnect GitHub") {
+                                        CoverAccounts.setGithubToken(context, null)
+                                        accountTick++
+                                    }
+                                }
+                            }
+                            }
                         }
                         SettingsPane.COVERS -> {
                             key(accountTick) {
@@ -165,24 +187,34 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                                             CoverAccounts.disconnect(context, CoverProvider.IGDB)
                                             accountTick++
                                         }
-                                    } else {
-                                        SettingsAction("Connect IGDB") { connectIgdb = true }
+                                } else {
+                                    SettingsAction(
+                                        if (TwitchDeviceAuth.clientIdConfigured()) {
+                                            "Connect IGDB"
+                                        } else {
+                                            "Connect IGDB (set TWITCH_CLIENT_ID)"
+                                        },
+                                    ) { connectIgdb = true }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                SettingsAction("Refresh curated pack") {
+                                    scope.launch {
+                                        val ok = withContext(Dispatchers.IO) {
+                                            CuratedCovers.refresh(context)
+                                        }
+                                        Toast.makeText(
+                                            context,
+                                            if (ok) {
+                                                "Curated covers ready (network or bundled)"
+                                            } else {
+                                                "Refresh failed — no network or bundled pack"
+                                            },
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    SettingsAction("Refresh curated pack") {
-                                        scope.launch {
-                                            val ok = withContext(Dispatchers.IO) {
-                                                CuratedCovers.refresh(context)
-                                            }
-                                            Toast.makeText(
-                                                context,
-                                                if (ok) "Curated covers refreshed" else "Refresh failed",
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                        }
-                                    }
                                     SettingsAction("Clear custom covers") {
                                         CoverStore.clearAll(context)
                                         Toast.makeText(context, "Custom covers cleared", Toast.LENGTH_SHORT).show()
@@ -243,6 +275,16 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                 connectSgdb = false
                 accountTick++
                 Toast.makeText(context, "SteamGridDB linked", Toast.LENGTH_SHORT).show()
+            },
+        )
+    }
+    if (connectGithub) {
+        ConnectGithubDialog(
+            onDismiss = { connectGithub = false },
+            onLinked = {
+                connectGithub = false
+                accountTick++
+                Toast.makeText(context, "GitHub token linked", Toast.LENGTH_SHORT).show()
             },
         )
     }

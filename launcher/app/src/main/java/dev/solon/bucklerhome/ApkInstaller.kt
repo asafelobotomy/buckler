@@ -13,7 +13,11 @@ object ApkInstaller {
     fun downloadApk(context: Context, url: String, fileName: String): File? {
         val dir = File(context.cacheDir, "updates").also { it.mkdirs() }
         val dest = File(dir, fileName.ifBlank { "update.apk" })
-        val (code, bytes) = HttpJson.download(url)
+        val headers = CoverAccounts.githubAuthHeaders(context).toMutableMap()
+        if (url.contains("api.github.com/") && url.contains("/releases/assets/")) {
+            headers["Accept"] = "application/octet-stream"
+        }
+        val (code, bytes) = HttpJson.download(url, headers = headers)
         if (code !in 200..299 || bytes.isEmpty()) return null
         dest.writeBytes(bytes)
         return dest

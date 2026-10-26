@@ -2,7 +2,10 @@ package dev.solon.bucklerhome
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,20 +14,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
@@ -33,11 +37,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
+import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 
 data class CoverSize(val width: Dp, val height: Dp, val icon: Dp)
 
@@ -61,37 +66,30 @@ fun CoverTile(
     val bmp = remember(item.id, item.icon) {
         item.icon?.toBitmap(128, 128)?.asImageBitmap()
     }
-    var tileModifier = modifier
+    val menu = rememberTvMenuInteraction(onOpen = onLaunch, onMenu = onLongPress)
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
+
+    var boxModifier = modifier
         .width(size.width)
         .height(size.height)
-        .pointerInput(item.id) {
-            detectTapGestures(onLongPress = { onLongPress() })
-        }
-        .onPreviewKeyEvent { event ->
-            if (event.type == KeyEventType.KeyUp &&
-                (event.key == Key.Menu || event.key == Key.Info)
-            ) {
-                onLongPress()
-                true
-            } else {
-                false
-            }
-        }
+        .scale(if (focused) 1.08f else 1f)
+        .clip(RoundedCornerShape(8.dp))
+        .background(if (focused) ColorBrand else ColorTile)
     if (focusRequester != null) {
-        tileModifier = tileModifier.focusRequester(focusRequester)
+        boxModifier = boxModifier.focusRequester(focusRequester)
     }
+    boxModifier = boxModifier
+        .focusable(interactionSource = interactionSource)
+        .tvMenuKeys(menu)
+        .pointerInput(item.id) {
+            detectTapGestures(
+                onLongPress = { menu.openMenu() },
+                onTap = { menu.open() },
+            )
+        }
 
-    Surface(
-        onClick = onLaunch,
-        modifier = tileModifier,
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.08f),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = ColorTile,
-            focusedContainerColor = ColorBrand,
-            contentColor = ColorText,
-            focusedContentColor = ColorOnBrand,
-        ),
-    ) {
+    Box(modifier = boxModifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -105,12 +103,18 @@ fun CoverTile(
                 contentAlignment = Alignment.Center,
             ) {
                 val model = item.imageUrl ?: item.imageUri
-                if (model != null) {
+                var remoteFailed by remember(item.id, model) { mutableStateOf(false) }
+                if (model != null && !remoteFailed) {
                     AsyncImage(
                         model = model,
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
+                        onState = { state ->
+                            if (state is AsyncImagePainter.State.Error) {
+                                remoteFailed = true
+                            }
+                        },
                     )
                 } else if (bmp != null) {
                     Image(
@@ -123,6 +127,7 @@ fun CoverTile(
             Text(
                 text = item.title,
                 fontSize = 12.sp,
+                color = if (focused) ColorOnBrand else ColorText,
                 maxLines = if (layout == CoverLayout.BANNER) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,

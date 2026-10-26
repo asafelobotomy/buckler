@@ -41,6 +41,7 @@ from buckler.tune import (
     clear_private_dns,
     compile_launcher_speed,
     doctor,
+    get_private_dns,
     set_animation_scales,
     set_our_screensaver,
     set_private_dns,
@@ -520,6 +521,32 @@ def tune_cmd(ctx: click.Context, anim: float, compile: bool) -> None:
 @cli.group("dns")
 def dns_group() -> None:
     """Private DNS (DoT) helpers — pick your own hostname."""
+
+
+def _dns_status_echo(ctx: click.Context) -> None:
+    mode, spec = get_private_dns(_adb(ctx.obj["host"]))
+    click.echo(f"private_dns_mode={mode}")
+    click.echo(f"private_dns_specifier={spec}")
+
+
+@dns_group.command("status")
+@click.pass_context
+def dns_status(ctx: click.Context) -> None:
+    """Show Private DNS mode and hostname specifier."""
+    try:
+        _dns_status_echo(ctx)
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+@dns_group.command("get")
+@click.pass_context
+def dns_get(ctx: click.Context) -> None:
+    """Alias for dns status."""
+    try:
+        _dns_status_echo(ctx)
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 @dns_group.command("set")

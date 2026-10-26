@@ -5,7 +5,11 @@ import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,18 +22,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -43,12 +50,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -62,36 +68,28 @@ fun AppTile(
     val bmp = remember(app.packageName) {
         app.icon?.toBitmap(128, 128)?.asImageBitmap()
     }
+    val menu = rememberTvMenuInteraction(onOpen = onLaunch, onMenu = onLongPress)
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
     var tileModifier = modifier
         .width(132.dp)
-        .pointerInput(app.packageName) {
-            detectTapGestures(onLongPress = { onLongPress() })
-        }
-        .onPreviewKeyEvent { event ->
-            if (event.type == KeyEventType.KeyUp &&
-                (event.key == Key.Menu || event.key == Key.Info)
-            ) {
-                onLongPress()
-                true
-            } else {
-                false
-            }
-        }
+        .scale(if (focused) 1.1f else 1f)
+        .clip(RoundedCornerShape(8.dp))
+        .background(if (focused) ColorBrand else ColorTile)
     if (focusRequester != null) {
         tileModifier = tileModifier.focusRequester(focusRequester)
     }
+    tileModifier = tileModifier
+        .focusable(interactionSource = interactionSource)
+        .tvMenuKeys(menu)
+        .pointerInput(app.packageName) {
+            detectTapGestures(
+                onLongPress = { menu.openMenu() },
+                onTap = { menu.open() },
+            )
+        }
 
-    Surface(
-        onClick = onLaunch,
-        modifier = tileModifier,
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = ColorTile,
-            focusedContainerColor = ColorBrand,
-            contentColor = ColorText,
-            focusedContentColor = ColorOnBrand,
-        ),
-    ) {
+    Box(modifier = tileModifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -111,6 +109,7 @@ fun AppTile(
             Text(
                 text = app.label,
                 fontSize = 13.sp,
+                color = if (focused) ColorOnBrand else ColorText,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -138,6 +137,11 @@ fun AppMenuDialog(
     onDismiss: () -> Unit,
 ) {
     var showInfo by remember { mutableStateOf(false) }
+    val firstFocus = remember { FocusRequester() }
+    // Long-press opens this dialog while Select is still held. Held-key auto-repeats
+    // (repeatCount > 0) and the eventual KeyUp belong to that old press; only a KeyUp that
+    // follows a fresh KeyDown (repeatCount == 0) inside this dialog may activate a button.
+    var freshSelectDown by remember { mutableStateOf(false) }
 
     if (showInfo) {
         AppInfoDialog(item = item, onDismiss = { showInfo = false })
@@ -145,21 +149,34 @@ fun AppMenuDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            onClick = {},
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = ColorFooter,
-                focusedContainerColor = ColorFooter,
-                contentColor = ColorText,
-                focusedContentColor = ColorText,
-            ),
-            modifier = Modifier.widthIn(min = 400.dp, max = 640.dp),
+        // Non-clickable panel so child actions keep D-pad focus + highlight.
+        Box(
+            modifier = Modifier
+                .widthIn(min = 400.dp, max = 640.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(ColorFooter)
+                .onPreviewKeyEvent { event ->
+                    if (!event.key.isTvSelectKey()) return@onPreviewKeyEvent false
+                    when (event.type) {
+                        KeyEventType.KeyDown -> {
+                            if (event.isKeyRepeat()) {
+                                true
+                            } else {
+                                freshSelectDown = true
+                                false
+                            }
+                        }
+                        KeyEventType.KeyUp -> {
+                            val orphan = !freshSelectDown
+                            freshSelectDown = false
+                            orphan
+                        }
+                        else -> false
+                    }
+                }
+                .padding(28.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(28.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     text = item.title,
                     fontSize = 22.sp,
@@ -174,25 +191,29 @@ fun AppMenuDialog(
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SettingsAction("Open", onOpen)
-                        SettingsAction("Change cover", onChangeCover)
+                        SettingsAction("Open", focusRequester = firstFocus, onClick = onOpen)
+                        SettingsAction("Change cover", onClick = onChangeCover)
                         SettingsAction("Info") { showInfo = true }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         if (pinned) {
-                            SettingsAction("Remove", onRemove)
-                            if (canMoveLeft) SettingsAction("Move left", onMoveLeft)
-                            if (canMoveRight) SettingsAction("Move right", onMoveRight)
+                            SettingsAction("Remove", onClick = onRemove)
+                            if (canMoveLeft) SettingsAction("Move left", onClick = onMoveLeft)
+                            if (canMoveRight) SettingsAction("Move right", onClick = onMoveRight)
                         } else if (item.packageName != null) {
-                            SettingsAction("Pin to Apps", onPin)
+                            SettingsAction("Pin to Apps", onClick = onPin)
                         }
                         if (canUninstall) {
-                            SettingsAction("Uninstall", onUninstall)
+                            SettingsAction("Uninstall", onClick = onUninstall)
                         }
-                        SettingsAction("Close", onDismiss)
+                        SettingsAction("Close", onClick = onDismiss)
                     }
                 }
             }
+        }
+        LaunchedEffect(Unit) {
+            delay(50)
+            runCatching { firstFocus.requestFocus() }
         }
     }
 }
@@ -257,19 +278,22 @@ private fun AppInfoDialog(item: ShelfItem, onDismiss: () -> Unit) {
         }
     }
 
+    val infoFocus = remember { FocusRequester() }
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            onClick = {},
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = ColorFooter,
-                focusedContainerColor = ColorFooter,
-                contentColor = ColorText,
-                focusedContentColor = ColorText,
-            ),
-            modifier = Modifier.widthIn(min = 400.dp, max = 560.dp),
+        Box(
+            modifier = Modifier
+                .widthIn(min = 400.dp, max = 560.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(ColorFooter)
+                .padding(28.dp),
         ) {
-            Column(modifier = Modifier.padding(28.dp)) {
-                Text(text = item.title, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            Column {
+                Text(
+                    text = item.title,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ColorText,
+                )
                 Text(
                     text = infoText,
                     fontSize = 14.sp,
@@ -278,7 +302,7 @@ private fun AppInfoDialog(item: ShelfItem, onDismiss: () -> Unit) {
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (pkg != null) {
-                        SettingsAction("App info") {
+                        SettingsAction("App info", focusRequester = infoFocus) {
                             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                 data = Uri.fromParts("package", pkg, null)
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -286,9 +310,16 @@ private fun AppInfoDialog(item: ShelfItem, onDismiss: () -> Unit) {
                             safeLaunch(context, intent, "App info")
                         }
                     }
-                    SettingsAction("Close", onDismiss)
+                    SettingsAction(
+                        "Close",
+                        focusRequester = if (pkg == null) infoFocus else null,
+                        onClick = onDismiss,
+                    )
                 }
             }
+        }
+        LaunchedEffect(Unit) {
+            runCatching { infoFocus.requestFocus() }
         }
     }
 }

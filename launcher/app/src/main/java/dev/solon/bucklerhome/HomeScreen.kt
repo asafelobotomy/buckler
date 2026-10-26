@@ -33,6 +33,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -299,7 +302,12 @@ private fun ShelfSection(
             text = shelf.config.title,
             color = ColorSection,
             fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 10.dp),
+            modifier = Modifier
+                .padding(bottom = 10.dp)
+                .semantics {
+                    contentDescription = shelf.config.title
+                    heading()
+                },
         )
         if (shelf.items.isEmpty()) {
             Text(

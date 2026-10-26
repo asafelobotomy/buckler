@@ -10,6 +10,14 @@ from typing import Any
 
 from buckler.paths import journals_dir
 
+# Files that live under journals/ but are not disable/restore journals.
+_NON_JOURNAL_NAMES = frozenset(
+    {
+        "home-layout.json",
+        "covers-index.json",
+    }
+)
+
 
 @dataclass
 class JournalEntry:
@@ -75,6 +83,11 @@ class Journal:
     @classmethod
     def load(cls, path: Path) -> Journal:
         data = json.loads(path.read_text(encoding="utf-8"))
+        if "host" not in data:
+            raise ValueError(
+                f"{path.name} is not a disable journal (missing host); "
+                "layout/cover files must not be loaded as journals"
+            )
         entries = [JournalEntry(**e) for e in data.get("entries", [])]
         j = cls(
             host=data["host"],
@@ -88,13 +101,21 @@ class Journal:
         return j
 
 
+def is_disable_journal(path: Path) -> bool:
+    """True if path looks like a disable/restore journal (not layout/snapshot)."""
+    name = path.name
+    if not name.endswith(".json"):
+        return False
+    if name.startswith("snapshot-"):
+        return False
+    if name in _NON_JOURNAL_NAMES:
+        return False
+    return True
+
+
 def iter_journals() -> list[Path]:
-    """Disable/restore journals only (excludes desired-state snapshot-*.json)."""
-    return sorted(
-        p
-        for p in journals_dir().glob("*.json")
-        if not p.name.startswith("snapshot-")
-    )
+    """Disable/restore journals only (excludes snapshots and home-layout)."""
+    return sorted(p for p in journals_dir().glob("*.json") if is_disable_journal(p))
 
 
 def latest_journal(profile: str | None = None) -> Path | None:

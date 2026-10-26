@@ -12,6 +12,25 @@ object CoverAccounts {
     private const val KEY_IGDB_ACCESS = "cover_account_igdb_access"
     private const val KEY_IGDB_REFRESH = "cover_account_igdb_refresh"
     private const val KEY_IGDB_EXPIRES = "cover_account_igdb_expires_at"
+    private const val KEY_GITHUB = "cover_account_github_token"
+
+    /** Optional PAT for private-repo OTA + curated covers refresh. */
+    fun githubToken(context: Context): String? =
+        SecurePrefs.get(context).getString(KEY_GITHUB, null)?.takeIf { it.isNotBlank() }
+
+    fun setGithubToken(context: Context, token: String?) {
+        SecurePrefs.get(context).edit().apply {
+            if (token.isNullOrBlank()) remove(KEY_GITHUB) else putString(KEY_GITHUB, token.trim())
+        }.apply()
+    }
+
+    fun githubAuthHeaders(context: Context): Map<String, String> {
+        val token = githubToken(context) ?: return emptyMap()
+        return mapOf(
+            "Authorization" to "Bearer $token",
+            "Accept" to "application/vnd.github+json",
+        )
+    }
 
     fun isLinked(context: Context, provider: CoverProvider): Boolean = when (provider) {
         CoverProvider.STEAMGRIDDB -> !sgdbToken(context).isNullOrBlank()

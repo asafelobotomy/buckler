@@ -48,9 +48,21 @@ def test_iter_journals_skips_snapshots(journals_dir: Path) -> None:
         '{"schema":1,"host":"h","policy":{},"profiles":[]}\n',
         encoding="utf-8",
     )
+    (journals_dir / "home-layout.json").write_text(
+        '{"schema":1,"layout":"banner","shelves":[]}\n',
+        encoding="utf-8",
+    )
     names = [p.name for p in iter_journals()]
     assert "20260101-privacy-core.json" in names
     assert "snapshot-20260101.json" not in names
+    assert "home-layout.json" not in names
+
+
+def test_journal_load_rejects_layout_file(journals_dir: Path) -> None:
+    path = journals_dir / "home-layout.json"
+    path.write_text('{"schema":1,"layout":"banner","shelves":[]}\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="not a disable journal"):
+        Journal.load(path)
 
 
 def test_restore_all_journals(journals_dir: Path) -> None:

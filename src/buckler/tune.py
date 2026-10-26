@@ -54,6 +54,16 @@ def clear_private_dns(adb: Adb) -> None:
     adb.shell("settings", "put", "global", "private_dns_mode", "off")
 
 
+def get_private_dns(adb: Adb) -> tuple[str, str]:
+    """Return (private_dns_mode, private_dns_specifier)."""
+    adb.connect()
+    mode = adb.shell("settings", "get", "global", "private_dns_mode", check=False).strip()
+    spec = adb.shell(
+        "settings", "get", "global", "private_dns_specifier", check=False
+    ).strip()
+    return mode or "null", spec or "null"
+
+
 def set_our_screensaver(adb: Adb) -> None:
     """Point secure screensaver settings at buckler-home ClockDream."""
     adb.connect()

@@ -1,6 +1,6 @@
 [project]
 name = "buckler"
-version = "0.1.0"
+version = "0.5.0"
 description = "Buckler — ADB CLI for NVIDIA SHIELD TV Pro cleanup, privacy profiles, and custom HOME launcher."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -28,6 +28,10 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 buckler = ["py.typed"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100

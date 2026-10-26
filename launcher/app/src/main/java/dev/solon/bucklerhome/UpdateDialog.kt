@@ -66,7 +66,8 @@ fun UpdateAvailableDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     SettingsAction("Update now") {
                         if (busy) return@SettingsAction
-                        val url = release.apkUrl
+                        val preferApi = !CoverAccounts.githubToken(context).isNullOrBlank()
+                        val url = release.downloadUrl(preferApi = preferApi)
                         if (url.isNullOrBlank()) {
                             Toast.makeText(
                                 context,

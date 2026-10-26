@@ -99,13 +99,17 @@ buckler home push                  # adb push → buckler-home import on resume
 buckler launcher build && buckler launcher install
 ```
 
-**OTA:** attach a `buckler-home*.apk` (or `bucklerhome*.apk` / `app-release.apk`) to the GitHub Release. The TV checks `releases/latest` (~12h), then Update now / Snooze 7 days / Dismiss.
+**OTA:** publish a GitHub Release tagged `vX.Y.Z` with a `buckler-home*.apk` asset. For a **private** repo, link a fine-grained PAT in Buckler Settings → Updates (Contents + Releases read). Public repos need no token. No release / no auth → background check stays quiet; Check now explains.
 
-**Covers:** [covers/index.json](covers/index.json) ships in-repo and as an APK asset; Settings → Covers can refresh from GitHub raw. Link enrichers in Settings (SteamGridDB QR → paste key once; IGDB needs a public Twitch Client ID in `build.gradle.kts` `TWITCH_CLIENT_ID` with Device Code Grant enabled).
+**Covers:** [covers/index.json](covers/index.json) is **bundled in the APK**. Refresh uses the GitHub Contents API when a token is linked, else raw URL, else bundled pack. Link enrichers in Settings (SteamGridDB QR; IGDB needs `TWITCH_CLIENT_ID` + Device Code Grant).
 
 **Long-press / Menu:** Open, Change cover, Remove (unpin), Uninstall, Info, Pin / move.
 
-Package id: `dev.solon.bucklerhome`. Uses `INTERNET` for artwork, curated pack, GitHub updates, and optional linked APIs — no ads. Release APKs are **debug-keystore signed** for personal sideload.
+**DNS:** `buckler dns status` (alias `get`) / `set --hostname …` / `off`.
+
+Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.5.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, and optional linked APIs — no ads. Release APKs are **debug-keystore signed** for personal sideload.
+
+**Dev tip:** run tests with the project venv (`uv run pytest` or `.venv/bin/python -m pytest` — `pythonpath = ["src"]` is set in `pyproject.toml`).
 
 ## Out of scope (for now)
 

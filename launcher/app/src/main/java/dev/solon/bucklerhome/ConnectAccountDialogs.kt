@@ -102,6 +102,85 @@ fun ConnectIgdbDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
     }
 }
 
+private const val GITHUB_TOKEN_URL = "https://github.com/settings/tokens?type=beta"
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun ConnectGithubDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
+    val context = LocalContext.current
+    var token by remember { mutableStateOf("") }
+    val qr = remember { QrBitmap.encode(GITHUB_TOKEN_URL) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            onClick = {},
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = ColorFooter,
+                focusedContainerColor = ColorFooter,
+                contentColor = ColorText,
+                focusedContentColor = ColorText,
+            ),
+            modifier = Modifier.widthIn(min = 480.dp, max = 720.dp),
+        ) {
+            Column(modifier = Modifier.padding(28.dp)) {
+                Text("Link GitHub (private repo)", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = "Scan QR → create a fine-grained PAT with Contents + Releases read → paste below.",
+                    fontSize = 14.sp,
+                    color = ColorMuted,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 16.dp),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    qr?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "QR to GitHub token settings",
+                            modifier = Modifier.size(180.dp),
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = GITHUB_TOKEN_URL, fontSize = 12.sp, color = ColorMuted)
+                        Text(
+                            text = "Personal access token",
+                            fontSize = 13.sp,
+                            color = ColorSection,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 6.dp),
+                        )
+                        BasicTextField(
+                            value = token,
+                            onValueChange = { token = it },
+                            singleLine = true,
+                            textStyle = TextStyle(color = ColorText, fontSize = 16.sp),
+                            cursorBrush = SolidColor(ColorBrand),
+                            modifier = Modifier
+                                .widthIn(min = 240.dp)
+                                .padding(vertical = 8.dp),
+                        )
+                        error?.let {
+                            Text(text = it, color = Color(0xFFFF8A80), fontSize = 13.sp)
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(top = 16.dp),
+                        ) {
+                            SettingsAction("Link") {
+                                if (token.isBlank()) {
+                                    error = "Paste a GitHub token"
+                                    return@SettingsAction
+                                }
+                                CoverAccounts.setGithubToken(context, token)
+                                onLinked()
+                            }
+                            SettingsAction("Cancel", onClick = onDismiss)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ConnectSgdbDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
@@ -170,7 +249,7 @@ fun ConnectSgdbDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
                                 CoverAccounts.setSgdbToken(context, token)
                                 onLinked()
                             }
-                            SettingsAction("Cancel", onDismiss)
+                            SettingsAction("Cancel", onClick = onDismiss)
                         }
                     }
                 }
@@ -231,7 +310,7 @@ private fun AccountConnectShell(
                             modifier = Modifier.padding(top = 12.dp),
                         )
                     }
-                    SettingsAction("Cancel", onDismiss)
+                    SettingsAction("Cancel", onClick = onDismiss)
                 }
             }
         }

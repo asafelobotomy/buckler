@@ -2,6 +2,6 @@
 <resources>
     <style name="Theme.BucklerHome" parent="@android:style/Theme.DeviceDefault.NoActionBar">
         <item name="android:windowBackground">#FF0B0E14</item>
-        <item name="android:colorPrimary">#FF7EB6FF</item>
+        <item name="android:colorPrimary">#FFD4A84B</item>
     </style>
 </resources>

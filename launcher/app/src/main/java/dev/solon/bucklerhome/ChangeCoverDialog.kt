@@ -127,7 +127,7 @@ fun ChangeCoverDialog(
                         CoverStore.set(context, packageName, null)
                         onPicked()
                     }
-                    SettingsAction("Close", onDismiss)
+                    SettingsAction("Close", onClick = onDismiss)
                 }
             }
         }
