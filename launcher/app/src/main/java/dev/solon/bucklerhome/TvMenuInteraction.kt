@@ -1,6 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,21 +50,11 @@ fun rememberTvMenuInteraction(
     }
 }
 
-private fun Key.isSelectKey(): Boolean =
-    this == Key.DirectionCenter ||
-        this == Key.Enter ||
-        this == Key.NumPadEnter ||
-        this == Key.ButtonA
-
 private fun Key.isMenuKey(): Boolean =
     this == Key.Menu || this == Key.Info
 
-private fun KeyEvent.asAndroid(): AndroidKeyEvent? =
-    nativeKeyEvent as? AndroidKeyEvent
-
 /** True for held-key auto-repeat KeyDown events (not a fresh press). */
-fun KeyEvent.isKeyRepeat(): Boolean =
-    (nativeKeyEvent as? AndroidKeyEvent)?.let { it.repeatCount > 0 } ?: false
+fun KeyEvent.isKeyRepeat(): Boolean = nativeKeyEvent.repeatCount > 0
 
 @Composable
 fun Modifier.tvMenuKeys(
@@ -89,7 +78,6 @@ fun Modifier.tvMenuKeys(
 
     return onPreviewKeyEvent { event ->
         val key = event.key
-        val android = event.asAndroid()
         when {
             event.type == KeyEventType.KeyUp && key.isMenuKey() -> {
                 cancelLongJob()
@@ -97,9 +85,9 @@ fun Modifier.tvMenuKeys(
                 fireMenu()
                 true
             }
-            event.type == KeyEventType.KeyDown && key.isSelectKey() -> {
+            event.type == KeyEventType.KeyDown && key.isTvSelectKey() -> {
                 // adb --longpress and some remotes deliver a single long-press KeyDown.
-                if (android?.isLongPress == true) {
+                if (event.nativeKeyEvent.isLongPress) {
                     cancelLongJob()
                     selectDown = true
                     fireMenu()
@@ -121,7 +109,7 @@ fun Modifier.tvMenuKeys(
                 // Consume so TV Surface does not treat hold as a normal click.
                 true
             }
-            event.type == KeyEventType.KeyUp && key.isSelectKey() -> {
+            event.type == KeyEventType.KeyUp && key.isTvSelectKey() -> {
                 selectDown = false
                 cancelLongJob()
                 if (longFired) {

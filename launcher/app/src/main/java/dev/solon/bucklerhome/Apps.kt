@@ -84,18 +84,6 @@ fun loadLaunchableApps(pm: PackageManager): List<LaunchableApp> {
         .sortedBy { it.label.lowercase() }
 }
 
-fun dockFromPins(apps: List<LaunchableApp>, pins: List<String>): List<LaunchableApp> {
-    val byPkg = apps.associateBy { it.packageName }
-    val dock = pins.mapNotNull { byPkg[it] }
-    if (dock.isNotEmpty()) return dock
-    return apps.filterNot { it.isSystem }.take(6)
-}
-
-fun libraryApps(apps: List<LaunchableApp>, dock: List<LaunchableApp>): List<LaunchableApp> {
-    val dockPkgs = dock.map { it.packageName }.toSet()
-    return apps.filterNot { it.isSystem || it.packageName in dockPkgs }
-}
-
 fun safeLaunch(context: Context, intent: Intent, label: String) {
     try {
         context.startActivity(intent)

@@ -3,7 +3,6 @@ package dev.solon.bucklerhome
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
-import android.net.Uri
 
 data class CoverCandidate(
     val id: String,
@@ -16,27 +15,35 @@ data class CoverCandidate(
 )
 
 object CoverResolver {
-    fun resolveImageUrl(
-        context: Context,
-        packageName: String?,
-        layout: CoverLayout,
-    ): String? {
-        if (packageName.isNullOrBlank()) return null
-        val stored = CoverStore.get(context, packageName)
-        CoverStore.parseUrl(stored)?.let { return it }
-        if (CoverStore.isLocalIcon(stored) || CoverStore.isLocalBanner(stored)) return null
-        // Default: curated when available
-        return CuratedCovers.urlFor(context, packageName, layout)
+    /** Resolve covers for many items with one read of the override + curated stores. */
+    fun applyAll(context: Context, items: List<ShelfItem>, layout: CoverLayout): List<ShelfItem> {
+        val overrides = CoverStore.all(context)
+        val curated = CuratedCovers.entries(context)
+        return items.map { applyOne(context, it, layout, overrides, curated) }
     }
 
-    fun resolveBannerDrawable(context: Context, packageName: String?): Drawable? {
-        if (packageName.isNullOrBlank()) return null
-        val stored = CoverStore.get(context, packageName)
-        if (stored != null && !CoverStore.isLocalBanner(stored) && CoverStore.parseUrl(stored) != null) {
-            return null
+    private fun applyOne(
+        context: Context,
+        item: ShelfItem,
+        layout: CoverLayout,
+        overrides: Map<String, String>,
+        curated: Map<String, CuratedCoverEntry>,
+    ): ShelfItem {
+        val pkg = item.packageName ?: return item
+        val stored = overrides[pkg]?.takeIf { it.isNotBlank() }
+        return when {
+            CoverStore.isLocalIcon(stored) -> item.copy(imageUrl = null, imageUri = null)
+            CoverStore.isLocalBanner(stored) -> {
+                val banner = leanbackBanner(context, pkg)
+                item.copy(imageUrl = null, imageUri = null, banner = banner)
+            }
+            else -> {
+                val url = CoverStore.parseUrl(stored)
+                    ?: curated[pkg]?.urlFor(layout)
+                val logoArt = stored == null || stored.startsWith("curated:")
+                if (url == null) item else item.copy(imageUrl = url, imageUri = null, coverFit = logoArt)
+            }
         }
-        if (stored != null && CoverStore.isLocalIcon(stored)) return null
-        return leanbackBanner(context, packageName)
     }
 
     fun leanbackBanner(context: Context, packageName: String): Drawable? {
@@ -86,22 +93,5 @@ object CoverResolver {
             list += CoverCandidate("curated-banner", "Curated banner", "Curated", "curated:$it", it)
         }
         return list
-    }
-
-    fun applyToItem(context: Context, item: ShelfItem, layout: CoverLayout): ShelfItem {
-        val pkg = item.packageName ?: return item
-        val url = resolveImageUrl(context, pkg, layout)
-        val stored = CoverStore.get(context, pkg)
-        val useBanner = CoverStore.isLocalBanner(stored) ||
-            (stored == null && url == null && leanbackBanner(context, pkg) != null && layout != CoverLayout.ICON)
-        if (url != null) {
-            return item.copy(imageUrl = url, imageUri = null)
-        }
-        if (useBanner || CoverStore.isLocalBanner(stored)) {
-            // Represent banner as android.resource URI is hard; CoverTile will fall back to icon.
-            // Prefer storing curated URLs. For local banner, leave imageUrl null and let UI use icon/banner.
-            return item
-        }
-        return item
     }
 }

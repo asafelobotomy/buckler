@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -103,3 +104,25 @@ def test_check_drift_uses_setup_profiles(journals_dir: Path) -> None:
     assert target in drifted
     assert not ai
     assert journals_dir.is_dir()
+
+
+def test_journal_load_ignores_unknown_entry_fields(tmp_path) -> None:
+    path = tmp_path / "j.json"
+    path.write_text(
+        json.dumps(
+            {
+                "host": "h",
+                "entries": [
+                    {
+                        "package": "a.b",
+                        "action": "disable-user",
+                        "reason": "r",
+                        "before_disabled": False,
+                        "future_field": 1,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert Journal.load(path).entries[0].package == "a.b"

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +27,8 @@ import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -34,7 +37,9 @@ fun EditHomeScreen(
 ) {
     val context = LocalContext.current
     var layout by remember { mutableStateOf(HomeLayout.load(context)) }
-    val apps = remember { loadLaunchableApps(context.packageManager) }
+    val apps by produceState(emptyList<LaunchableApp>()) {
+        value = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }
+    }
 
     fun persist(next: HomeLayout) {
         layout = next
@@ -148,7 +153,7 @@ fun EditHomeScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
             itemsIndexed(
-                apps.filterNot { it.isSystem }.take(40),
+                apps.filterNot { it.isSystem },
                 key = { _, a -> a.packageName },
             ) { _, app ->
                 val pinned = app.packageName in layout.appsPackages()

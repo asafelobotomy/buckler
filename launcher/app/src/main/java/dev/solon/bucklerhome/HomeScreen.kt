@@ -4,23 +4,17 @@ import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,15 +27,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import java.time.LocalDate
 import java.time.LocalTime
@@ -58,10 +47,9 @@ fun HomeScreen(
     onOpenEditHome: () -> Unit,
 ) {
     val context = LocalContext.current
-    var homeLayout by remember(resumeTick, layoutVersion) {
-        mutableStateOf(HomeLayout.load(context))
-    }
-    val apps = remember(resumeTick) { loadLaunchableApps(context.packageManager) }
+    // Layout + app list load off the main thread; keep showing the previous values while reloading.
+    var homeLayout by remember { mutableStateOf<HomeLayout?>(null) }
+    var apps by remember { mutableStateOf<List<LaunchableApp>?>(null) }
     var shelves by remember { mutableStateOf<List<ResolvedShelf>>(emptyList()) }
     var clock by remember { mutableStateOf(currentClock()) }
     var date by remember { mutableStateOf(currentDate()) }
@@ -69,16 +57,25 @@ fun HomeScreen(
     var changeCoverTarget by remember { mutableStateOf<ShelfItem?>(null) }
     var coverVersion by remember { mutableStateOf(0) }
     var updateRelease by remember { mutableStateOf<GitHubRelease?>(null) }
+    var initialFocusDone by remember { mutableStateOf(false) }
     val firstFocus = remember { FocusRequester() }
     val brandMark: Painter = painterResource(R.drawable.ic_buckler_mark)
 
-    LaunchedEffect(homeLayout, apps, resumeTick, layoutVersion, coverVersion) {
+    LaunchedEffect(resumeTick, layoutVersion) {
+        homeLayout = withContext(Dispatchers.IO) { HomeLayout.load(context) }
+    }
+    LaunchedEffect(resumeTick) {
+        apps = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }
+    }
+
+    val layout = homeLayout
+    val appList = apps
+    LaunchedEffect(layout, appList, coverVersion) {
+        if (layout == null || appList == null) return@LaunchedEffect
         shelves = withContext(Dispatchers.IO) {
             CuratedCovers.ensureCached(context)
-            Shelves.resolve(context, homeLayout, apps).map { shelf ->
-                shelf.copy(
-                    items = shelf.items.map { CoverResolver.applyToItem(context, it, homeLayout.layout) },
-                )
+            Shelves.resolve(context, layout, appList).map { shelf ->
+                shelf.copy(items = CoverResolver.applyAll(context, shelf.items, layout.layout))
             }
         }
     }
@@ -101,10 +98,17 @@ fun HomeScreen(
         }
     }
 
+    // Focus the first tile once; later reloads (cover/pin edits) must not steal focus.
     LaunchedEffect(shelves) {
-        if (shelves.any { it.items.isNotEmpty() }) {
+        if (!initialFocusDone && shelves.any { it.items.isNotEmpty() }) {
+            initialFocusDone = true
             runCatching { firstFocus.requestFocus() }
         }
+    }
+
+    if (layout == null) {
+        Box(modifier = Modifier.fillMaxSize().background(HomeBgBrush))
+        return
     }
 
     fun launch(item: ShelfItem) {
@@ -115,7 +119,7 @@ fun HomeScreen(
         }
     }
 
-    val hero = remember(shelves, homeLayout) { heroItem(shelves, homeLayout) }
+    val hero = remember(shelves, layout) { heroItem(shelves, layout) }
 
     Column(
         modifier = Modifier
@@ -160,7 +164,7 @@ fun HomeScreen(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            if (hero != null && homeLayout.layout == CoverLayout.BANNER) {
+            if (hero != null && layout.layout == CoverLayout.BANNER) {
                 item(key = "hero") {
                     HeroBanner(item = hero, onLaunch = { launch(hero) })
                 }
@@ -168,7 +172,7 @@ fun HomeScreen(
             items(shelves, key = { it.config.id }) { shelf ->
                 ShelfSection(
                     shelf = shelf,
-                    coverLayout = homeLayout.layout,
+                    coverLayout = layout.layout,
                     firstFocus = if (shelf == shelves.firstOrNull { it.items.isNotEmpty() }) {
                         firstFocus
                     } else {
@@ -202,61 +206,12 @@ fun HomeScreen(
     }
 
     editTarget?.let { item ->
-        val pkg = item.packageName
-        val pinned = pkg != null && pkg in homeLayout.appsPackages()
-        AppMenuDialog(
+        HomeMenuHost(
             item = item,
-            pinned = pinned,
-            canMoveLeft = pinned && pkg != null && homeLayout.appsPackages().indexOf(pkg) > 0,
-            canMoveRight = pinned && pkg != null &&
-                homeLayout.appsPackages().indexOf(pkg) < homeLayout.appsPackages().lastIndex,
-            canUninstall = canUninstallPackage(context, pkg),
-            onOpen = {
-                launch(item)
-                editTarget = null
-            },
-            onChangeCover = {
-                changeCoverTarget = item
-                editTarget = null
-            },
-            onRemove = {
-                if (pkg != null) {
-                    homeLayout = homeLayout.withAppsPackages(
-                        homeLayout.appsPackages().filterNot { it == pkg },
-                    )
-                    HomeLayout.save(context, homeLayout)
-                }
-                editTarget = null
-            },
-            onUninstall = {
-                if (pkg != null) uninstallPackage(context, pkg)
-                editTarget = null
-            },
-            onPin = {
-                if (pkg != null) {
-                    val pins = homeLayout.appsPackages().toMutableList()
-                    if (pkg !in pins) pins.add(pkg)
-                    homeLayout = homeLayout.withAppsPackages(pins)
-                    HomeLayout.save(context, homeLayout)
-                }
-                editTarget = null
-            },
-            onMoveLeft = {
-                if (pkg != null) {
-                    val pins = DockPrefs.moveLeft(context, pkg)
-                    homeLayout = homeLayout.withAppsPackages(pins)
-                    HomeLayout.save(context, homeLayout)
-                }
-                editTarget = null
-            },
-            onMoveRight = {
-                if (pkg != null) {
-                    val pins = DockPrefs.moveRight(context, pkg)
-                    homeLayout = homeLayout.withAppsPackages(pins)
-                    HomeLayout.save(context, homeLayout)
-                }
-                editTarget = null
-            },
+            layout = layout,
+            onLayoutChange = { homeLayout = it },
+            onOpen = { launch(it) },
+            onChangeCover = { changeCoverTarget = it },
             onDismiss = { editTarget = null },
         )
     }
@@ -270,7 +225,7 @@ fun HomeScreen(
                 packageName = pkg,
                 title = item.title,
                 icon = item.icon,
-                layout = homeLayout.layout,
+                layout = layout.layout,
                 onDismiss = { changeCoverTarget = null },
                 onPicked = {
                     changeCoverTarget = null
@@ -284,103 +239,6 @@ fun HomeScreen(
         UpdateAvailableDialog(
             release = release,
             onDismiss = { updateRelease = null },
-        )
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ShelfSection(
-    shelf: ResolvedShelf,
-    coverLayout: CoverLayout,
-    firstFocus: FocusRequester?,
-    onLaunch: (ShelfItem) -> Unit,
-    onLongPress: (ShelfItem) -> Unit,
-) {
-    Column {
-        Text(
-            text = shelf.config.title,
-            color = ColorSection,
-            fontSize = 14.sp,
-            modifier = Modifier
-                .padding(bottom = 10.dp)
-                .semantics {
-                    contentDescription = shelf.config.title
-                    heading()
-                },
-        )
-        if (shelf.items.isEmpty()) {
-            Text(
-                text = when (shelf.config.type) {
-                    ShelfType.WATCH_NEXT -> "Nothing in Up Next yet — apps publish here when you watch."
-                    ShelfType.SUGGESTED -> "Launch a few apps to build suggestions."
-                    else -> "No items"
-                },
-                color = ColorHint,
-                fontSize = 14.sp,
-            )
-            return
-        }
-        if (shelf.config.type == ShelfType.LIBRARY) {
-            val columns = 5
-            val rows = shelf.items.chunked(columns)
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 360.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                rows.forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        row.forEach { item ->
-                            CoverTile(
-                                item = item,
-                                layout = coverLayout,
-                                onLaunch = { onLaunch(item) },
-                                onLongPress = { onLongPress(item) },
-                            )
-                        }
-                    }
-                }
-            }
-        } else {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(end = 16.dp),
-            ) {
-                itemsIndexed(shelf.items, key = { _, item -> item.id }) { index, item ->
-                    CoverTile(
-                        item = item,
-                        layout = coverLayout,
-                        onLaunch = { onLaunch(item) },
-                        onLongPress = { onLongPress(item) },
-                        focusRequester = if (index == 0) firstFocus else null,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun FooterButton(label: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.width(180.dp),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = ColorFooter,
-            focusedContainerColor = ColorBrand,
-            contentColor = ColorText,
-            focusedContentColor = ColorOnBrand,
-        ),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-            fontSize = 15.sp,
         )
     }
 }

@@ -67,6 +67,7 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
     var connectSgdb by remember { mutableStateOf(false) }
     var connectGithub by remember { mutableStateOf(false) }
     var accountTick by remember { mutableStateOf(0) }
+    var confirmClearCovers by remember { mutableStateOf(false) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var availableRelease by remember { mutableStateOf<GitHubRelease?>(null) }
     val scope = rememberCoroutineScope()
@@ -187,37 +188,44 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                                             CoverAccounts.disconnect(context, CoverProvider.IGDB)
                                             accountTick++
                                         }
-                                } else {
-                                    SettingsAction(
-                                        if (TwitchDeviceAuth.clientIdConfigured()) {
-                                            "Connect IGDB"
-                                        } else {
-                                            "Connect IGDB (set TWITCH_CLIENT_ID)"
-                                        },
-                                    ) { connectIgdb = true }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                SettingsAction("Refresh curated pack") {
-                                    scope.launch {
-                                        val ok = withContext(Dispatchers.IO) {
-                                            CuratedCovers.refresh(context)
-                                        }
-                                        Toast.makeText(
-                                            context,
-                                            if (ok) {
-                                                "Curated covers ready (network or bundled)"
+                                    } else {
+                                        SettingsAction(
+                                            if (TwitchDeviceAuth.clientIdConfigured()) {
+                                                "Connect IGDB"
                                             } else {
-                                                "Refresh failed — no network or bundled pack"
+                                                "Connect IGDB (set TWITCH_CLIENT_ID)"
                                             },
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
+                                        ) { connectIgdb = true }
                                     }
                                 }
-                                    SettingsAction("Clear custom covers") {
-                                        CoverStore.clearAll(context)
-                                        Toast.makeText(context, "Custom covers cleared", Toast.LENGTH_SHORT).show()
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    SettingsAction("Refresh curated pack") {
+                                        scope.launch {
+                                            val ok = withContext(Dispatchers.IO) {
+                                                CuratedCovers.refresh(context)
+                                            }
+                                            Toast.makeText(
+                                                context,
+                                                if (ok) {
+                                                    "Curated covers updated"
+                                                } else {
+                                                    "Refresh failed — keeping current covers"
+                                                },
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
+                                    }
+                                    SettingsAction(
+                                        if (confirmClearCovers) "Press again to confirm" else "Clear custom covers",
+                                    ) {
+                                        if (confirmClearCovers) {
+                                            CoverStore.clearAll(context)
+                                            confirmClearCovers = false
+                                            Toast.makeText(context, "Custom covers cleared", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            confirmClearCovers = true
+                                        }
                                     }
                                 }
                             }

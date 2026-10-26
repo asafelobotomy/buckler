@@ -218,40 +218,6 @@ fun AppMenuDialog(
     }
 }
 
-/** Backward-compatible thin wrapper used by older call sites. */
-@Composable
-fun DockEditDialog(
-    app: LaunchableApp,
-    pinned: Boolean,
-    canMoveLeft: Boolean,
-    canMoveRight: Boolean,
-    onPin: () -> Unit,
-    onUnpin: () -> Unit,
-    onMoveLeft: () -> Unit,
-    onMoveRight: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val context = LocalContext.current
-    AppMenuDialog(
-        item = app.toShelfItem(),
-        pinned = pinned,
-        canMoveLeft = canMoveLeft,
-        canMoveRight = canMoveRight,
-        canUninstall = !app.isSystem,
-        onOpen = {
-            safeLaunch(context, app.launchIntent, app.label)
-            onDismiss()
-        },
-        onChangeCover = onDismiss,
-        onRemove = onUnpin,
-        onUninstall = onDismiss,
-        onPin = onPin,
-        onMoveLeft = onMoveLeft,
-        onMoveRight = onMoveRight,
-        onDismiss = onDismiss,
-    )
-}
-
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun AppInfoDialog(item: ShelfItem, onDismiss: () -> Unit) {

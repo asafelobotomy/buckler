@@ -6,10 +6,13 @@ import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.core.content.FileProvider
 import java.io.File
 
 object ApkInstaller {
+    private const val TAG = "ApkInstaller"
+
     fun downloadApk(context: Context, url: String, fileName: String): File? {
         val dir = File(context.cacheDir, "updates").also { it.mkdirs() }
         val dest = File(dir, fileName.ifBlank { "update.apk" })
@@ -17,9 +20,13 @@ object ApkInstaller {
         if (url.contains("api.github.com/") && url.contains("/releases/assets/")) {
             headers["Accept"] = "application/octet-stream"
         }
-        val (code, bytes) = HttpJson.download(url, headers = headers)
-        if (code !in 200..299 || bytes.isEmpty()) return null
-        dest.writeBytes(bytes)
+        val code = runCatching { HttpJson.downloadTo(url, dest, headers = headers) }
+            .onFailure { Log.w(TAG, "APK download failed", it) }
+            .getOrDefault(-1)
+        if (code !in 200..299 || dest.length() == 0L) {
+            dest.delete()
+            return null
+        }
         return dest
     }
 
@@ -36,11 +43,11 @@ object ApkInstaller {
                 apk.inputStream().use { inp -> inp.copyTo(out) }
                 session.fsync(out)
             }
-            val callback = Intent(context, MainActivity::class.java).apply {
-                action = "dev.solon.bucklerhome.INSTALL_COMPLETE"
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val callback = Intent(context, InstallResultReceiver::class.java).apply {
+                action = InstallResultReceiver.ACTION
             }
-            val pending = PendingIntent.getActivity(
+            // Mutable so PackageInstaller can attach EXTRA_STATUS / EXTRA_INTENT.
+            val pending = PendingIntent.getBroadcast(
                 context,
                 sessionId,
                 callback,
@@ -49,7 +56,8 @@ object ApkInstaller {
             session.commit(pending.intentSender)
             session.close()
             true
-        }.getOrElse {
+        }.getOrElse { error ->
+            Log.w(TAG, "PackageInstaller session failed; falling back to ACTION_VIEW", error)
             // Fallback: ACTION_VIEW via FileProvider
             runCatching {
                 val uri: Uri = FileProvider.getUriForFile(

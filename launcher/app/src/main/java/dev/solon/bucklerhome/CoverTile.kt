@@ -66,6 +66,9 @@ fun CoverTile(
     val bmp = remember(item.id, item.icon) {
         item.icon?.toBitmap(128, 128)?.asImageBitmap()
     }
+    val bannerBmp = remember(item.id, item.banner) {
+        item.banner?.toBitmap(320, 180)?.asImageBitmap()
+    }
     val menu = rememberTvMenuInteraction(onOpen = onLaunch, onMenu = onLongPress)
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
@@ -108,13 +111,20 @@ fun CoverTile(
                     AsyncImage(
                         model = model,
                         contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
+                        contentScale = if (item.coverFit) ContentScale.Fit else ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                         onState = { state ->
                             if (state is AsyncImagePainter.State.Error) {
                                 remoteFailed = true
                             }
                         },
+                    )
+                } else if (bannerBmp != null) {
+                    Image(
+                        bitmap = bannerBmp,
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 } else if (bmp != null) {
                     Image(
@@ -168,7 +178,7 @@ fun HeroBanner(
                 AsyncImage(
                     model = model,
                     contentDescription = item.title,
-                    contentScale = ContentScale.Crop,
+                    contentScale = if (item.coverFit) ContentScale.Fit else ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else if (bmp != null) {

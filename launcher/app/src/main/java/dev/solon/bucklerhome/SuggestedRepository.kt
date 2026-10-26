@@ -47,7 +47,8 @@ object SuggestedRepository {
     }
 
     private fun fetchFeed(url: String): List<ShelfItem> {
-        if (!url.startsWith("https://") && !url.startsWith("http://")) return emptyList()
+        // Cleartext traffic is disabled in the manifest, so only https feeds can load.
+        if (!url.startsWith("https://")) return emptyList()
         return runCatching {
             val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 4_000

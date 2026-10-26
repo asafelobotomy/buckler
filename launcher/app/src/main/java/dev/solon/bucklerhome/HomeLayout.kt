@@ -1,6 +1,7 @@
 package dev.solon.bucklerhome
 
 import android.content.Context
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -75,9 +76,28 @@ data class HomeLayout(
             .put("shelves", shelvesArr)
     }
 
+    /** Effective pinned packages (an empty Apps shelf shows the defaults, so report them). */
     fun appsPackages(): List<String> =
-        shelves.firstOrNull { it.type == ShelfType.APPS }?.packages
+        shelves.firstOrNull { it.type == ShelfType.APPS }?.packages?.ifEmpty { DEFAULT_DOCK_PACKAGES }
             ?: DEFAULT_DOCK_PACKAGES
+
+    fun withPinned(packageName: String): HomeLayout {
+        val pins = appsPackages()
+        return if (packageName in pins) this else withAppsPackages(pins + packageName)
+    }
+
+    fun withoutPinned(packageName: String): HomeLayout =
+        withAppsPackages(appsPackages().filterNot { it == packageName })
+
+    /** Swap [packageName] with its neighbour; [delta] is -1 (left) or +1 (right). */
+    fun withMovedPinned(packageName: String, delta: Int): HomeLayout {
+        val pins = appsPackages().toMutableList()
+        val from = pins.indexOf(packageName)
+        val to = from + delta
+        if (from < 0 || to !in pins.indices) return this
+        pins[from] = pins[to].also { pins[to] = pins[from] }
+        return withAppsPackages(pins)
+    }
 
     fun withAppsPackages(packages: List<String>): HomeLayout =
         copy(
@@ -90,6 +110,8 @@ data class HomeLayout(
         const val IMPORT_FILE = "home-layout.json"
         private const val PREFS = "bucklerhome"
         private const val KEY_LAYOUT = "home_layout_json"
+        private const val KEY_LAYOUT_CORRUPT = "home_layout_json_corrupt"
+        private const val TAG = "HomeLayout"
 
         fun defaultShelves(appsPackages: List<String> = DEFAULT_DOCK_PACKAGES): List<ShelfConfig> =
             listOf(
@@ -111,13 +133,13 @@ data class HomeLayout(
             val shelvesArr = obj.optJSONArray("shelves") ?: JSONArray()
             val shelves = buildList {
                 for (i in 0 until shelvesArr.length()) {
-                    val s = shelvesArr.getJSONObject(i)
+                    val s = shelvesArr.optJSONObject(i) ?: continue
                     val pkgsArr = s.optJSONArray("packages") ?: JSONArray()
                     val pkgs = buildList {
                         for (j in 0 until pkgsArr.length()) {
-                            add(pkgsArr.getString(j))
+                            pkgsArr.optString(j).takeIf { it.isNotBlank() }?.let(::add)
                         }
-                    }
+                    }.distinct()
                     add(
                         ShelfConfig(
                             id = s.optString("id", "shelf_$i"),
@@ -132,7 +154,8 @@ data class HomeLayout(
             val feed = obj.optString("suggested_feed_url", "").ifBlank { null }
             return HomeLayout(
                 layout = CoverLayout.fromWire(obj.optString("layout")),
-                shelves = shelves.ifEmpty { defaultShelves() },
+                // Duplicate shelf ids would crash the LazyColumn; keep the first of each.
+                shelves = shelves.distinctBy { it.id }.ifEmpty { defaultShelves() },
                 suggestedFeedUrl = feed,
             )
         }
@@ -142,7 +165,11 @@ data class HomeLayout(
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val raw = prefs.getString(KEY_LAYOUT, null)
             if (!raw.isNullOrBlank()) {
-                return runCatching { fromJson(raw) }.getOrElse { migrateFromDockPrefs(context) }
+                return runCatching { fromJson(raw) }.getOrElse { error ->
+                    Log.w(TAG, "Stored home layout is corrupt; keeping a copy and resetting", error)
+                    prefs.edit().putString(KEY_LAYOUT_CORRUPT, raw).apply()
+                    migrateFromDockPrefs(context)
+                }
             }
             return migrateFromDockPrefs(context)
         }
@@ -162,7 +189,9 @@ data class HomeLayout(
         fun importIfPresent(context: Context): Boolean {
             val file = importFile(context)
             if (!file.isFile) return false
-            val parsed = runCatching { fromJson(file.readText()) }.getOrNull() ?: return false
+            val parsed = runCatching { fromJson(file.readText()) }
+                .onFailure { Log.w(TAG, "Ignoring invalid ${file.name}", it) }
+                .getOrNull() ?: return false
             save(context, parsed)
             runCatching { file.delete() }
             return true

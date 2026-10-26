@@ -97,6 +97,7 @@ def validate_home_layout(doc: dict[str, Any]) -> None:
     if not isinstance(shelves, list) or not shelves:
         raise HomeLayoutError("shelves must be a non-empty array")
     allowed = {"apps", "library", "recents", "watch_next", "suggested"}
+    seen_ids: set[str] = set()
     for i, shelf in enumerate(shelves):
         if not isinstance(shelf, dict):
             raise HomeLayoutError(f"shelves[{i}] must be an object")
@@ -107,6 +108,19 @@ def validate_home_layout(doc: dict[str, Any]) -> None:
             raise HomeLayoutError(f"shelves[{i}].type invalid: {shelf['type']!r}")
         if not isinstance(shelf["enabled"], bool):
             raise HomeLayoutError(f"shelves[{i}].enabled must be boolean")
+        shelf_id = shelf["id"]
+        if not isinstance(shelf_id, str) or not shelf_id:
+            raise HomeLayoutError(f"shelves[{i}].id must be a non-empty string")
+        if shelf_id in seen_ids:
+            raise HomeLayoutError(f"shelves[{i}].id duplicate: {shelf_id!r}")
+        seen_ids.add(shelf_id)
+        packages = shelf.get("packages", [])
+        if not isinstance(packages, list) or not all(
+            isinstance(pkg, str) and pkg for pkg in packages
+        ):
+            raise HomeLayoutError(f"shelves[{i}].packages must be a list of strings")
+        if len(set(packages)) != len(packages):
+            raise HomeLayoutError(f"shelves[{i}].packages contains duplicates")
 
 
 def default_layout_path() -> Path:

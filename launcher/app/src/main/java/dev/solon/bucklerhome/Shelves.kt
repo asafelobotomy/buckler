@@ -19,7 +19,8 @@ object Shelves {
             .map { config ->
                 ResolvedShelf(
                     config = config,
-                    items = itemsFor(context, config, apps, pinned, layout.suggestedFeedUrl),
+                    items = itemsFor(context, config, apps, pinned, layout.suggestedFeedUrl)
+                    .distinctBy { it.id },
                 )
             }
             .filter { shelf ->
@@ -41,7 +42,7 @@ object Shelves {
         val byPkg = apps.associateBy { it.packageName }
         return when (config.type) {
             ShelfType.APPS -> {
-                val pkgs = config.packages.ifEmpty { DEFAULT_DOCK_PACKAGES }
+                val pkgs = config.packages.ifEmpty { DEFAULT_DOCK_PACKAGES }.distinct()
                 pkgs.mapNotNull { byPkg[it] }.map { it.toShelfItem() }
                     .ifEmpty { apps.filterNot { it.isSystem }.take(6).map { it.toShelfItem() } }
             }

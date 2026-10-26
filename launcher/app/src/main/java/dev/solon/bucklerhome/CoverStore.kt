@@ -60,7 +60,7 @@ object CoverStore {
             stored.startsWith("url:") -> stored.removePrefix("url:")
             stored.startsWith("sgdb:") -> stored.removePrefix("sgdb:")
             stored.startsWith("igdb:") -> stored.removePrefix("igdb:")
-            stored.startsWith("http://") || stored.startsWith("https://") -> stored
+            stored.startsWith("https://") -> stored
             else -> null
         }
     }

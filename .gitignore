@@ -20,3 +20,6 @@ launcher/.idea/
 *.apk
 *.ap_
 .DS_Store
+launcher/keystore.properties
+*.jks
+*.keystore

@@ -107,7 +107,15 @@ buckler launcher build && buckler launcher install
 
 **DNS:** `buckler dns status` (alias `get`) / `set --hostname …` / `off`.
 
-Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.5.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, and optional linked APIs — no ads. Release APKs are **debug-keystore signed** for personal sideload.
+Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.5.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, and optional linked APIs — no ads. Release APKs are signed with `launcher/keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; git-ignored) when present, otherwise with the machine-local debug key — OTA updates only install over an APK signed with the same key. Switching keys means one uninstall/reinstall. Backups are disabled (tokens live in encrypted prefs). Feeds and artwork must be `https://`.
+
+## Development
+
+```bash
+pytest -q && ruff check src tests scripts   # Python
+python scripts/check_loc.py                 # every source file <= 400 lines
+(cd launcher && ./gradlew :app:testDebugUnitTest)   # Kotlin unit tests
+```
 
 **Dev tip:** run tests with the project venv (`uv run pytest` or `.venv/bin/python -m pytest` — `pythonpath = ["src"]` is set in `pyproject.toml`).
 

@@ -32,9 +32,7 @@ object WatchNextRepository {
                             packageName = null,
                             launchIntent = intent,
                             imageUri = art,
-                            imageUrl = artStr?.takeIf {
-                                it.startsWith("http://") || it.startsWith("https://")
-                            },
+                            imageUrl = artStr?.takeIf { it.startsWith("https://") },
                         ),
                     )
                 }

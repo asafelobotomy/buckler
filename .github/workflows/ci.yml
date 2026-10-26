@@ -19,3 +19,21 @@ jobs:
         run: ruff check src tests
       - name: Pytest
         run: pytest -q
+      - name: File length limit (400 lines)
+        run: python scripts/check_loc.py
+
+  launcher:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Unit tests
+        working-directory: launcher
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+      - name: Assemble release
+        working-directory: launcher
+        run: ./gradlew :app:assembleRelease --no-daemon

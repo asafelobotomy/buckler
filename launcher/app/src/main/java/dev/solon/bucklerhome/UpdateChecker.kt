@@ -2,6 +2,7 @@ package dev.solon.bucklerhome
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -82,6 +83,7 @@ object UpdateChecker {
                 headers = CoverAccounts.githubAuthHeaders(context),
             )
         }.getOrElse {
+            Log.w("UpdateChecker", "Release check failed", it)
             return UpdateCheckResult.Error(it.message ?: "Network error")
         }
         if (response.code == 404) {
@@ -151,7 +153,7 @@ object UpdateChecker {
             val browser = a.optString("browser_download_url").takeIf { it.isNotBlank() }
             val id = a.optLong("id", 0L)
             val api = if (id > 0L) {
-                "https://api.github.com/repos/asafelobotomy/buckler/releases/assets/$id"
+                "https://api.github.com/repos/${BuildConfig.GITHUB_REPO}/releases/assets/$id"
             } else {
                 null
             }
@@ -167,19 +169,29 @@ object UpdateChecker {
         return candidates.minByOrNull { score(it.name) }
     }
 
+    /** Strip a leading `v` and build metadata; keeps any `-prerelease` suffix. */
     fun normalizeVersion(raw: String): String =
-        raw.trim().removePrefix("v").removePrefix("V").substringBefore("-").substringBefore("+")
+        raw.trim().removePrefix("v").removePrefix("V").substringBefore("+")
 
-    /** Positive if a > b. */
+    /** Positive if [a] is newer than [b]. A release outranks its own pre-release (1.0.0 > 1.0.0-rc1). */
     fun compareSemver(a: String, b: String): Int {
-        val pa = a.split('.').map { it.toIntOrNull() ?: 0 }
-        val pb = b.split('.').map { it.toIntOrNull() ?: 0 }
-        val n = maxOf(pa.size, pb.size)
-        for (i in 0 until n) {
+        val (coreA, preA) = splitPre(a)
+        val (coreB, preB) = splitPre(b)
+        val pa = coreA.split('.').map { it.toIntOrNull() ?: 0 }
+        val pb = coreB.split('.').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(pa.size, pb.size)) {
             val ai = pa.getOrElse(i) { 0 }
             val bi = pb.getOrElse(i) { 0 }
             if (ai != bi) return ai.compareTo(bi)
         }
-        return 0
+        return when {
+            preA == preB -> 0
+            preA == null -> 1
+            preB == null -> -1
+            else -> preA.compareTo(preB)
+        }
     }
+
+    private fun splitPre(version: String): Pair<String, String?> =
+        version.substringBefore("-") to version.substringAfter("-", "").ifEmpty { null }
 }

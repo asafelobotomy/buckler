@@ -1,0 +1,10 @@
+---
+description: Keep every source file at or under 400 lines
+alwaysApply: true
+---
+
+# 400-line file limit
+
+No tracked source file (`.py`, `.kt`, `.kts`, `.xml`, `.yml`, `.md`, `.sh`) may exceed **400 lines**.
+Split by responsibility (new module/composable file) before crossing the limit.
+Check with `python scripts/check_loc.py`; CI and `tests/test_loc_limit.py` enforce it.

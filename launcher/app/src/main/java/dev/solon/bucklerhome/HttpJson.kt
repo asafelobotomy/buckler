@@ -1,9 +1,11 @@
 package dev.solon.bucklerhome
 
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import org.json.JSONObject
 
@@ -73,12 +75,14 @@ object HttpJson {
         return read(conn)
     }
 
-    fun download(
+    /** Stream a download straight to [dest]; returns the HTTP status code. */
+    fun downloadTo(
         url: String,
+        dest: File,
         headers: Map<String, String> = emptyMap(),
         connectTimeoutMs: Int = 15_000,
         readTimeoutMs: Int = 120_000,
-    ): Pair<Int, ByteArray> {
+    ): Int {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = connectTimeoutMs
@@ -87,11 +91,17 @@ object HttpJson {
             setRequestProperty("User-Agent", "buckler-home/${BuildConfig.VERSION_NAME}")
             headers.forEach { (k, v) -> setRequestProperty(k, v) }
         }
-        val code = conn.responseCode
-        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-        val bytes = stream?.use { it.readBytes() } ?: ByteArray(0)
-        conn.disconnect()
-        return code to bytes
+        try {
+            val code = conn.responseCode
+            if (code in 200..299) {
+                conn.inputStream.use { input ->
+                    dest.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            return code
+        } finally {
+            conn.disconnect()
+        }
     }
 
     fun parseObject(body: String): JSONObject? =
@@ -108,5 +118,5 @@ object HttpJson {
     }
 
     private fun encode(value: String): String =
-        java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+        URLEncoder.encode(value, StandardCharsets.UTF_8.name())
 }

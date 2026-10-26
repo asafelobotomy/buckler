@@ -25,3 +25,23 @@ def test_write_roundtrip(tmp_path) -> None:
     text = path.read_text(encoding="utf-8")
     assert '"schema": 1' in text
     assert "watch_next" in text
+
+
+def test_rejects_duplicate_shelf_ids() -> None:
+    doc = default_home_layout()
+    doc["shelves"][1]["id"] = doc["shelves"][0]["id"]
+    with pytest.raises(HomeLayoutError, match="duplicate"):
+        validate_home_layout(doc)
+
+
+def test_rejects_duplicate_packages() -> None:
+    doc = default_home_layout(packages=["a.b", "a.b"])
+    with pytest.raises(HomeLayoutError, match="duplicates"):
+        validate_home_layout(doc)
+
+
+def test_rejects_non_string_packages() -> None:
+    doc = default_home_layout()
+    doc["shelves"][1]["packages"] = ["ok", 3]
+    with pytest.raises(HomeLayoutError, match="packages"):
+        validate_home_layout(doc)

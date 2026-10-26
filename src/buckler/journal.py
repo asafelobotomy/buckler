@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -88,7 +88,11 @@ class Journal:
                 f"{path.name} is not a disable journal (missing host); "
                 "layout/cover files must not be loaded as journals"
             )
-        entries = [JournalEntry(**e) for e in data.get("entries", [])]
+        known = {f.name for f in fields(JournalEntry)}
+        entries = [
+            JournalEntry(**{k: v for k, v in e.items() if k in known})
+            for e in data.get("entries", [])
+        ]
         j = cls(
             host=data["host"],
             profile=data.get("profile", "unknown"),
@@ -108,9 +112,7 @@ def is_disable_journal(path: Path) -> bool:
         return False
     if name.startswith("snapshot-"):
         return False
-    if name in _NON_JOURNAL_NAMES:
-        return False
-    return True
+    return name not in _NON_JOURNAL_NAMES
 
 
 def iter_journals() -> list[Path]:

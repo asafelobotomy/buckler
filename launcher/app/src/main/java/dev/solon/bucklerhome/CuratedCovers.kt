@@ -2,6 +2,8 @@ package dev.solon.bucklerhome
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Base64
+import android.util.Log
 import org.json.JSONObject
 
 data class CuratedCoverEntry(
@@ -9,13 +11,26 @@ data class CuratedCoverEntry(
     val icon: String? = null,
     val poster: String? = null,
     val banner: String? = null,
-)
+) {
+    fun urlFor(layout: CoverLayout): String? = when (layout) {
+        CoverLayout.BANNER -> banner ?: poster ?: icon
+        CoverLayout.POSTER -> poster ?: banner ?: icon
+        CoverLayout.ICON -> icon ?: poster ?: banner
+    }
+}
 
 object CuratedCovers {
     private const val PREFS = "bucklerhome"
     private const val KEY_CACHE = "curated_covers_json"
     private const val KEY_FETCHED = "curated_covers_fetched_at"
     private const val ASSET_NAME = "covers_index.json"
+    private const val TAG = "CuratedCovers"
+
+    @Volatile
+    private var parsedRaw: String? = null
+
+    @Volatile
+    private var parsed: Map<String, CuratedCoverEntry> = emptyMap()
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -23,14 +38,11 @@ object CuratedCovers {
     fun get(context: Context, packageName: String): CuratedCoverEntry? =
         loadMap(context)[packageName]
 
-    fun urlFor(context: Context, packageName: String, layout: CoverLayout): String? {
-        val entry = get(context, packageName) ?: return null
-        return when (layout) {
-            CoverLayout.BANNER -> entry.banner ?: entry.poster ?: entry.icon
-            CoverLayout.POSTER -> entry.poster ?: entry.banner ?: entry.icon
-            CoverLayout.ICON -> entry.icon ?: entry.poster ?: entry.banner
-        }
-    }
+    fun urlFor(context: Context, packageName: String, layout: CoverLayout): String? =
+        get(context, packageName)?.urlFor(layout)
+
+    /** Parsed curated index (cached until the stored JSON changes). */
+    fun entries(context: Context): Map<String, CuratedCoverEntry> = loadMap(context)
 
     /**
      * Try network pack, then fall back to the APK-bundled asset.
@@ -40,14 +52,14 @@ object CuratedCovers {
         val headers = CoverAccounts.githubAuthHeaders(context)
         // Prefer Contents API when a token is present (works for private repos).
         val apiUrl =
-            "https://api.github.com/repos/asafelobotomy/buckler/contents/covers/index.json?ref=main"
+            "https://api.github.com/repos/${BuildConfig.GITHUB_REPO}/contents/covers/index.json?ref=main"
         val response = runCatching {
             if (headers.isNotEmpty()) {
                 HttpJson.get(apiUrl, headers = headers)
             } else {
                 HttpJson.get(BuildConfig.CURATED_COVERS_URL)
             }
-        }.getOrNull()
+        }.onFailure { Log.w(TAG, "Curated covers refresh failed", it) }.getOrNull()
         if (response != null && response.code in 200..299 && response.body.isNotBlank()) {
             val body = if (headers.isNotEmpty()) {
                 decodeGithubContents(response.body) ?: response.body
@@ -62,6 +74,8 @@ object CuratedCovers {
                 return true
             }
         }
+        // Keep a previously fetched pack rather than clobbering it with the bundled one.
+        if (!prefs(context).getString(KEY_CACHE, null).isNullOrBlank()) return false
         return reloadFromAssets(context)
     }
 
@@ -70,7 +84,7 @@ object CuratedCovers {
         val b64 = obj.optString("content").replace("\n", "")
         if (b64.isBlank()) return null
         return runCatching {
-            String(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
+            String(Base64.decode(b64, Base64.DEFAULT))
         }.getOrNull()
     }
 
@@ -108,7 +122,11 @@ object CuratedCovers {
     private fun loadMap(context: Context): Map<String, CuratedCoverEntry> {
         ensureCached(context)
         val raw = prefs(context).getString(KEY_CACHE, null) ?: return emptyMap()
-        return parse(raw)
+        if (raw == parsedRaw) return parsed
+        return parse(raw).also {
+            parsed = it
+            parsedRaw = raw
+        }
     }
 
     fun parse(raw: String): Map<String, CuratedCoverEntry> {
