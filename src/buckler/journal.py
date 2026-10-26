@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from shieldctl.paths import journals_dir
+from buckler.paths import journals_dir
 
 
 @dataclass
@@ -26,7 +26,7 @@ class Journal:
     host: str
     profile: str
     created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds")
+        default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds")
     )
     method: str = "pm disable-user --user 0"
     entries: list[JournalEntry] = field(default_factory=list)
@@ -65,7 +65,7 @@ class Journal:
 
     def save(self, path: Path | None = None) -> Path:
         if path is None:
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+            stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
             path = journals_dir() / f"{stamp}-{self.profile}.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(self.to_dict(), indent=2) + "\n", encoding="utf-8")
@@ -88,10 +88,19 @@ class Journal:
         return j
 
 
+def iter_journals() -> list[Path]:
+    """Disable/restore journals only (excludes desired-state snapshot-*.json)."""
+    return sorted(
+        p
+        for p in journals_dir().glob("*.json")
+        if not p.name.startswith("snapshot-")
+    )
+
+
 def latest_journal(profile: str | None = None) -> Path | None:
-    files = sorted(journals_dir().glob("*.json"), reverse=True)
+    files = sorted(iter_journals(), reverse=True)
     for path in files:
-        if profile is None or f"-{profile}.json" in path.name:
+        if profile is None or profile in path.stem:
             return path
     return None
 

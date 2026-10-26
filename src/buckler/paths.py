@@ -6,9 +6,9 @@ from pathlib import Path
 
 
 def repo_root() -> Path:
-    """Return the shieldctl repository root (contains profiles/, launcher/)."""
+    """Return the Buckler repository root (contains profiles/, launcher/)."""
     here = Path(__file__).resolve()
-    # src/shieldctl/paths.py -> repo root
+    # src/buckler/paths.py -> repo root
     candidate = here.parents[2]
     if (candidate / "profiles").is_dir():
         return candidate
@@ -16,7 +16,7 @@ def repo_root() -> Path:
     cwd = Path.cwd()
     if (cwd / "profiles").is_dir():
         return cwd
-    raise RuntimeError("Cannot locate shieldctl repo root (profiles/ missing)")
+    raise RuntimeError("Cannot locate Buckler repo root (profiles/ missing)")
 
 
 def profiles_dir() -> Path:

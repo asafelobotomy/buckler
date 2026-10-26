@@ -8,13 +8,15 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from shieldctl.adb import Adb
-from shieldctl.journal import Journal
-from shieldctl.paths import journals_dir, launcher_dir
-from shieldctl.policy import OUR_HOME_ACTIVITY, OUR_LAUNCHER
-
-
-STOCK_LAUNCHER = "com.google.android.tvlauncher"
+from buckler.adb import Adb
+from buckler.journal import Journal
+from buckler.paths import journals_dir, launcher_dir
+from buckler.policy import (
+    KNOWN_STOCK_LAUNCHERS,
+    OUR_HOME_ACTIVITY,
+    OUR_LAUNCHER,
+    can_disable_home_owner,
+)
 
 
 @dataclass
@@ -107,7 +109,7 @@ class HandoverResult:
 
 
 def handover(adb: Adb, *, reboot: bool = False) -> HandoverResult:
-    """Install (if needed), set HOME, disable stock launcher, verify."""
+    """Install (if needed), set HOME, disable known stock launchers, verify."""
     adb.connect()
     home_before = adb.resolve_home()
 
@@ -125,18 +127,32 @@ def handover(adb: Adb, *, reboot: bool = False) -> HandoverResult:
     # Try set-home first (often no-ops while stock priority=2)
     adb.set_home_activity(OUR_HOME_ACTIVITY)
 
-    stock = STOCK_LAUNCHER
-    if adb.package_present(stock) and not adb.package_disabled(stock):
-        # Disable stock so our launcher can become HOME
+    disabled_stocks: list[str] = []
+    for stock in sorted(KNOWN_STOCK_LAUNCHERS):
+        if not adb.package_present(stock):
+            continue
+        if adb.package_disabled(stock):
+            continue
+        ok, reason = can_disable_home_owner(adb, stock)
+        if not ok:
+            for pkg in disabled_stocks:
+                adb.enable(pkg)
+            return HandoverResult(
+                False,
+                home_before,
+                home_before,
+                f"refusing to disable {stock}: {reason}",
+            )
         adb.disable_user(stock)
+        disabled_stocks.append(stock)
 
     home_after_pkg = adb.home_package()
     home_after = adb.resolve_home()
 
     if home_after_pkg != OUR_LAUNCHER:
-        # Rollback: re-enable stock
-        if adb.package_disabled(stock):
-            adb.enable(stock)
+        for pkg in disabled_stocks:
+            if adb.package_disabled(pkg):
+                adb.enable(pkg)
         return HandoverResult(
             False,
             home_before,
@@ -145,14 +161,17 @@ def handover(adb: Adb, *, reboot: bool = False) -> HandoverResult:
         )
 
     journal = Journal(host=adb.host, profile="home-clean")
-    journal.add(
-        stock,
-        before_disabled=False,
-        after_disabled=True,
-        reason="HOME handover to shieldhome",
-    )
+    for stock in disabled_stocks:
+        journal.add(
+            stock,
+            before_disabled=False,
+            after_disabled=True,
+            reason="HOME handover to shieldhome",
+        )
     journal.notes.append(f"home_before={home_before}")
     journal.notes.append(f"home_after={home_after}")
+    if not disabled_stocks:
+        journal.notes.append("no stock launchers needed disabling (already clean)")
     path = journal.save(journals_dir() / "home-clean-handover.json")
 
     if reboot:

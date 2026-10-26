@@ -8,7 +8,10 @@ from typing import Any
 
 import yaml
 
-from shieldctl.paths import profiles_dir
+from buckler.paths import profiles_dir
+
+# Default profiles applied by `buckler setup` and used by `buckler check`.
+SETUP_PROFILES: tuple[str, ...] = ("privacy-core", "speech", "minimal", "extras")
 
 
 @dataclass
@@ -24,7 +27,7 @@ class Profile:
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
-        raise ValueError(f"Profile {path} must be a mapping")
+        raise TypeError(f"Profile {path} must be a mapping")
     return data
 
 
@@ -35,7 +38,7 @@ def load_profile(name: str) -> Profile:
     data = _load_yaml(path)
     packages = data.get("packages") or []
     if not isinstance(packages, list):
-        raise ValueError(f"packages in {path} must be a list")
+        raise TypeError(f"packages in {path} must be a list")
     return Profile(
         name=str(data.get("name") or name),
         description=str(data.get("description") or ""),

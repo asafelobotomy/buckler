@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from shieldctl.adb import Adb
-from shieldctl.journal import Journal
-from shieldctl.paths import journals_dir
-from shieldctl.policy import OUR_LAUNCHER, verify_ai_stack
+from buckler.adb import Adb
+from buckler.journal import Journal
+from buckler.paths import journals_dir
+from buckler.policy import OUR_LAUNCHER, verify_ai_stack
 
 OUR_DREAM = "dev.solon.shieldhome/.ClockDream"
 BACKDROP = "com.google.android.backdrop"
@@ -15,8 +15,16 @@ BACKDROP = "com.google.android.backdrop"
 
 @dataclass
 class DoctorReport:
+    """Health check result.
+
+    ``ok`` is False only for hard failures (HOME, AI stack, Chromecast policy).
+    Soft issues (screensaver mismatch, Network debugging reminder) go in
+    ``warnings`` and do not fail the exit code.
+    """
+
     lines: list[str]
     ok: bool
+    warnings: list[str] = field(default_factory=list)
 
 
 def set_animation_scales(adb: Adb, scale: float = 0.5) -> None:
@@ -75,6 +83,7 @@ def disable_backdrop(adb: Adb) -> Journal:
 def doctor(adb: Adb) -> DoctorReport:
     adb.connect()
     lines: list[str] = []
+    warnings: list[str] = []
     ok = True
 
     home = adb.resolve_home()
@@ -95,7 +104,6 @@ def doctor(adb: Adb) -> DoctorReport:
     sticky = []
     ps = adb.shell("ps", "-A", check=False)
     for pkg in sorted(disabled):
-        # match process name containing package
         if pkg in ps:
             sticky.append(pkg)
             adb.shell("am", "force-stop", pkg, check=False)
@@ -109,7 +117,9 @@ def doctor(adb: Adb) -> DoctorReport:
     dream = adb.shell("settings", "get", "secure", "screensaver_components", check=False)
     lines.append(f"screensaver: {dream}")
     if OUR_DREAM not in dream:
-        lines.append("  ! screensaver is not shieldhome ClockDream")
+        msg = "screensaver is not shieldhome ClockDream"
+        warnings.append(msg)
+        lines.append(f"  ~ {msg}")
 
     mediashell = "com.google.android.apps.mediashell"
     if adb.package_present(mediashell) and adb.package_disabled(mediashell):
@@ -124,7 +134,7 @@ def doctor(adb: Adb) -> DoctorReport:
     dns = adb.shell("settings", "get", "global", "private_dns_mode", check=False)
     lines.append(f"private_dns_mode: {dns}")
 
-    lines.append(
-        "reminder: turn Network debugging OFF in Developer options when finished"
-    )
-    return DoctorReport(lines=lines, ok=ok)
+    reminder = "turn Network debugging OFF in Developer options when finished"
+    warnings.append(reminder)
+    lines.append(f"reminder: {reminder}")
+    return DoctorReport(lines=lines, ok=ok, warnings=warnings)

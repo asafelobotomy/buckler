@@ -1,10 +1,10 @@
 [project]
-name = "shieldctl"
+name = "buckler"
 version = "0.1.0"
-description = "ADB CLI for NVIDIA SHIELD TV Pro cleanup, privacy profiles, and custom HOME launcher."
+description = "Buckler — ADB CLI for NVIDIA SHIELD TV Pro cleanup, privacy profiles, and custom HOME launcher."
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 dependencies = [
     "click>=8.1.0",
     "pyyaml>=6.0",
@@ -17,7 +17,7 @@ dev = [
 ]
 
 [project.scripts]
-shieldctl = "shieldctl.cli:cli"
+buckler = "buckler.cli:cli"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
@@ -27,7 +27,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-shieldctl = ["py.typed"]
+buckler = ["py.typed"]
 
 [tool.ruff]
 line-length = 100

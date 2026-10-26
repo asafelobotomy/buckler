@@ -5,17 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from shieldctl.adb import Adb
-from shieldctl.journal import Journal
-from shieldctl.paths import journals_dir
-from shieldctl.policy import (
+from buckler.adb import Adb
+from buckler.journal import Journal, iter_journals
+from buckler.policy import (
     KNOWN_STOCK_LAUNCHERS,
     OUR_LAUNCHER,
     can_disable_home_owner,
     filter_allowed,
     verify_ai_stack,
 )
-from shieldctl.profiles import load_profile, list_profiles
+from buckler.profiles import SETUP_PROFILES, list_profiles, load_profile
 
 
 @dataclass
@@ -100,7 +99,7 @@ def apply_profile(
     dry_run: bool = False,
 ) -> ApplyResult:
     if profile_name == "home-clean":
-        raise ValueError("Use `shieldctl launcher handover` for home-clean")
+        raise ValueError("Use `buckler launcher handover` for home-clean")
     if profile_name == "never":
         raise ValueError("The never profile cannot be applied")
 
@@ -177,6 +176,16 @@ def restore_journal(adb: Adb, path: Path) -> list[str]:
     return restored
 
 
+def restore_all_journals(adb: Adb) -> list[tuple[Path, list[str]]]:
+    """Re-enable packages from every disable journal (skips snapshot-*.json)."""
+    adb.connect()
+    results: list[tuple[Path, list[str]]] = []
+    for path in iter_journals():
+        restored = restore_journal(adb, path)
+        results.append((path, restored))
+    return results
+
+
 def check_drift(
     adb: Adb,
     *,
@@ -185,17 +194,18 @@ def check_drift(
 ) -> tuple[list[str], list[str]]:
     """Compare desired disabled set (from journals/profiles) to device.
 
-    Returns (drifted_should_be_disabled, unexpected).
+    Returns (drifted_should_be_disabled, ai_problems).
+    Default desired set is SETUP_PROFILES (same as ``buckler setup``).
     """
     adb.connect()
     desired: set[str] = set()
     if profile_name:
         desired.update(load_profile(profile_name).packages)
     else:
-        for name in ("privacy-core", "minimal"):
+        for name in SETUP_PROFILES:
             desired.update(load_profile(name).packages)
 
-    for path in journals_dir().glob("*.json"):
+    for path in iter_journals():
         j = Journal.load(path)
         for e in j.entries:
             if e.action == "disable-user":

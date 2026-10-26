@@ -23,4 +23,4 @@ packages:
   - com.google.android.syncadapters.calendar
   - com.google.android.tv.frameworkpackagestubs
   - com.android.dreams.basic
-  # Backdrop is handled by `shieldctl screensaver` after ClockDream is installed
+  # Backdrop is handled by `buckler screensaver` after ClockDream is installed

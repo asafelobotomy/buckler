@@ -1,4 +1,4 @@
-"""shieldctl Click entrypoint."""
+"""buckler Click entrypoint."""
 
 from __future__ import annotations
 
@@ -6,29 +6,37 @@ from pathlib import Path
 
 import click
 
-from shieldctl import __version__
-from shieldctl.adb import Adb, AdbError
-from shieldctl.journal import latest_journal, seed_privacy_core_journal
-from shieldctl.launcher_ops import (
+from buckler import __version__
+from buckler.adb import Adb, AdbError
+from buckler.journal import latest_journal, seed_privacy_core_journal
+from buckler.launcher_ops import (
     build_launcher,
     handover,
     home_is_ours,
     install_launcher,
     verify_launcher_installed,
 )
-from shieldctl.ops import apply_profile, audit, check_drift, format_probe, probe, restore_journal
-from shieldctl.policy import OUR_LAUNCHER, verify_ai_stack
-from shieldctl.profiles import list_profiles
-from shieldctl.tune import (
+from buckler.ops import (
+    apply_profile,
+    audit,
+    check_drift,
+    format_probe,
+    probe,
+    restore_all_journals,
+    restore_journal,
+)
+from buckler.policy import OUR_LAUNCHER, verify_ai_stack
+from buckler.profiles import SETUP_PROFILES, list_profiles
+from buckler.setup_wizard import export_snapshot, run_restore_wizard, run_setup
+from buckler.tune import (
     clear_private_dns,
     compile_launcher_speed,
-    disable_backdrop as replace_backdrop_with_clock,
     doctor,
     set_animation_scales,
     set_our_screensaver,
     set_private_dns,
 )
-
+from buckler.tune import disable_backdrop as replace_backdrop_with_clock
 
 DEFAULT_HOST = "192.168.178.23"
 
@@ -38,17 +46,17 @@ def _adb(host: str) -> Adb:
 
 
 @click.group()
-@click.version_option(__version__, prog_name="shieldctl")
+@click.version_option(__version__, prog_name="buckler")
 @click.option(
     "--host",
-    envvar="SHIELD_HOST",
+    envvar=["BUCKLER_HOST", "SHIELD_HOST"],
     default=DEFAULT_HOST,
     show_default=True,
-    help="Shield IP or host:port (Network debugging).",
+    help="Shield IP or host:port (Network debugging). Env: BUCKLER_HOST or SHIELD_HOST.",
 )
 @click.pass_context
 def cli(ctx: click.Context, host: str) -> None:
-    """ADB cleanup + launcher tooling for NVIDIA SHIELD TV Pro."""
+    """Buckler — ADB cleanup + launcher tooling for NVIDIA SHIELD TV Pro."""
     ctx.ensure_object(dict)
     ctx.obj["host"] = host
 
@@ -86,14 +94,14 @@ def audit_cmd(ctx: click.Context) -> None:
         [p for p in list_profiles() if p != "home-clean"],
         case_sensitive=True,
     ),
-    help="Profile to apply (privacy-core, minimal).",
+    help="Profile to apply (privacy-core, speech, minimal, extras, …).",
 )
 @click.option("--dry-run", is_flag=True, help="Show what would change; write no journal.")
 @click.pass_context
 def apply_cmd(ctx: click.Context, profile_name: str, dry_run: bool) -> None:
     """Disable packages in a profile with journaled restore."""
     if profile_name == "home-clean":
-        raise click.ClickException("Use: shieldctl launcher handover")
+        raise click.ClickException("Use: buckler launcher handover")
     try:
         result = apply_profile(_adb(ctx.obj["host"]), profile_name, dry_run=dry_run)
     except (AdbError, ValueError) as exc:
@@ -130,15 +138,34 @@ def apply_cmd(ctx: click.Context, profile_name: str, dry_run: bool) -> None:
     "journal_path",
     type=click.Path(path_type=Path, exists=True),
     default=None,
-    help="Journal JSON to restore (default: latest).",
+    help="Journal JSON to restore (default: latest disable journal).",
+)
+@click.option(
+    "--all",
+    "restore_all",
+    is_flag=True,
+    help="Re-enable packages from every disable journal (preferred after setup).",
 )
 @click.pass_context
-def restore_cmd(ctx: click.Context, journal_path: Path | None) -> None:
-    """Re-enable packages recorded in a journal."""
-    path = journal_path or latest_journal()
-    if path is None:
-        raise click.ClickException("No journals found under journals/")
+def restore_cmd(ctx: click.Context, journal_path: Path | None, restore_all: bool) -> None:
+    """Re-enable packages recorded in journal(s)."""
+    if restore_all and journal_path is not None:
+        raise click.ClickException("Use either --all or --journal, not both")
     try:
+        if restore_all:
+            results = restore_all_journals(_adb(ctx.obj["host"]))
+            if not results:
+                raise click.ClickException("No journals found under journals/")
+            for path, restored in results:
+                click.echo(f"restored from {path}:")
+                for pkg in restored:
+                    click.echo(f"  + enabled {pkg}")
+                if not restored:
+                    click.echo("  (nothing to enable)")
+            return
+        path = journal_path or latest_journal()
+        if path is None:
+            raise click.ClickException("No journals found under journals/")
         restored = restore_journal(_adb(ctx.obj["host"]), path)
     except AdbError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -150,7 +177,14 @@ def restore_cmd(ctx: click.Context, journal_path: Path | None) -> None:
 
 
 @cli.command("check")
-@click.option("--profile", "profile_name", default=None, help="Limit desired set to one profile.")
+@click.option(
+    "--profile",
+    "profile_name",
+    default=None,
+    help="Limit desired set to one profile (default: setup profiles "
+    + ", ".join(SETUP_PROFILES)
+    + ").",
+)
 @click.option("--fix", "do_fix", is_flag=True, help="Re-disable drifted packages.")
 @click.pass_context
 def check_cmd(ctx: click.Context, profile_name: str | None, do_fix: bool) -> None:
@@ -236,7 +270,7 @@ def launcher_verify(ctx: click.Context) -> None:
 @click.option("--reboot", is_flag=True, help="Reboot Shield after successful handover.")
 @click.pass_context
 def launcher_handover(ctx: click.Context, reboot: bool) -> None:
-    """Install launcher if needed, disable stock HOME, verify."""
+    """Install launcher if needed, disable stock HOME(s), verify."""
     try:
         result = handover(_adb(ctx.obj["host"]), reboot=reboot)
     except (AdbError, RuntimeError) as exc:
@@ -257,16 +291,127 @@ def profiles_cmd() -> None:
         click.echo(name)
 
 
+@cli.command("setup")
+@click.option("--dry-run", is_flag=True, help="Apply profile dry-runs only; skip launcher.")
+@click.option(
+    "--skip-build",
+    is_flag=True,
+    help="Reuse an already-built APK (still installs + hands over HOME).",
+)
+@click.option(
+    "--interactive/--batch",
+    default=False,
+    help="Prompt before each mutating phase (privacy, speech, home, …).",
+)
+@click.confirmation_option(
+    prompt="Run multi-step buckler setup on this Shield?",
+)
+@click.pass_context
+def setup_cmd(
+    ctx: click.Context,
+    dry_run: bool,
+    skip_build: bool,
+    interactive: bool,
+) -> None:
+    """Multi-step setup wizard (stock path; phases shared with kitetvOS)."""
+
+    def _ask(prompt: str) -> bool:
+        return click.confirm(prompt, default=True)
+
+    try:
+        report = run_setup(
+            _adb(ctx.obj["host"]),
+            dry_run=dry_run,
+            skip_build=skip_build,
+            interactive=interactive,
+            echo=click.echo,
+            ask=_ask if interactive else None,
+        )
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo("")
+    click.echo(f"setup ok={report.ok} runtime={report.runtime}")
+    for step in report.steps:
+        if step.skipped:
+            mark = "skip"
+        elif step.ok:
+            mark = "ok"
+        else:
+            mark = "FAIL"
+        click.echo(f"  [{mark}] {step.name}: {step.detail}")
+    if report.snapshot_path:
+        click.echo(f"snapshot: {report.snapshot_path}")
+    if not report.ok:
+        raise SystemExit(1)
+
+
+@cli.command("restore-wizard")
+@click.option(
+    "--journal",
+    "journal_path",
+    type=click.Path(path_type=Path, exists=True),
+    default=None,
+    help="Journal to re-enable (default: latest, unless --all).",
+)
+@click.option(
+    "--all",
+    "restore_all",
+    is_flag=True,
+    help="Re-enable from every disable journal (preferred after setup).",
+)
+@click.confirmation_option(prompt="Re-enable packages from journal(s) on this Shield?")
+@click.pass_context
+def restore_wizard_cmd(
+    ctx: click.Context,
+    journal_path: Path | None,
+    restore_all: bool,
+) -> None:
+    """Guided restore from journal(s), then doctor."""
+    if restore_all and journal_path is not None:
+        raise click.ClickException("Use either --all or --journal, not both")
+    try:
+        report = run_restore_wizard(
+            _adb(ctx.obj["host"]),
+            journal=journal_path,
+            all_journals=restore_all,
+            echo=click.echo,
+        )
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"restore-wizard ok={report.ok}")
+    if not report.ok:
+        raise SystemExit(1)
+
+
+@cli.command("snapshot")
+@click.option(
+    "--out",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Output path (default: journals/snapshot-*.json).",
+)
+@click.pass_context
+def snapshot_cmd(ctx: click.Context, out: Path | None) -> None:
+    """Export desired-state snapshot JSON for this Shield."""
+    try:
+        path = export_snapshot(_adb(ctx.obj["host"]), out)
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(str(path))
+
+
 @cli.command("doctor")
 @click.pass_context
 def doctor_cmd(ctx: click.Context) -> None:
-    """Health check: HOME, AI stack, sticky disables, screensaver, reminders."""
+    """Health check: HOME/AI/Chromecast hard-fail; screensaver is a warning."""
     try:
         report = doctor(_adb(ctx.obj["host"]))
     except AdbError as exc:
         raise click.ClickException(str(exc)) from exc
     for line in report.lines:
         click.echo(line)
+    if report.warnings and report.ok:
+        click.echo(f"(warnings: {len(report.warnings)} — exit 0)")
     if not report.ok:
         raise SystemExit(1)
 

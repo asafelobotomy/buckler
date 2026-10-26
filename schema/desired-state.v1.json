@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kitetv.local/schema/desired-state.v1.json",
+  "title": "kitetv / buckler desired state",
+  "description": "Shared contract between stock ADB setup (buckler) and future kitetvOS first-boot provisioning.",
+  "type": "object",
+  "required": ["schema", "policy", "profiles"],
+  "properties": {
+    "schema": { "const": 1 },
+    "created_at": { "type": "string" },
+    "host": { "type": "string" },
+    "device": {
+      "type": "object",
+      "properties": {
+        "model": { "type": "string" },
+        "codename": { "type": "string" },
+        "build": { "type": "string" },
+        "security_patch": { "type": "string" },
+        "home": { "type": "string" }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "keep_ai_upscaling",
+        "keep_chromecast",
+        "disable_mics",
+        "launcher",
+        "screensaver"
+      ],
+      "properties": {
+        "keep_ai_upscaling": { "type": "boolean" },
+        "keep_chromecast": { "type": "boolean" },
+        "disable_mics": { "type": "boolean" },
+        "launcher": { "type": "string" },
+        "screensaver": { "type": "string" },
+        "animation_scale": { "type": "number" }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "desired_disabled": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "actually_disabled": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "ai_problems": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["stock-adb", "kitetvos"],
+      "description": "stock-adb = buckler on SHIELD Experience; kitetvos = first-boot / Provisioner on custom ROM"
+    }
+  }
+}

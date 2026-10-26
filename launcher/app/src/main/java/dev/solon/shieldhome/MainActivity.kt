@@ -63,11 +63,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             ShieldHomeTheme {
-                HomeScreen(
-                    onOpenSettings = {
-                        startActivity(Intent(Settings.ACTION_SETTINGS))
-                    },
-                )
+                var showFirstRun by remember { mutableStateOf(isFirstRunPending(this)) }
+                val openSettings = {
+                    startActivity(Intent(Settings.ACTION_SETTINGS))
+                }
+                if (showFirstRun) {
+                    FirstRunScreen(
+                        onContinue = {
+                            markFirstRunDone(this)
+                            showFirstRun = false
+                        },
+                        onOpenSettings = openSettings,
+                    )
+                } else {
+                    HomeScreen(onOpenSettings = openSettings)
+                }
             }
         }
     }

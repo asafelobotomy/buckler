@@ -1,4 +1,4 @@
-# Hard-blocked packages — shieldctl refuses to disable these even if listed elsewhere.
+# Hard-blocked packages — buckler refuses to disable these even if listed elsewhere.
 name: never
 description: Soft-brick / core Shield / AI upscaling — never disable
 packages:

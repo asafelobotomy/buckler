@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from shieldctl.adb import Adb
-from shieldctl.profiles import load_never
+from buckler.adb import Adb
+from buckler.profiles import load_never
 
 KNOWN_STOCK_LAUNCHERS = frozenset(
     {

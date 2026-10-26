@@ -4,33 +4,35 @@
 2. Probe:
 
    ```bash
-   cd ~/Projects/shieldctl
+   cd ~/Projects/buckler
    source .venv/bin/activate   # or: uv run --python /usr/bin/python3
-   shieldctl --host <IP>:5555 probe
+   buckler --host <IP>:5555 probe
    ```
 
-3. Check drift against journals + `privacy-core` / `minimal`:
+3. Check drift against setup profiles (`privacy-core`, `speech`, `minimal`, `extras`) plus disable journals:
 
    ```bash
-   shieldctl --host <IP>:5555 check
+   buckler --host <IP>:5555 check
    ```
 
 4. If packages came back enabled, re-apply:
 
    ```bash
-   shieldctl --host <IP>:5555 check --fix
+   buckler --host <IP>:5555 check --fix
    # or explicitly:
-   shieldctl --host <IP>:5555 apply --profile privacy-core
-   shieldctl --host <IP>:5555 apply --profile minimal
+   buckler --host <IP>:5555 apply --profile privacy-core
+   buckler --host <IP>:5555 apply --profile speech
+   buckler --host <IP>:5555 apply --profile minimal
+   buckler --host <IP>:5555 apply --profile extras
    ```
 
 5. Confirm HOME is still shieldhome:
 
    ```bash
-   shieldctl --host <IP>:5555 launcher verify
+   buckler --host <IP>:5555 launcher verify
    ```
 
-   If stock returned as HOME, run `shieldctl launcher handover` again.
+   If stock returned as HOME, run `buckler launcher handover` again (disables all known stock launchers).
 
 6. Confirm AI upscaling stack still reports OK in `probe` / `check`.
 7. Turn Network debugging off.

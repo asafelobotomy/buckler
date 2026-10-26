@@ -1,32 +1,67 @@
-# Setup / restore experience (planned original work)
+# Setup / restore experience
 
-## Can we clone and decompile NVIDIA’s setup / restore UI?
+Original work in `buckler` + `shieldhome` — **not** a decompile of NVIDIA setup/restore APKs.
 
-**Not as a product path.** The stock setup / welcome / registration packages (`tungsten.setupwraith`, `com.nvidia.shield.welcome`, `com.nvidia.shield.registration`, etc.) are proprietary NVIDIA/Google code. Decompiling them to ship a refactored derivative would copy their expression and is not something this project will do.
+## Why not decompile stock setup?
 
-What *is* fine:
+Packages like `tungsten.setupwraith`, `com.nvidia.shield.welcome`, and `com.nvidia.shield.registration` are proprietary. Shipping a refactored derivative of their code is off-limits. We build our own flows instead.
 
-- Observe **behaviour** (screens, order of prompts, what ADB restore needs) for UX inspiration
-- Build an **original** first-run and restore flow in `shieldctl` + `shieldhome`
-- Keep using reversible `pm disable-user` journals instead of imaging proprietary APKs
+## Host CLI
 
-## Recommended design (original)
+```bash
+# Multi-step setup (confirm prompt; use --yes to skip):
+buckler --host <IP> setup
+buckler --host <IP> setup --interactive   # ask before each mutating phase
 
-A couch-friendly **Restore & Setup** mode owned by us:
+# Preview profile changes only:
+buckler --host <IP> setup --dry-run
 
-1. **Host CLI wizard** (`shieldctl setup` / `shieldctl restore-wizard`)
-   - Connect / probe
-   - Offer profiles: privacy-core → speech → minimal → extras → home-clean
-   - Install/update shieldhome + ClockDream screensaver
-   - Apply journals; verify AI stack + Chromecast kept
-   - Print “turn Network debugging off”
+# Reuse an already-built APK:
+buckler --host <IP> setup --skip-build
 
-2. **On-TV first-run** (shieldhome)
-   - One-time welcome: dock picker, confirm screensaver, link to Settings
-   - No network permission; no telemetric “registration”
+# Export desired-state JSON (schema/desired-state.v1.json, validated on write):
+buckler --host <IP> snapshot
 
-3. **Disaster restore**
-   - `shieldctl restore --journal …` already re-enables packages
-   - Optional: export a single “desired state” snapshot JSON for the unit
+# Prefer after a full setup — undo every disable journal, then doctor:
+buckler --host <IP> restore-wizard --all
+buckler --host <IP> restore --all
 
-This stays MIT-clean, matches kitetvOS’s long-term “own launcher / own experience” goal, and avoids soft-brick risk from ripping system setup packages.
+# Surgical: one journal only
+buckler --host <IP> restore --journal journals/<file>.json
+```
+
+### What `setup` does (phase IDs)
+
+`connect` → `probe` → `privacy` → `speech` → `extras` → `home` → `screensaver` → `tune` → `verify` → `snapshot` → `finish`
+
+Same IDs are the contract for **kitetvOS Provisioner** first-boot ([kitetvos-bridge.md](kitetvos-bridge.md)).
+
+**Important:** A stock Shield factory restore still runs NVIDIA’s OOBE, not this wizard. After stock restore, enable Network debugging and run `buckler setup` again. On kitetvOS, factory reset will re-open *our* wizard.
+
+### Snapshot schema
+
+JSON with device identity, policy flags (keep AI / Chromecast, disable mics), profile list, desired vs actual disabled packages. Written only after `validate_desired_state`. Use after OTAs with `buckler check --fix`.
+
+## On-TV first-run
+
+`shieldhome` shows a one-time welcome (SharedPreferences `first_run_done`). It is **informational only** — it does not apply host profiles or talk to `buckler`.
+
+- Explains dock / library / screensaver / host tooling  
+- **Continue to Home** or **Open Android TV Settings**  
+- No network permission; no registration telemetry  
+
+Clear the flag to see it again:
+
+```bash
+adb shell run-as dev.solon.shieldhome true 2>/dev/null || true
+# debug builds / until run-as works, uninstall+reinstall or:
+adb shell pm clear dev.solon.shieldhome   # clears prefs (re-triggers welcome)
+```
+
+Prefer after install: launch HOME once to see the welcome.
+
+## Disaster path
+
+1. `restore-wizard --all` (or `restore --all`) to undo all setup disables  
+2. Or `setup` again to re-apply the full clean stack  
+3. Keep snapshots under `journals/` (gitignored) for your unit  

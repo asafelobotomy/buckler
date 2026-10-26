@@ -100,13 +100,6 @@ class Adb:
         )
         return result.stdout.strip()
 
-    def uninstall(self, package: str) -> str:
-        result = self._run(
-            [self.adb_bin, "-s", self.host, "uninstall", package],
-            check=False,
-        )
-        return result.stdout.strip()
-
     def set_home_activity(self, component: str) -> str:
         return self.shell("cmd", "package", "set-home-activity", component, check=False)
 
