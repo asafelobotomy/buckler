@@ -1,0 +1,34 @@
+[project]
+name = "shieldctl"
+version = "0.1.0"
+description = "ADB CLI for NVIDIA SHIELD TV Pro cleanup, privacy profiles, and custom HOME launcher."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "click>=8.1.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+shieldctl = "shieldctl.cli:cli"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+shieldctl = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

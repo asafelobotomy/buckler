@@ -1,0 +1,12 @@
+name: minimal
+description: Tier A telemetry, partner auto-installs, GameStream leftovers, trivial bloat
+packages:
+  - com.nvidia.stats
+  - com.nvidia.feedback
+  - com.nvidia.diagtools
+  - com.google.android.feedback
+  - android.autoinstalls.config.nvidia
+  - com.nvidia.nvgamecast
+  - com.nvidia.tegrazone3
+  - com.android.gallery3d
+  - com.android.printspooler

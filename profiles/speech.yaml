@@ -1,0 +1,8 @@
+name: speech
+description: Disable mic / voice stacks (keep Chromecast mediashell)
+packages:
+  - com.google.android.speech.pumpkin
+  - com.nvidia.hotwordsetup
+  - com.nvidia.shield.ask
+  # katniss already in privacy-core; listed again is fine (idempotent)
+  - com.google.android.katniss

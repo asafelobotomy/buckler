@@ -1,0 +1,5 @@
+name: privacy-core
+description: Disable Google Assistant and recommendations (no phone remote)
+packages:
+  - com.google.android.katniss
+  - com.google.android.tvrecommendations

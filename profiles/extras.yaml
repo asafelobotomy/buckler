@@ -1,0 +1,26 @@
+name: extras
+description: Factory/setup leftovers, SMB share, OSC overlay, registration/welcome/beta
+packages:
+  - com.nvidia.factory
+  - com.nvidia.factorybundling
+  - com.nvidia.factorysyschecker
+  - com.nvidia.developerwidget
+  - com.nvidia.shield.registration
+  - com.nvidia.shield.welcome
+  - com.nvidia.shieldbeta
+  - com.nvidia.shield.beta
+  - com.nvidia.shield.smbserver
+  - com.nvidia.osc
+  - com.nvidia.shield.nvcustomize
+  - com.nvidia.shieldtech.hooks
+  - com.nvidia.shieldtech.proxy
+  - com.nvidia.NvCPLUpdater
+  - com.nvidia.inputviewer
+  - com.nvidia.tegraprofiler.security
+  - com.nvidia.app.messaging
+  - com.nvidia.shield.appselector
+  - com.google.android.partnersetup
+  - com.google.android.syncadapters.calendar
+  - com.google.android.tv.frameworkpackagestubs
+  - com.android.dreams.basic
+  # Backdrop is handled by `shieldctl screensaver` after ClockDream is installed

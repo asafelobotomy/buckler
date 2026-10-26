@@ -1,0 +1,8 @@
+# Package list is empty — home-clean is an action profile handled by
+# `shieldctl launcher handover`, which installs/verifies our launcher then
+# disables the stock HOME owner.
+name: home-clean
+description: Replace stock Android TV HOME with shieldhome (via launcher handover)
+packages: []
+stock_launcher: com.google.android.tvlauncher
+our_launcher: dev.solon.shieldhome
