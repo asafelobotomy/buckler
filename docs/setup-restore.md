@@ -1,6 +1,6 @@
 # Setup / restore experience
 
-Original work in `buckler` + `shieldhome` — **not** a decompile of NVIDIA setup/restore APKs.
+Original work in `buckler` + `buckler-home` — **not** a decompile of NVIDIA setup/restore APKs.
 
 ## Why not decompile stock setup?
 
@@ -44,7 +44,7 @@ JSON with device identity, policy flags (keep AI / Chromecast, disable mics), pr
 
 ## On-TV first-run
 
-`shieldhome` shows a one-time welcome (SharedPreferences `first_run_done`). It is **informational only** — it does not apply host profiles or talk to `buckler`.
+`buckler-home` shows a one-time welcome (SharedPreferences `first_run_done`). It is **informational only** — it does not apply host profiles or talk to `buckler`.
 
 - Explains dock / library / screensaver / host tooling  
 - **Continue to Home** or **Open Android TV Settings**  
@@ -53,9 +53,9 @@ JSON with device identity, policy flags (keep AI / Chromecast, disable mics), pr
 Clear the flag to see it again:
 
 ```bash
-adb shell run-as dev.solon.shieldhome true 2>/dev/null || true
+adb shell run-as dev.solon.bucklerhome true 2>/dev/null || true
 # debug builds / until run-as works, uninstall+reinstall or:
-adb shell pm clear dev.solon.shieldhome   # clears prefs (re-triggers welcome)
+adb shell pm clear dev.solon.bucklerhome   # clears prefs (re-triggers welcome)
 ```
 
 Prefer after install: launch HOME once to see the welcome.

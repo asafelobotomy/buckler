@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kitetv.local/schema/home-layout.v1.json",
+  "title": "buckler-home / buckler home layout",
+  "description": "Shared home layout contract: cover style + ordered shelves.",
+  "type": "object",
+  "required": ["schema", "layout", "shelves"],
+  "properties": {
+    "schema": { "const": 1 },
+    "layout": {
+      "type": "string",
+      "enum": ["icon", "poster", "banner"]
+    },
+    "suggested_feed_url": {
+      "type": ["string", "null"],
+      "description": "Optional HTTPS JSON feed merged into the suggested shelf"
+    },
+    "shelves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "title", "enabled"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["apps", "library", "recents", "watch_next", "suggested"]
+          },
+          "title": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "packages": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

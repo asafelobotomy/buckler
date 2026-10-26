@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "shieldhome"
+rootProject.name = "buckler-home"
 include(":app")

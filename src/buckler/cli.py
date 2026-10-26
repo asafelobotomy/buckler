@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import click
 
 from buckler import __version__
 from buckler.adb import Adb, AdbError
+from buckler.home_layout import (
+    HomeLayoutError,
+    default_home_layout,
+    default_layout_path,
+    push_home_layout,
+    validate_home_layout,
+    write_home_layout,
+)
 from buckler.journal import latest_journal, seed_privacy_core_journal
 from buckler.launcher_ops import (
     build_launcher,
@@ -222,7 +231,7 @@ def seed_journal_cmd(ctx: click.Context) -> None:
 
 @cli.group("launcher")
 def launcher_group() -> None:
-    """Build / install / verify / handover shieldhome."""
+    """Build / install / verify / handover buckler-home."""
 
 
 @launcher_group.command("build")
@@ -250,7 +259,7 @@ def launcher_install(ctx: click.Context) -> None:
 @launcher_group.command("verify")
 @click.pass_context
 def launcher_verify(ctx: click.Context) -> None:
-    """Check package install and whether HOME points at shieldhome."""
+    """Check package install and whether HOME points at buckler-home."""
     adb = _adb(ctx.obj["host"])
     try:
         adb.connect()
@@ -291,12 +300,85 @@ def profiles_cmd() -> None:
         click.echo(name)
 
 
+@cli.group("home")
+def home_group() -> None:
+    """buckler-home layout defaults (home-layout.v1)."""
+
+
+@home_group.command("show")
+@click.option(
+    "--file",
+    "layout_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Layout JSON (default: journals/home-layout.json or built-in default).",
+)
+def home_show(layout_path: Path | None) -> None:
+    """Print home-layout.v1 JSON."""
+    path = layout_path or default_layout_path()
+    if path.is_file():
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        doc = default_home_layout()
+    try:
+        validate_home_layout(doc)
+    except HomeLayoutError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(json.dumps(doc, indent=2))
+
+
+@home_group.command("write")
+@click.option(
+    "--out",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Output path (default: journals/home-layout.json).",
+)
+@click.option(
+    "--layout",
+    type=click.Choice(["icon", "poster", "banner"], case_sensitive=True),
+    default="banner",
+    show_default=True,
+)
+def home_write(out: Path | None, layout: str) -> None:
+    """Write default home-layout.v1 JSON."""
+    path = write_home_layout(out, default_home_layout(layout=layout))
+    click.echo(str(path))
+
+
+@home_group.command("push")
+@click.option(
+    "--file",
+    "layout_path",
+    type=click.Path(path_type=Path, exists=True),
+    default=None,
+    help="Layout JSON to push (default: write journals/home-layout.json first).",
+)
+@click.pass_context
+def home_push(ctx: click.Context, layout_path: Path | None) -> None:
+    """Push home-layout.json onto the Shield for buckler-home to import."""
+    path = layout_path
+    if path is None:
+        path = write_home_layout()
+    try:
+        remote = push_home_layout(_adb(ctx.obj["host"]), path)
+    except (AdbError, HomeLayoutError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"pushed {path} → {remote}")
+    click.echo("Open HOME (or resume buckler-home) to import.")
+
+
 @cli.command("setup")
 @click.option("--dry-run", is_flag=True, help="Apply profile dry-runs only; skip launcher.")
 @click.option(
     "--skip-build",
     is_flag=True,
     help="Reuse an already-built APK (still installs + hands over HOME).",
+)
+@click.option(
+    "--skip-home-layout",
+    is_flag=True,
+    help="Do not write/push home-layout.v1 after launcher handover.",
 )
 @click.option(
     "--interactive/--batch",
@@ -311,6 +393,7 @@ def setup_cmd(
     ctx: click.Context,
     dry_run: bool,
     skip_build: bool,
+    skip_home_layout: bool,
     interactive: bool,
 ) -> None:
     """Multi-step setup wizard (stock path; phases shared with kitetvOS)."""
@@ -323,6 +406,7 @@ def setup_cmd(
             _adb(ctx.obj["host"]),
             dry_run=dry_run,
             skip_build=skip_build,
+            skip_home_layout=skip_home_layout,
             interactive=interactive,
             echo=click.echo,
             ask=_ask if interactive else None,
@@ -418,7 +502,7 @@ def doctor_cmd(ctx: click.Context) -> None:
 
 @cli.command("tune")
 @click.option("--anim", default=0.5, show_default=True, type=float, help="Animation scale.")
-@click.option("--compile/--no-compile", default=True, help="Speed-compile shieldhome.")
+@click.option("--compile/--no-compile", default=True, help="Speed-compile buckler-home.")
 @click.pass_context
 def tune_cmd(ctx: click.Context, anim: float, compile: bool) -> None:
     """Snappier animations and optional speed-profile compile."""
@@ -428,7 +512,7 @@ def tune_cmd(ctx: click.Context, anim: float, compile: bool) -> None:
         click.echo(f"animation scales: {anim}")
         if compile:
             out = compile_launcher_speed(adb)
-            click.echo(out or "compiled shieldhome (speed)")
+            click.echo(out or "compiled buckler-home (speed)")
     except AdbError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -469,7 +553,7 @@ def dns_off(ctx: click.Context) -> None:
 @click.option("--disable-backdrop/--keep-backdrop", default=True)
 @click.pass_context
 def screensaver_cmd(ctx: click.Context, disable_backdrop: bool) -> None:
-    """Set shieldhome ClockDream as screensaver; optionally disable Backdrop."""
+    """Set buckler-home ClockDream as screensaver; optionally disable Backdrop."""
     adb = _adb(ctx.obj["host"])
     try:
         if disable_backdrop:

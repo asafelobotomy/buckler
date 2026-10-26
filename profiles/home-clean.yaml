@@ -2,7 +2,7 @@
 # `buckler launcher handover`, which installs/verifies our launcher then
 # disables the stock HOME owner.
 name: home-clean
-description: Replace stock Android TV HOME with shieldhome (via launcher handover)
+description: Replace stock Android TV HOME with buckler-home (via launcher handover)
 packages: []
 stock_launcher: com.google.android.tvlauncher
-our_launcher: dev.solon.shieldhome
+our_launcher: dev.solon.bucklerhome

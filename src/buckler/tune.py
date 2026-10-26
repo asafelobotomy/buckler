@@ -9,7 +9,7 @@ from buckler.journal import Journal
 from buckler.paths import journals_dir
 from buckler.policy import OUR_LAUNCHER, verify_ai_stack
 
-OUR_DREAM = "dev.solon.shieldhome/.ClockDream"
+OUR_DREAM = "dev.solon.bucklerhome/.ClockDream"
 BACKDROP = "com.google.android.backdrop"
 
 
@@ -55,7 +55,7 @@ def clear_private_dns(adb: Adb) -> None:
 
 
 def set_our_screensaver(adb: Adb) -> None:
-    """Point secure screensaver settings at shieldhome ClockDream."""
+    """Point secure screensaver settings at buckler-home ClockDream."""
     adb.connect()
     if not adb.package_present(OUR_LAUNCHER):
         raise RuntimeError(f"{OUR_LAUNCHER} not installed")
@@ -73,7 +73,7 @@ def disable_backdrop(adb: Adb) -> Journal:
             BACKDROP,
             before_disabled=False,
             after_disabled=True,
-            reason="replaced by shieldhome ClockDream",
+            reason="replaced by buckler-home ClockDream",
         )
     journal.notes.append(f"screensaver={OUR_DREAM}")
     journal.save(journals_dir() / "screensaver.json")
@@ -90,7 +90,7 @@ def doctor(adb: Adb) -> DoctorReport:
     lines.append(f"home: {home}")
     if OUR_LAUNCHER not in home:
         ok = False
-        lines.append("  ! HOME is not shieldhome")
+        lines.append("  ! HOME is not buckler-home")
 
     ai = verify_ai_stack(adb)
     if ai:
@@ -117,7 +117,7 @@ def doctor(adb: Adb) -> DoctorReport:
     dream = adb.shell("settings", "get", "secure", "screensaver_components", check=False)
     lines.append(f"screensaver: {dream}")
     if OUR_DREAM not in dream:
-        msg = "screensaver is not shieldhome ClockDream"
+        msg = "screensaver is not buckler-home ClockDream"
         warnings.append(msg)
         lines.append(f"  ~ {msg}")
 

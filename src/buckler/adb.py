@@ -104,6 +104,13 @@ class Adb:
         )
         return result.stdout.strip()
 
+    def push(self, local: str, remote: str) -> str:
+        result = self._run(
+            [self.adb_bin, "-s", self.host, "push", local, remote],
+            check=True,
+        )
+        return (result.stdout or result.stderr or "").strip()
+
     def set_home_activity(self, component: str) -> str:
         return self.shell("cmd", "package", "set-home-activity", component, check=False)
 

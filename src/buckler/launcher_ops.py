@@ -1,4 +1,4 @@
-"""Build, install, verify, and hand over HOME to shieldhome."""
+"""Build, install, verify, and hand over HOME to buckler-home."""
 
 from __future__ import annotations
 
@@ -166,7 +166,7 @@ def handover(adb: Adb, *, reboot: bool = False) -> HandoverResult:
             stock,
             before_disabled=False,
             after_disabled=True,
-            reason="HOME handover to shieldhome",
+            reason="HOME handover to buckler-home",
         )
     journal.notes.append(f"home_before={home_before}")
     journal.notes.append(f"home_after={home_after}")

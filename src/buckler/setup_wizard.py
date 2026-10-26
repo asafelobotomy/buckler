@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from buckler.adb import Adb
+from buckler.home_layout import push_home_layout, write_home_layout
 from buckler.journal import Journal, iter_journals, latest_journal
 from buckler.launcher_ops import build_launcher, handover, install_launcher
 from buckler.ops import apply_profile, format_probe, probe, restore_all_journals, restore_journal
@@ -129,6 +130,7 @@ def export_snapshot(adb: Adb, path: Path | None = None) -> Path:
         "desired_disabled": desired_disabled,
         "actually_disabled": p.disabled,
         "ai_problems": p.ai_problems,
+        "home_layout": "schema/home-layout.v1.json",
     }
     validate_desired_state(doc)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -141,6 +143,7 @@ def run_setup(
     *,
     dry_run: bool = False,
     skip_build: bool = False,
+    skip_home_layout: bool = False,
     interactive: bool = False,
     echo: Echo | None = None,
     ask: Ask | None = None,
@@ -239,7 +242,7 @@ def run_setup(
 
     # --- home ---
     _echo(echo, banner(PHASES[5], 5, total))
-    if interactive and not _ask(ask, "Install shieldhome and take over HOME?"):
+    if interactive and not _ask(ask, "Install buckler-home and take over HOME?"):
         report.add("launcher", True, "skipped by user", skipped=True)
     else:
         try:
@@ -252,6 +255,14 @@ def run_setup(
             _echo(echo, f"  {hand.message}")
             if not hand.success:
                 return report
+            if not skip_home_layout:
+                try:
+                    local = write_home_layout()
+                    remote = push_home_layout(adb, local)
+                    report.add("home_layout", True, remote)
+                    _echo(echo, f"  home-layout → {remote}")
+                except Exception as exc:  # noqa: BLE001
+                    report.add("home_layout", False, str(exc))
         except Exception as exc:  # noqa: BLE001
             report.add("launcher", False, str(exc))
             return report

@@ -3,14 +3,14 @@
 ADB CLI and custom Android TV HOME launcher for **NVIDIA SHIELD TV Pro** (`mdarcy`).  
 Command: `buckler` · Project: `~/Projects/buckler` · Path to **kitetvOS**.
 
-Inspired by [cleanyourtv](https://github.com/Gathin23/cleanyourtv)’s safety model (disable-user, journals, never leave the box without HOME) — implemented as our own tooling and **shieldhome** launcher, not a fork.
+Inspired by [cleanyourtv](https://github.com/Gathin23/cleanyourtv)’s safety model (disable-user, journals, never leave the box without HOME) — implemented as our own tooling and **buckler-home** launcher, not a fork.
 
 ## What it does
 
 - **probe / audit** — identity, HOME owner, package state, AI upscaling health
 - **apply / restore / check** — journaled `pm disable-user` profiles; OTA drift detection
 - **setup / snapshot / restore-wizard** — guided stock path aligned with future kitetvOS first-boot
-- **launcher** — build, install, verify, and safely hand HOME to `dev.solon.shieldhome`
+- **launcher** — build, install, verify, and safely hand HOME to `dev.solon.bucklerhome`
 
 ## Device policy (this project’s defaults)
 
@@ -19,7 +19,7 @@ Inspired by [cleanyourtv](https://github.com/Gathin23/cleanyourtv)’s safety mo
 | NVIDIA AI upscaling (`NvCPLSvc` + audio/Dolby) | Google Assistant (`katniss`) |
 | Play Services / Store / remote / BT | `tvrecommendations` (no phone remote) |
 | Settings / core Shield services | Tier A telemetry & GameStream leftovers |
-| Chromecast (`mediashell`) | Stock HOME(s) after shieldhome handover |
+| Chromecast (`mediashell`) | Stock HOME(s) after buckler-home handover |
 
 See [docs/safety.md](docs/safety.md).
 
@@ -82,17 +82,30 @@ Stock factory reset still needs a manual `setup` afterward; kitetvOS will re-ent
 profiles/     privacy-core, speech, minimal, extras, home-clean, never
 schema/       desired-state.v1.json (stock ↔ kitetvOS contract)
 src/buckler/  CLI (Click + system adb)
-launcher/     Compose-for-TV app (no INTERNET permission)
+launcher/     Compose-for-TV app (buckler-home)
+covers/       Curated cover index (keyless Change cover pack)
 journals/     restore journals + snapshots (gitignored JSON)
 docs/         safety, OTA, setup/restore, kitetvOS bridge
 tests/        policy / handover / journal / schema unit tests
 ```
 
-## Launcher (shieldhome)
+## Launcher (buckler-home)
 
-Lean Compose-for-TV HOME: clock, preferred dock (Jellyfin, LiveSubs, SonicSound, …), full app library, Settings tile. One-time on-TV welcome is informational only (does not run host profiles). No network permission. Package id: `dev.solon.shieldhome`.
+Compose-for-TV HOME (**0.5.0**) with cover layouts, shelves, **Buckler Settings**, GitHub OTA prompts, and keyless Change cover (local + curated pack). Optional SteamGridDB / IGDB link via TV QR / device-code — not required for covers.
 
-Release APKs are **debug-keystore signed** for personal sideload; replace signing before any wider distribution.
+```bash
+buckler home write                 # journals/home-layout.json
+buckler home push                  # adb push → buckler-home import on resume
+buckler launcher build && buckler launcher install
+```
+
+**OTA:** attach a `buckler-home*.apk` (or `bucklerhome*.apk` / `app-release.apk`) to the GitHub Release. The TV checks `releases/latest` (~12h), then Update now / Snooze 7 days / Dismiss.
+
+**Covers:** [covers/index.json](covers/index.json) ships in-repo and as an APK asset; Settings → Covers can refresh from GitHub raw. Link enrichers in Settings (SteamGridDB QR → paste key once; IGDB needs a public Twitch Client ID in `build.gradle.kts` `TWITCH_CLIENT_ID` with Device Code Grant enabled).
+
+**Long-press / Menu:** Open, Change cover, Remove (unpin), Uninstall, Info, Pin / move.
+
+Package id: `dev.solon.bucklerhome`. Uses `INTERNET` for artwork, curated pack, GitHub updates, and optional linked APIs — no ads. Release APKs are **debug-keystore signed** for personal sideload.
 
 ## Out of scope (for now)
 

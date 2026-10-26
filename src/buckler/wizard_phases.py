@@ -19,7 +19,7 @@ PHASES: tuple[Phase, ...] = (
     Phase("privacy", "Privacy", "Disable telemetry, partner auto-installs, GameStream leftovers."),
     Phase("speech", "Voice & mics", "Disable Assistant / hotword / on-device speech (keep Chromecast)."),
     Phase("extras", "Extras", "Factory, SMB, OSC, welcome/registration leftovers."),
-    Phase("home", "Home screen", "Install shieldhome and make it HOME."),
+    Phase("home", "Home screen", "Install buckler-home and make it HOME."),
     Phase("screensaver", "Screensaver", "ClockDream on; Backdrop off."),
     Phase("tune", "Tune", "Faster animations and speed-compile the launcher."),
     Phase("verify", "Verify", "Doctor: HOME, AI policy, Chromecast, sticky processes."),

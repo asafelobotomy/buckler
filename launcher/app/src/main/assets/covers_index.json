@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "apps": {
+    "org.jellyfin.androidtv": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/jellyfin.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/jellyfin.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/jellyfin.png"
+    },
+    "com.netflix.ninja": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netflix.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netflix.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netflix.png"
+    },
+    "com.disney.disneyplus": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/disney-plus.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/disney-plus.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/disney-plus.png"
+    },
+    "com.google.android.youtube.tv": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/youtube.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/youtube.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/youtube.png"
+    },
+    "com.spotify.tv.android": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/spotify.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/spotify.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/spotify.png"
+    },
+    "org.videolan.vlc": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/vlc.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/vlc.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/vlc.png"
+    },
+    "tv.twitch.android.app": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/twitch.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/twitch.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/twitch.png"
+    },
+    "com.google.android.videos": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play-movies-and-tv.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play-movies-and-tv.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play-movies-and-tv.png"
+    },
+    "com.android.vending": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play.png",
+      "poster": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play.png",
+      "banner": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-play.png"
+    }
+  }
+}

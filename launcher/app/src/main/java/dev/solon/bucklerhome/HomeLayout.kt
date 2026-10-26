@@ -1,0 +1,178 @@
+package dev.solon.bucklerhome
+
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+
+enum class CoverLayout {
+    ICON,
+    POSTER,
+    BANNER,
+    ;
+
+    fun wire(): String = name.lowercase()
+
+    companion object {
+        fun fromWire(raw: String?): CoverLayout = when (raw?.lowercase()) {
+            "poster" -> POSTER
+            "banner" -> BANNER
+            else -> ICON
+        }
+    }
+}
+
+enum class ShelfType {
+    APPS,
+    LIBRARY,
+    RECENTS,
+    WATCH_NEXT,
+    SUGGESTED,
+    ;
+
+    fun wire(): String = name.lowercase()
+
+    companion object {
+        fun fromWire(raw: String?): ShelfType = when (raw?.lowercase()) {
+            "library" -> LIBRARY
+            "recents" -> RECENTS
+            "watch_next" -> WATCH_NEXT
+            "suggested" -> SUGGESTED
+            else -> APPS
+        }
+    }
+}
+
+data class ShelfConfig(
+    val id: String,
+    val type: ShelfType,
+    val title: String,
+    val enabled: Boolean = true,
+    val packages: List<String> = emptyList(),
+)
+
+data class HomeLayout(
+    val layout: CoverLayout = CoverLayout.BANNER,
+    val shelves: List<ShelfConfig> = defaultShelves(),
+    val suggestedFeedUrl: String? = null,
+) {
+    fun toJson(): JSONObject {
+        val shelvesArr = JSONArray()
+        for (s in shelves) {
+            shelvesArr.put(
+                JSONObject()
+                    .put("id", s.id)
+                    .put("type", s.type.wire())
+                    .put("title", s.title)
+                    .put("enabled", s.enabled)
+                    .put("packages", JSONArray(s.packages)),
+            )
+        }
+        return JSONObject()
+            .put("schema", 1)
+            .put("layout", layout.wire())
+            .put("suggested_feed_url", suggestedFeedUrl)
+            .put("shelves", shelvesArr)
+    }
+
+    fun appsPackages(): List<String> =
+        shelves.firstOrNull { it.type == ShelfType.APPS }?.packages
+            ?: DEFAULT_DOCK_PACKAGES
+
+    fun withAppsPackages(packages: List<String>): HomeLayout =
+        copy(
+            shelves = shelves.map { s ->
+                if (s.type == ShelfType.APPS) s.copy(packages = packages) else s
+            },
+        )
+
+    companion object {
+        const val IMPORT_FILE = "home-layout.json"
+        private const val PREFS = "bucklerhome"
+        private const val KEY_LAYOUT = "home_layout_json"
+
+        fun defaultShelves(appsPackages: List<String> = DEFAULT_DOCK_PACKAGES): List<ShelfConfig> =
+            listOf(
+                ShelfConfig("watch_next", ShelfType.WATCH_NEXT, "Up Next", enabled = true),
+                ShelfConfig("apps", ShelfType.APPS, "Apps", enabled = true, packages = appsPackages),
+                ShelfConfig("suggested", ShelfType.SUGGESTED, "Suggested", enabled = true),
+                ShelfConfig("recents", ShelfType.RECENTS, "Recent", enabled = false),
+                ShelfConfig("library", ShelfType.LIBRARY, "Library", enabled = true),
+            )
+
+        fun default(appsPackages: List<String> = DEFAULT_DOCK_PACKAGES): HomeLayout =
+            HomeLayout(
+                layout = CoverLayout.BANNER,
+                shelves = defaultShelves(appsPackages),
+            )
+
+        fun fromJson(raw: String): HomeLayout {
+            val obj = JSONObject(raw)
+            val shelvesArr = obj.optJSONArray("shelves") ?: JSONArray()
+            val shelves = buildList {
+                for (i in 0 until shelvesArr.length()) {
+                    val s = shelvesArr.getJSONObject(i)
+                    val pkgsArr = s.optJSONArray("packages") ?: JSONArray()
+                    val pkgs = buildList {
+                        for (j in 0 until pkgsArr.length()) {
+                            add(pkgsArr.getString(j))
+                        }
+                    }
+                    add(
+                        ShelfConfig(
+                            id = s.optString("id", "shelf_$i"),
+                            type = ShelfType.fromWire(s.optString("type")),
+                            title = s.optString("title", "Shelf"),
+                            enabled = s.optBoolean("enabled", true),
+                            packages = pkgs,
+                        ),
+                    )
+                }
+            }
+            val feed = obj.optString("suggested_feed_url", "").ifBlank { null }
+            return HomeLayout(
+                layout = CoverLayout.fromWire(obj.optString("layout")),
+                shelves = shelves.ifEmpty { defaultShelves() },
+                suggestedFeedUrl = feed,
+            )
+        }
+
+        fun load(context: Context): HomeLayout {
+            importIfPresent(context)
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val raw = prefs.getString(KEY_LAYOUT, null)
+            if (!raw.isNullOrBlank()) {
+                return runCatching { fromJson(raw) }.getOrElse { migrateFromDockPrefs(context) }
+            }
+            return migrateFromDockPrefs(context)
+        }
+
+        fun save(context: Context, layout: HomeLayout) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_LAYOUT, layout.toJson().toString())
+                .apply()
+            // Keep legacy dock pins in sync for older code paths
+            DockPrefs.savePins(context, layout.appsPackages())
+        }
+
+        fun importFile(context: Context): File =
+            File(context.getExternalFilesDir(null) ?: context.filesDir, IMPORT_FILE)
+
+        fun importIfPresent(context: Context): Boolean {
+            val file = importFile(context)
+            if (!file.isFile) return false
+            val parsed = runCatching { fromJson(file.readText()) }.getOrNull() ?: return false
+            save(context, parsed)
+            runCatching { file.delete() }
+            return true
+        }
+
+        private fun migrateFromDockPrefs(context: Context): HomeLayout {
+            val pins = DockPrefs.loadPins(context)
+            val layout = default(pins)
+            save(context, layout)
+            return layout
+        }
+    }
+}

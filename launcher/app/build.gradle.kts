@@ -4,15 +4,28 @@ plugins {
 }
 
 android {
-    namespace = "dev.solon.shieldhome"
+    namespace = "dev.solon.bucklerhome"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "dev.solon.shieldhome"
+        applicationId = "dev.solon.bucklerhome"
         minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 5
+        versionName = "0.5.0"
+        // Public Twitch Client ID for IGDB device-code login (no secret in APK).
+        // Register at https://dev.twitch.tv/console and enable Device Code Grant.
+        buildConfigField("String", "TWITCH_CLIENT_ID", "\"\"")
+        buildConfigField(
+            "String",
+            "GITHUB_RELEASES_URL",
+            "\"https://api.github.com/repos/asafelobotomy/buckler/releases/latest\"",
+        )
+        buildConfigField(
+            "String",
+            "CURATED_COVERS_URL",
+            "\"https://raw.githubusercontent.com/asafelobotomy/buckler/main/covers/index.json\"",
+        )
     }
 
     buildTypes {
@@ -38,6 +51,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -63,5 +77,9 @@ dependencies {
     implementation("androidx.tv:tv-material:1.0.0-alpha10")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.core:core:1.13.1")
+    implementation("androidx.tvprovider:tvprovider:1.0.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("androidx.security:security-crypto:1.0.0")
+    implementation("com.google.zxing:core:3.5.3")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

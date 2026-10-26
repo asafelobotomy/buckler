@@ -14,8 +14,8 @@ KNOWN_STOCK_LAUNCHERS = frozenset(
     }
 )
 
-OUR_LAUNCHER = "dev.solon.shieldhome"
-OUR_HOME_ACTIVITY = "dev.solon.shieldhome/.MainActivity"
+OUR_LAUNCHER = "dev.solon.bucklerhome"
+OUR_HOME_ACTIVITY = "dev.solon.bucklerhome/.MainActivity"
 
 # Packages that must remain enabled for AI upscaling / display
 AI_STACK = frozenset(

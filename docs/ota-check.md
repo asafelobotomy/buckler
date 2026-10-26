@@ -26,7 +26,7 @@
    buckler --host <IP>:5555 apply --profile extras
    ```
 
-5. Confirm HOME is still shieldhome:
+5. Confirm HOME is still buckler-home:
 
    ```bash
    buckler --host <IP>:5555 launcher verify

@@ -2,12 +2,12 @@
 
 **End goal:** kitetvOS — a full custom Android TV OS for the 2019 SHIELD Pro (`mdarcy`), with its own first-boot wizard, launcher, privacy defaults, and (later) store/OTA.
 
-**Now:** stock SHIELD Experience + `buckler` / `shieldhome` prove the product behaviour without unlocking.
+**Now:** stock SHIELD Experience + `buckler` / `buckler-home` prove the product behaviour without unlocking.
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │  TODAY — stock firmware                                     │
-│  buckler setup (multi-step)  →  shieldhome + ClockDream   │
+│  buckler setup (multi-step)  →  buckler-home + ClockDream   │
 │  desired-state.v1.json         →  journals/snapshot-*.json  │
 └───────────────────────────┬─────────────────────────────────┘
                             │ same schema + UX copy
@@ -16,7 +16,7 @@
 │  LATER — kitetvOS                                           │
 │  First-boot Provisioner (system priv-app)                   │
 │  reads desired-state / baked product defaults               │
-│  shieldhome (or lineage_kitetv HOME) already system app     │
+│  buckler-home (or lineage_kitetv HOME) already system app     │
 │  no ADB required on the couch                               │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -27,7 +27,7 @@
 |---|---|
 | Package disable profiles (`privacy-core`, `speech`, …) | `PRODUCT_PACKAGES` omit / `pm disable` at boot / RRO overlays |
 | `never.yaml` AI / remote / GMS rules | Product makefile + sepolicy; document AI upscaling **lost** after unlock |
-| shieldhome Compose UI + first-run | Same app (or fork) as `PRODUCT_PACKAGES` HOME |
+| buckler-home Compose UI + first-run | Same app (or fork) as `PRODUCT_PACKAGES` HOME |
 | ClockDream screensaver | Same DreamService as system |
 | `desired-state.v1.json` | Provisioner input + factory reset re-run |
 | `buckler doctor` / snapshot | On-device Settings tile + `adb` for CI |
@@ -50,7 +50,7 @@ Shared names so UX and code stay aligned (`src/buckler/wizard_phases.py`):
 3. **privacy** — telemetry / leftovers (`privacy-core` + `minimal`)  
 4. **speech** — mic / assistant off  
 5. **extras** — factory / SMB / OSC / welcome leftovers  
-6. **home** — install + set shieldhome  
+6. **home** — install + set buckler-home  
 7. **screensaver** — ClockDream, remove Backdrop  
 8. **tune** — animations / compile  
 9. **verify** — doctor + Chromecast + AI policy  
@@ -70,4 +70,4 @@ Shared names so UX and code stay aligned (`src/buckler/wizard_phases.py`):
 | `~/Projects/buckler` | Stock path + shared schema + launcher prototype |
 | `~/Projects/kitetvOS` | Lineage product, manifests, vendor/kitetv, flash/OTA |
 
-When Phase 4 of kitetvOS starts, **move or submodule** `launcher/` into `vendor/kitetv/apps/ShieldHome` (or rename to KiteHome) and wire Provisioner to the same phase list.
+When Phase 4 of kitetvOS starts, **move or submodule** `launcher/` into `vendor/kitetv/apps/BucklerHome` (or rename to KiteHome) and wire Provisioner to the same phase list.
