@@ -25,8 +25,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,12 +42,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import androidx.tv.material3.darkColorScheme
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
@@ -64,6 +69,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             ShieldHomeTheme {
                 var showFirstRun by remember { mutableStateOf(isFirstRunPending(this)) }
+                var resumeTick by remember { mutableIntStateOf(0) }
+
+                DisposableEffect(this) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            resumeTick += 1
+                        }
+                    }
+                    lifecycle.addObserver(observer)
+                    onDispose { lifecycle.removeObserver(observer) }
+                }
+
                 val openSettings = {
                     startActivity(Intent(Settings.ACTION_SETTINGS))
                 }
@@ -76,7 +93,10 @@ class MainActivity : ComponentActivity() {
                         onOpenSettings = openSettings,
                     )
                 } else {
-                    HomeScreen(onOpenSettings = openSettings)
+                    HomeScreen(
+                        resumeTick = resumeTick,
+                        onOpenSettings = openSettings,
+                    )
                 }
             }
         }
@@ -100,16 +120,23 @@ fun ShieldHomeTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun HomeScreen(onOpenSettings: () -> Unit) {
+fun HomeScreen(
+    resumeTick: Int,
+    onOpenSettings: () -> Unit,
+) {
     val context = LocalContext.current
-    val apps = remember { loadLaunchableApps(context.packageManager) }
+    val apps = remember(resumeTick) { loadLaunchableApps(context.packageManager) }
     val dock = remember(apps) { preferredDock(apps) }
-    val library = remember(apps) { apps.filterNot { it.isSystem } }
+    val library = remember(apps) {
+        apps.filterNot { it.isSystem || it.packageName in dock.map { d -> d.packageName }.toSet() }
+    }
     var clock by remember { mutableStateOf(currentClock()) }
+    var date by remember { mutableStateOf(currentDate()) }
 
     LaunchedEffect(Unit) {
         while (true) {
             clock = currentClock()
+            date = currentDate()
             delay(15_000)
         }
     }
@@ -138,10 +165,16 @@ fun HomeScreen(onOpenSettings: () -> Unit) {
             modifier = Modifier.padding(top = 8.dp),
         )
         Text(
-            text = "No ads · no mic · Chromecast kept",
+            text = date,
             color = Color(0xFF9AA6B8),
             fontSize = 16.sp,
-            modifier = Modifier.padding(top = 4.dp, bottom = 28.dp),
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        Text(
+            text = "No ads · no mic · Chromecast kept",
+            color = Color(0xFF9AA6B8),
+            fontSize = 15.sp,
+            modifier = Modifier.padding(top = 6.dp, bottom = 28.dp),
         )
 
         Text(
@@ -150,7 +183,11 @@ fun HomeScreen(onOpenSettings: () -> Unit) {
             fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 12.dp),
         )
-        AppRow(apps = dock)
+        if (dock.isEmpty()) {
+            EmptyHint("Install Jellyfin, VLC, or a streaming app — it will show up here.")
+        } else {
+            AppRow(apps = dock)
+        }
 
         Spacer(modifier = Modifier.height(28.dp))
 
@@ -160,7 +197,11 @@ fun HomeScreen(onOpenSettings: () -> Unit) {
             fontSize = 14.sp,
             modifier = Modifier.padding(bottom = 12.dp),
         )
-        AppRow(apps = library)
+        if (library.isEmpty()) {
+            EmptyHint("No other launchable apps yet.")
+        } else {
+            AppRow(apps = library)
+        }
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -182,6 +223,16 @@ fun HomeScreen(onOpenSettings: () -> Unit) {
             )
         }
     }
+}
+
+@Composable
+private fun EmptyHint(message: String) {
+    Text(
+        text = message,
+        color = Color(0xFF6B778A),
+        fontSize = 15.sp,
+        modifier = Modifier.padding(vertical = 8.dp),
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -235,6 +286,10 @@ fun AppRow(apps: List<LaunchableApp>) {
 private fun currentClock(): String =
     LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
 
+private fun currentDate(): String =
+    LocalDate.now().format(DateTimeFormatter.ofPattern("EEE d MMM"))
+
+/** Preferred dock order — only installed apps appear. */
 private val DOCK_PACKAGES = listOf(
     "org.jellyfin.androidtv",
     "com.livesubs.tv",
@@ -242,13 +297,20 @@ private val DOCK_PACKAGES = listOf(
     "org.videolan.vlc",
     "com.google.android.youtube.tv",
     "com.netflix.ninja",
+    "com.disney.disneyplus",
+    "tv.twitch.android.app",
+    "com.kick.mobile",
     "ar.tvplayer.tv",
     "com.spotify.tv.android",
+    "com.google.android.videos",
 )
 
 private fun preferredDock(apps: List<LaunchableApp>): List<LaunchableApp> {
     val byPkg = apps.associateBy { it.packageName }
-    return DOCK_PACKAGES.mapNotNull { byPkg[it] }
+    val preferred = DOCK_PACKAGES.mapNotNull { byPkg[it] }
+    if (preferred.isNotEmpty()) return preferred
+    // Fallback: first few non-system apps so a fresh box isn't an empty row
+    return apps.filterNot { it.isSystem }.take(6)
 }
 
 private fun loadLaunchableApps(pm: PackageManager): List<LaunchableApp> {
@@ -295,6 +357,9 @@ private val USER_FACING_SYSTEM = setOf(
     "com.netflix.ninja",
     "com.amazon.amazonvideo.livingroom.nvidia",
     "com.google.android.apps.mediashell",
+    "com.google.android.tv",
+    "com.google.android.videos",
+    "com.disney.disneyplus",
 )
 
 private const val OUR_PACKAGE = "dev.solon.shieldhome"

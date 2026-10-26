@@ -115,6 +115,9 @@ fun FirstRunScreen(
         )
         Spacer(modifier = Modifier.height(40.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (page > 0) {
+                SecondaryButton("Back") { page -= 1 }
+            }
             if (page < PAGES.lastIndex) {
                 PrimaryButton("Next") { page += 1 }
             } else {

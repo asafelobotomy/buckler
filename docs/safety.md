@@ -14,10 +14,10 @@
 
 | Profile | Intent |
 |---|---|
-| `privacy-core` | Google Assistant + recommendations (no phone remote) |
+| `privacy-core` | Google Assistant + recommendations + Smart Connect (no phone remote) |
 | `minimal` | Telemetry, partner auto-installs, GameStream leftovers, trivial bloat |
-| `speech` | Mics / hotword / on-device speech (keeps Chromecast) |
-| `extras` | Factory, SMB, OSC, welcome/registration leftovers |
+| `speech` | Mics / hotword enrollment / on-device speech (keeps Chromecast) |
+| `extras` | Factory, SMB/NAS auth, OSC, welcome/registration leftovers |
 | `home-clean` | Action profile via `buckler launcher handover` (not `apply`) |
 | `never` | Not applyable — blocklist only |
 

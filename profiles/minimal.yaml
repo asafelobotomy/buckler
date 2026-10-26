@@ -8,5 +8,6 @@ packages:
   - android.autoinstalls.config.nvidia
   - com.nvidia.nvgamecast
   - com.nvidia.tegrazone3
+  - com.nvidia.benchmarkblocker
   - com.android.gallery3d
   - com.android.printspooler

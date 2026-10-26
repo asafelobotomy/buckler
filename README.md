@@ -59,7 +59,8 @@ buckler check                      # after OTAs: check --fix
 # buckler dns set --hostname family.cloudflare-dns.com
 ```
 
-After firmware updates: [docs/ota-check.md](docs/ota-check.md).
+After firmware updates: [docs/ota-check.md](docs/ota-check.md).  
+Device dogfood checklist: [docs/dogfood.md](docs/dogfood.md).
 
 ### Guided setup / restore
 

@@ -1,5 +1,5 @@
 name: extras
-description: Factory/setup leftovers, SMB share, OSC overlay, registration/welcome/beta
+description: Factory/setup leftovers, SMB/NAS share, OSC overlay, registration/welcome/beta
 packages:
   - com.nvidia.factory
   - com.nvidia.factorybundling
@@ -10,6 +10,8 @@ packages:
   - com.nvidia.shieldbeta
   - com.nvidia.shield.beta
   - com.nvidia.shield.smbserver
+  - com.nvidia.shield.smbauth
+  - com.nvidia.shield.nas
   - com.nvidia.osc
   - com.nvidia.shield.nvcustomize
   - com.nvidia.shieldtech.hooks

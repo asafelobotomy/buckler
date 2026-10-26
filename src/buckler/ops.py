@@ -141,9 +141,15 @@ def apply_profile(
         )
         if after:
             changed.append(pkg)
+            adb.force_stop(pkg)
 
     for pkg in blocked:
         journal.notes.append(f"blocked by never list: {pkg}")
+
+    # Already-disabled profile pkgs can still leave sticky processes (GameStream/OSC).
+    if not dry_run:
+        for pkg in skipped_already:
+            adb.force_stop(pkg)
 
     if not dry_run:
         journal.save()
@@ -226,6 +232,7 @@ def check_drift(
                     if adb.home_package() == pkg and not adb.package_present(OUR_LAUNCHER):
                         continue
                 adb.disable_user(pkg)
+                adb.force_stop(pkg)
 
     ai = verify_ai_stack(adb)
     return drifted, ai

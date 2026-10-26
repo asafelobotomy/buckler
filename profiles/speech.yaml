@@ -4,5 +4,8 @@ packages:
   - com.google.android.speech.pumpkin
   - com.nvidia.hotwordsetup
   - com.nvidia.shield.ask
+  # Hotword enrollment helpers (still present after katniss disable)
+  - com.android.hotwordenrollment.okgoogle
+  - com.android.hotwordenrollment.xgoogle
   # katniss already in privacy-core; listed again is fine (idempotent)
   - com.google.android.katniss

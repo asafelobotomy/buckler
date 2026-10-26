@@ -57,6 +57,10 @@ class Adb:
     def disable_user(self, package: str) -> str:
         return self.shell("pm", "disable-user", "--user", "0", package)
 
+    def force_stop(self, package: str) -> str:
+        """Best-effort stop; some NVIDIA system services may respawn until reboot."""
+        return self.shell("am", "force-stop", package, check=False)
+
     def enable(self, package: str) -> str:
         return self.shell("pm", "enable", package)
 

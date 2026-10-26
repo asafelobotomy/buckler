@@ -1,5 +1,7 @@
 name: privacy-core
-description: Disable Google Assistant and recommendations (no phone remote)
+description: Disable Google Assistant, recommendations, and phone Smart Connect
 packages:
   - com.google.android.katniss
   - com.google.android.tvrecommendations
+  # Phone↔TV Smart Connect (not Chromecast)
+  - com.google.android.apps.nbu.smartconnect.tv
