@@ -31,3 +31,13 @@ def journals_dir() -> Path:
 
 def launcher_dir() -> Path:
     return repo_root() / "launcher"
+
+
+def catalog_dir() -> Path:
+    return repo_root() / "catalog"
+
+
+def apk_cache_dir() -> Path:
+    path = repo_root() / ".cache" / "apks"
+    path.mkdir(parents=True, exist_ok=True)
+    return path

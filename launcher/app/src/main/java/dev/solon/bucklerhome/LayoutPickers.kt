@@ -69,17 +69,44 @@ fun TileSizePicker(style: CoverLayout, tileSize: TileSize, onSize: (TileSize) ->
     }
 }
 
-/** Both pickers, one under the other. */
+/** Both pickers, one under the other, plus the optional name under each tile. */
 @Composable
 fun LayoutAndSizePickers(
     style: CoverLayout,
     tileSize: TileSize,
+    showLabels: Boolean,
+    mainStage: MainStage,
     onStyle: (CoverLayout) -> Unit,
     onSize: (TileSize) -> Unit,
+    onLabels: (Boolean) -> Unit,
+    onStage: (MainStage) -> Unit,
 ) {
     Column {
         LayoutPicker(style, tileSize, onStyle)
         Spacer(modifier = Modifier.height(18.dp))
         TileSizePicker(style, tileSize, onSize)
+        Spacer(modifier = Modifier.height(18.dp))
+        PickerTitle("App names")
+        SettingsAction(
+            label = if (showLabels) "Show under the artwork" else "Hidden",
+            selected = showLabels,
+            onClick = { onLabels(!showLabels) },
+        )
+        Spacer(modifier = Modifier.height(18.dp))
+        MainStagePicker(mainStage, onStage)
+    }
+}
+
+/** News, Now Playing, weather or suggested media in the band under the header. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun MainStagePicker(mode: MainStage, onMode: (MainStage) -> Unit) {
+    Column {
+        PickerTitle("Main stage")
+        FlowRow(horizontalArrangement = CardGap, verticalArrangement = CardGap) {
+            MainStage.entries.forEach { option ->
+                SettingsAction(option.label, selected = option == mode) { onMode(option) }
+            }
+        }
     }
 }

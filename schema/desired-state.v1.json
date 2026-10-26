@@ -57,6 +57,21 @@
       "type": "string",
       "enum": ["stock-adb", "kitetvos"],
       "description": "stock-adb = buckler on SHIELD Experience; kitetvos = first-boot / Provisioner on custom ROM"
+    },
+    "apps": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional open-app choices recorded by setup. Omitted on older snapshots.",
+      "properties": {
+        "swaps": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "suggestions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
     }
   }
 }

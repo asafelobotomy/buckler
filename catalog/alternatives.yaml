@@ -1,0 +1,36 @@
+# Open replacements for stock apps. Batch setup keeps stock unless --swap is set.
+# Shield TV Pro 2019 is arm64. Split APKs below are the arm64 build.
+# Pinned sha256 is the file we hashed, not a guess. Refresh URL and hash together.
+entries:
+  - id: smarttube
+    label: SmartTube
+    stock_label: YouTube
+    stock_package: com.google.android.youtube.tv
+    package: org.smarttube.stable
+    version: "32.68"
+    url: https://github.com/yuliskov/SmartTube/releases/download/32.68s/SmartTube_stable_32.68_arm64-v8a.apk
+    sha256: 0a3d3f024eae66b8468f75fe85ab421169177f5ea1223a5d097d1dc9e1c84cf3
+    dock: replace-pin
+    note: >-
+      Official stable build includes Firebase Crashlytics.
+      YouTube stays installed so a phone can still cast.
+
+  - id: google-tv
+    label: Google TV
+    stock_label: Google TV
+    stock_package: com.google.android.videos
+    dock: unpin-only
+    note: Jellyfin and VLC stay on the dock. Play purchases stay in the Google app.
+
+  - id: moonlight
+    label: Moonlight
+    stock_label: GameStream
+    stock_package: com.nvidia.nvgamecast
+    package: com.limelight
+    version: "12.2"
+    url: https://github.com/moonlight-stream/moonlight-android/releases/download/v12.2/app-nonRoot-release.apk
+    sha256: a871f6190365386ef3ac5722a016d4da015ee1555631ec257f6e5dc3f4a45fe0
+    dock: append
+    note: >-
+      GameStream is already disabled by the minimal profile.
+      Moonlight plays from a Sunshine host on your PC.

@@ -38,6 +38,19 @@ def test_validate_rejects_missing_policy_field() -> None:
         validate_desired_state(doc)
 
 
+def test_validate_accepts_apps() -> None:
+    doc = _valid_doc()
+    doc["apps"] = {"swaps": ["smarttube"], "suggestions": ["localsend"]}
+    validate_desired_state(doc)
+
+
+def test_validate_rejects_bad_apps() -> None:
+    doc = _valid_doc()
+    doc["apps"] = {"swaps": [""]}
+    with pytest.raises(SchemaError, match="apps.swaps"):
+        validate_desired_state(doc)
+
+
 def test_validate_rejects_bad_runtime() -> None:
     doc = _valid_doc()
     doc["runtime"] = "windows"

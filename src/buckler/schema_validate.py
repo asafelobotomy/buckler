@@ -57,3 +57,20 @@ def validate_desired_state(doc: dict[str, Any]) -> None:
             val = doc[list_key]
             if not isinstance(val, list) or not all(isinstance(x, str) for x in val):
                 raise SchemaError(f"{list_key} must be an array of strings")
+
+    if "apps" in doc:
+        _validate_apps(doc["apps"])
+
+
+def _validate_apps(apps: Any) -> None:
+    if not isinstance(apps, dict):
+        raise SchemaError("apps must be an object")
+    extra = set(apps) - {"swaps", "suggestions"}
+    if extra:
+        raise SchemaError(f"apps has unknown fields: {', '.join(sorted(extra))}")
+    for key in ("swaps", "suggestions"):
+        if key not in apps:
+            continue
+        val = apps[key]
+        if not isinstance(val, list) or not all(isinstance(item, str) and item for item in val):
+            raise SchemaError(f"apps.{key} must be an array of non-empty strings")

@@ -57,6 +57,10 @@ data class HomeLayout(
     val shelves: List<ShelfConfig> = defaultShelves(),
     val suggestedFeedUrl: String? = null,
     val tileSize: TileSize = TileSize.MEDIUM,
+    /** App name under the artwork. Off: the tile is the picture, edge to edge. */
+    val showLabels: Boolean = false,
+    /** What fills the band under the header. */
+    val mainStage: MainStage = MainStage.NEWS,
 ) {
     fun toJson(): JSONObject {
         val shelvesArr = JSONArray()
@@ -74,6 +78,8 @@ data class HomeLayout(
             .put("schema", 1)
             .put("layout", layout.wire())
             .put("tile_size", tileSize.wire())
+            .put("show_labels", showLabels)
+            .put("main_stage", mainStage.wire())
             .put("suggested_feed_url", suggestedFeedUrl)
             .put("shelves", shelvesArr)
     }
@@ -178,6 +184,8 @@ data class HomeLayout(
                 shelves = shelves.distinctBy { it.id }.ifEmpty { defaultShelves() },
                 suggestedFeedUrl = feed,
                 tileSize = TileSize.fromWire(obj.optString("tile_size")),
+                showLabels = obj.optBoolean("show_labels", false),
+                mainStage = MainStage.fromWire(obj.optString("main_stage").takeIf { it.isNotBlank() }),
             )
         }
 

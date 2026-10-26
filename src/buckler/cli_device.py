@@ -7,8 +7,10 @@ from pathlib import Path
 import click
 
 from buckler.adb import AdbError
+from buckler.app_catalog import CatalogError, load_catalog
 from buckler.cli_common import cli, make_adb
-from buckler.setup_wizard import export_snapshot, run_restore_wizard, run_setup
+from buckler.policy import OUR_LAUNCHER
+from buckler.setup_wizard import WizardReport, export_snapshot, run_setup
 from buckler.tune import (
     clear_private_dns,
     compile_launcher_speed,
@@ -19,6 +21,8 @@ from buckler.tune import (
     set_private_dns,
 )
 from buckler.tune import disable_backdrop as replace_backdrop_with_clock
+from buckler.wizard_apps import run_app_phases
+from buckler.wizard_restore import run_restore_wizard
 
 
 @cli.command("setup")
@@ -36,7 +40,19 @@ from buckler.tune import disable_backdrop as replace_backdrop_with_clock
 @click.option(
     "--interactive/--batch",
     default=False,
-    help="Prompt before each mutating phase (privacy, speech, home, …).",
+    help="Prompt before each mutating phase. App swaps and suggestions default to keep.",
+)
+@click.option(
+    "--swap",
+    "swaps",
+    multiple=True,
+    help="Alternative id to pin (repeatable). Batch setup keeps stock unless this is set.",
+)
+@click.option(
+    "--suggest",
+    "suggestions",
+    multiple=True,
+    help="Suggested app id to install (repeatable). Batch setup installs none unless set.",
 )
 @click.confirmation_option(
     prompt="Run multi-step buckler setup on this Shield?",
@@ -48,11 +64,13 @@ def setup_cmd(
     skip_build: bool,
     skip_home_layout: bool,
     interactive: bool,
+    swaps: tuple[str, ...],
+    suggestions: tuple[str, ...],
 ) -> None:
     """Multi-step setup wizard (stock path; phases shared with kitetvOS)."""
 
-    def _ask(prompt: str) -> bool:
-        return click.confirm(prompt, default=True)
+    def _ask(prompt: str, default: bool = True) -> bool:
+        return click.confirm(prompt, default=default)
 
     try:
         report = run_setup(
@@ -61,6 +79,8 @@ def setup_cmd(
             skip_build=skip_build,
             skip_home_layout=skip_home_layout,
             interactive=interactive,
+            swaps=swaps,
+            suggestions=suggestions,
             echo=click.echo,
             ask=_ask if interactive else None,
         )
@@ -226,6 +246,82 @@ def dns_off(ctx: click.Context) -> None:
     except AdbError as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo("private_dns_mode=off")
+
+
+def _print_report(report: WizardReport) -> None:
+    for step in report.steps:
+        if step.skipped:
+            mark = "skip"
+        elif step.ok:
+            mark = "ok"
+        else:
+            mark = "FAIL"
+        click.echo(f"  [{mark}] {step.name}: {step.detail}")
+
+
+@cli.group("apps")
+def apps_group() -> None:
+    """Open alternatives and optional suggested apps."""
+
+
+@apps_group.command("list")
+def apps_list() -> None:
+    """Show alternative and suggestion ids."""
+    try:
+        catalog = load_catalog()
+    except CatalogError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo("alternatives (default: keep stock):")
+    for entry in catalog.swaps:
+        click.echo(f"  {entry.id}: {entry.label} — {entry.note}")
+    click.echo("suggestions (default: skip):")
+    for entry in catalog.suggestions:
+        click.echo(f"  {entry.id}: {entry.label} — {entry.note}")
+
+
+@apps_group.command("apply")
+@click.option("--swap", "swaps", multiple=True, help="Alternative id to pin (repeatable).")
+@click.option("--suggest", "suggestions", multiple=True, help="Suggested app id to install.")
+@click.option("--dry-run", is_flag=True, help="Print choices only. Download nothing.")
+@click.option(
+    "--interactive/--batch",
+    default=False,
+    help="Prompt for every catalog app not already named. Default answer is no.",
+)
+@click.pass_context
+def apps_apply(
+    ctx: click.Context,
+    swaps: tuple[str, ...],
+    suggestions: tuple[str, ...],
+    dry_run: bool,
+    interactive: bool,
+) -> None:
+    """Install chosen apps and pin them. Does not disable stock packages."""
+
+    def _ask(prompt: str, default: bool = False) -> bool:
+        return click.confirm(prompt, default=default)
+
+    adb = make_adb(ctx.obj["host"])
+    report = WizardReport(host=adb.host, mode="apps", runtime="stock-adb")
+    try:
+        adb.connect()
+        push = (not dry_run) and adb.package_present(OUR_LAUNCHER)
+        run_app_phases(
+            adb,
+            report,
+            swaps=swaps,
+            suggestions=suggestions,
+            dry_run=dry_run,
+            ask=_ask if interactive else None,
+            echo=click.echo,
+            push_layout=push,
+        )
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"apps ok={report.ok}")
+    _print_report(report)
+    if not report.ok:
+        raise SystemExit(1)
 
 
 @cli.command("screensaver")

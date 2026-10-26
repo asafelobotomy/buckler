@@ -19,7 +19,8 @@ private const val REFRESH_RETRY_MS = 2 * 60_000L
 /** Process-wide last results so returning to Home shows content immediately instead of a blank. */
 private object HeaderCache {
     var weather: Pair<Place, Weather>? = null
-    var news: Pair<NewsSource, List<String>>? = null
+    var forecast: Pair<Place, Forecast>? = null
+    var news: Pair<String, List<Headline>>? = null
 }
 
 @Composable
@@ -43,19 +44,40 @@ fun rememberWeather(place: Place?): State<Weather?> =
     }
 
 @Composable
-fun rememberHeadlines(source: NewsSource?): State<List<String>> =
-    produceState(
-        initialValue = HeaderCache.news?.takeIf { it.first == source }?.second.orEmpty(),
-        source,
+fun rememberForecast(place: Place?): State<Forecast?> =
+    produceState<Forecast?>(
+        initialValue = HeaderCache.forecast?.takeIf { it.first == place }?.second,
+        place,
     ) {
-        if (source == null) {
+        if (place == null) {
+            value = null
+            return@produceState
+        }
+        while (true) {
+            val fresh = withContext(Dispatchers.IO) { WeatherClient.fetchForecast(place) }
+            if (fresh != null && (fresh.hours.isNotEmpty() || fresh.days.isNotEmpty())) {
+                HeaderCache.forecast = place to fresh
+                value = fresh
+            }
+            delay(if (fresh != null) REFRESH_OK_MS else REFRESH_RETRY_MS)
+        }
+    }
+
+@Composable
+fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> =
+    produceState(
+        initialValue = HeaderCache.news?.takeIf { it.first == query?.cacheKey }?.second.orEmpty(),
+        query?.cacheKey,
+    ) {
+        val key = query?.cacheKey
+        if (query == null || key == null) {
             value = emptyList()
             return@produceState
         }
         while (true) {
-            val fresh = withContext(Dispatchers.IO) { NewsFeed.fetch(source) }
+            val fresh = withContext(Dispatchers.IO) { NewsFeed.load(query) }
             if (fresh.isNotEmpty()) {
-                HeaderCache.news = source to fresh
+                HeaderCache.news = key to fresh
                 value = fresh
             }
             delay(if (fresh.isNotEmpty()) REFRESH_NEWS_MS else REFRESH_RETRY_MS)

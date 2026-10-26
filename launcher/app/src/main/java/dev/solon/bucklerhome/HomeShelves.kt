@@ -54,6 +54,7 @@ fun ShelfSection(
     shelf: ResolvedShelf,
     coverLayout: CoverLayout,
     tileSize: TileSize,
+    showLabels: Boolean,
     actions: ShelfActions,
     focus: ShelfFocus,
 ) {
@@ -78,13 +79,14 @@ fun ShelfSection(
             return
         }
         if (shelf.config.type == ShelfType.LIBRARY) {
-            LibraryGrid(shelf.items, coverLayout, tileSize, actions, focus)
+            LibraryGrid(shelf.items, coverLayout, tileSize, showLabels, actions, focus)
         } else {
             val isApps = shelf.config.type == ShelfType.APPS
             ShelfRow(
                 items = shelf.items,
                 coverLayout = coverLayout,
                 tileSize = tileSize,
+                showLabels = showLabels,
                 actions = actions,
                 focus = if (isApps) focus else focus.withoutAppMove(),
             )
@@ -112,6 +114,7 @@ private fun LibraryGrid(
     items: List<ShelfItem>,
     coverLayout: CoverLayout,
     tileSize: TileSize,
+    showLabels: Boolean,
     actions: ShelfActions,
     focus: ShelfFocus,
 ) {
@@ -133,6 +136,7 @@ private fun LibraryGrid(
                             item = item,
                             layout = coverLayout,
                             tileSize = tileSize,
+                            showLabels = showLabels,
                             onLaunch = { actions.onLaunch(item) },
                             onLongPress = { actions.onLongPress(item) },
                             onLeftEdge = if (col == 0) actions.onShelfMenu else null,
@@ -150,6 +154,7 @@ private fun ShelfRow(
     items: List<ShelfItem>,
     coverLayout: CoverLayout,
     tileSize: TileSize,
+    showLabels: Boolean,
     actions: ShelfActions,
     focus: ShelfFocus,
 ) {
@@ -171,6 +176,7 @@ private fun ShelfRow(
                 item = item,
                 layout = coverLayout,
                 tileSize = tileSize,
+                showLabels = showLabels,
                 onLaunch = { actions.onLaunch(item) },
                 onLongPress = { actions.onLongPress(item) },
                 onLeftEdge = if (index == 0) actions.onShelfMenu else null,

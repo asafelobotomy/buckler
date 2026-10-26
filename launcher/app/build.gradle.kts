@@ -24,8 +24,8 @@ android {
         applicationId = "dev.solon.bucklerhome"
         minSdk = 28
         targetSdk = 34
-        versionCode = 8
-        versionName = "0.8.0"
+        versionCode = 9
+        versionName = "0.9.0"
         // Public Twitch Client ID for IGDB device-code login (no secret in APK).
         // Register at https://dev.twitch.tv/console and enable Device Code Grant.
         buildConfigField("String", "TWITCH_CLIENT_ID", "\"\"")

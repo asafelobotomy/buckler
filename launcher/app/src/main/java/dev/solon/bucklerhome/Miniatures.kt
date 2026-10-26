@@ -36,7 +36,7 @@ private const val MINI_SCALE = 0.24f
 private fun Modifier.rounded(color: Color, radius: Dp = 3.dp) =
     clip(RoundedCornerShape(radius)).background(color)
 
-/** A tiny Home screen: header strip, optional hero banner, shelf title and a row of real-proportion tiles. */
+/** A tiny Home screen: header strip, main stage, shelf title and a row of real-proportion tiles. */
 @Composable
 fun BoxScope.LayoutMiniature(style: CoverLayout, tileSize: TileSize, palette: Palette = LocalPalette.current) {
     val tile = coverSize(style, tileSize)
@@ -50,11 +50,9 @@ fun BoxScope.LayoutMiniature(style: CoverLayout, tileSize: TileSize, palette: Pa
                 Box(Modifier.padding(start = 3.dp).size(6.dp).clip(CircleShape).background(palette.muted))
             }
         }
-        Spacer(Modifier.height(5.dp))
-        if (style == CoverLayout.BANNER) {
-            Box(Modifier.fillMaxWidth().height(16.dp).rounded(palette.brand.copy(alpha = 0.4f), 4.dp))
-            Spacer(Modifier.height(4.dp))
-        }
+        Spacer(Modifier.height(4.dp))
+        Box(Modifier.fillMaxWidth().height(8.dp).rounded(palette.brand.copy(alpha = 0.4f), 3.dp))
+        Spacer(Modifier.height(3.dp))
         Box(Modifier.size(width = 30.dp, height = 3.dp).rounded(palette.section))
         Spacer(Modifier.height(4.dp))
         // Unbounded width: the row runs off the edge like a real shelf instead of squeezing tiles.

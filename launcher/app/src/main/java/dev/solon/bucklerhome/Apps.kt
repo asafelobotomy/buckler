@@ -92,6 +92,19 @@ fun safeLaunch(context: Context, intent: Intent, label: String) {
     }
 }
 
+fun launchPackage(context: Context, packageName: String, label: String) {
+    val pm = context.packageManager
+    val intent = pm.getLeanbackLaunchIntentForPackage(packageName)
+        ?: pm.getLaunchIntentForPackage(packageName)
+        ?: run {
+            Toast.makeText(context, "Could not open $label", Toast.LENGTH_SHORT).show()
+            return
+        }
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    LaunchStats.recordLaunch(context, packageName)
+    safeLaunch(context, intent, label)
+}
+
 fun playStoreLaunchIntent(pm: PackageManager): Intent? {
     return pm.getLeanbackLaunchIntentForPackage(PLAY_STORE_PACKAGE)
         ?: pm.getLaunchIntentForPackage(PLAY_STORE_PACKAGE)

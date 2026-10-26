@@ -46,6 +46,13 @@ class AppearanceTest {
             assertEquals(medium.width * 1.25f, large.width)
         }
         assertEquals(220.dp, coverSize(CoverLayout.BANNER).width)
+        val icon = coverSize(CoverLayout.ICON)
+        assertEquals(icon.width, icon.height)
+        assertEquals(icon.artHeight, icon.height)
+        val labeled = coverSize(CoverLayout.BANNER, showLabels = true)
+        assertEquals(220.dp, labeled.width)
+        assertTrue(labeled.height > labeled.artHeight)
+        assertEquals(labeled.artHeight, coverSize(CoverLayout.BANNER).height)
     }
 
     @Test

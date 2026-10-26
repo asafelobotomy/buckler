@@ -66,12 +66,3 @@ fun LaunchableApp.toShelfItem(): ShelfItem =
         launchIntent = launchIntent,
         icon = icon,
     )
-
-fun heroItem(shelves: List<ResolvedShelf>, layout: HomeLayout): ShelfItem? {
-    if (layout.layout != CoverLayout.BANNER) return null
-    shelves.firstOrNull { it.config.type == ShelfType.WATCH_NEXT }?.items?.firstOrNull()
-        ?.let { return it }
-    shelves.firstOrNull { it.config.type == ShelfType.APPS }?.items?.firstOrNull()
-        ?.let { return it }
-    return shelves.flatMap { it.items }.firstOrNull()
-}

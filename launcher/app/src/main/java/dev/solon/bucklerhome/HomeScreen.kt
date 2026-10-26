@@ -49,6 +49,7 @@ fun HomeScreen(
     val availableUpdate by rememberAvailableUpdate(resumeTick)
     var initialFocusDone by remember { mutableStateOf(false) }
     val firstFocus = remember { FocusRequester() }
+    val stageFocus = remember { FocusRequester() }
     val move = remember { MoveMode() }
     val moveFocus = remember { FocusRequester() }
     var refocusTick by remember { mutableStateOf(0) }
@@ -61,12 +62,18 @@ fun HomeScreen(
     var shelfMenu by remember { mutableStateOf<ShelfConfig?>(null) }
     val listState = rememberLazyListState()
 
+    val stage = homeLayout?.mainStage ?: MainStage.NEWS
+    val stageInteractive = stage == MainStage.NOW_PLAYING || stage == MainStage.SUGGESTED
     val weather by rememberWeather(config.weatherPlace)
-    val headlines by rememberHeadlines(config.news?.takeIf { config.showsNews })
+    val headlines by rememberHeadlines(stageNewsQuery(config, stage))
+    val forecast by rememberForecast(if (stage == MainStage.WEATHER) config.place else null)
     val net by rememberNetState()
     val clockText by rememberClockText(config)
     val (clock, date) = clockText
-    val nowPlaying = rememberNowPlaying(config.showsNowPlaying, resumeTick)
+    val nowPlaying = rememberNowPlaying(
+        config.showsNowPlaying || stageInteractive,
+        resumeTick,
+    )
 
     LaunchedEffect(resumeTick, layoutVersion) {
         homeLayout = withContext(Dispatchers.IO) { HomeLayout.load(context) }
@@ -175,7 +182,7 @@ fun HomeScreen(
     val movingShelfIndex = shelves.indexOfFirst { it.config.id == focusShelfId }
     LaunchedEffect(movingShelfIndex, focusShelfId) {
         if (movingShelfIndex >= 0) {
-            val index = movingShelfIndex + if (homeLayout?.layout == CoverLayout.BANNER) 1 else 0
+            val index = movingShelfIndex + 1
             val info = listState.layoutInfo
             val shown = info.visibleItemsInfo.firstOrNull { it.index == index }
             val fullyVisible = shown != null && shown.offset >= 0 && shown.offset + shown.size <= info.viewportEndOffset
@@ -221,7 +228,6 @@ fun HomeScreen(
         }
     }
 
-    val hero = remember(shelves, layout) { heroItem(shelves, layout) }
     val actions = rememberHeaderActions(onOpenEditHome)
 
     Column(
@@ -240,9 +246,9 @@ fun HomeScreen(
                 weather = weather,
                 headlines = headlines,
                 net = net,
-                nowPlaying = nowPlaying,
+                nowPlaying = if (layout.mainStage == MainStage.NOW_PLAYING) null else nowPlaying,
                 actions = actions,
-                below = firstFocus,
+                below = if (stageInteractive) stageFocus else firstFocus,
             )
             Spacer(modifier = Modifier.height(14.dp))
         }
@@ -252,10 +258,18 @@ fun HomeScreen(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            if (hero != null && layout.layout == CoverLayout.BANNER) {
-                item(key = "hero") {
-                    HeroBanner(item = hero, onLaunch = { launch(hero) }, tileSize = layout.tileSize)
-                }
+            item(key = "main-stage") {
+                MainStage(
+                    mode = layout.mainStage,
+                    headlines = headlines,
+                    forecast = forecast,
+                    place = config.place,
+                    fahrenheit = config.fahrenheit,
+                    use24h = config.use24h,
+                    nowPlaying = nowPlaying,
+                    stageFocus = stageFocus,
+                    below = firstFocus,
+                )
             }
             items(shelves, key = { it.config.id }) { shelf ->
                 val id = shelf.config.id
@@ -263,6 +277,7 @@ fun HomeScreen(
                     shelf = shelf,
                     coverLayout = layout.layout,
                     tileSize = layout.tileSize,
+                    showLabels = layout.showLabels,
                     actions = ShelfActions(
                         onLaunch = { launch(it) },
                         onLongPress = { editTarget = it },

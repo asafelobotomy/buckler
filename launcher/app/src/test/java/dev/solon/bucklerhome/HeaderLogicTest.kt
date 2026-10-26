@@ -1,6 +1,7 @@
 package dev.solon.bucklerhome
 
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.Locale
 import org.junit.Assert.assertEquals
@@ -31,6 +32,38 @@ class HeaderLogicTest {
     fun dateStyleCyclesAndSurvivesUnknownNames() {
         assertEquals(DateStyle.SHORT, DateStyle.entries.last().next())
         assertEquals(DateStyle.SHORT, DateStyle.fromName("nope"))
+    }
+
+    @Test
+    fun shuffleTakesTheNextStoryFromEachSource() {
+        val mixed = NewsFeed.interleave(
+            listOf(
+                NewsSource.BBC_WORLD to listOf("a1", "a2"),
+                NewsSource.NPR to listOf("b1"),
+                NewsSource.GUARDIAN to listOf("c1", "c2", "c3"),
+            ),
+        )
+        assertEquals(listOf("a1", "b1", "c1", "a2", "c2", "c3"), mixed.map { it.title })
+        assertEquals(NewsSource.NPR, mixed[1].source)
+        assertEquals(NewsSource.GUARDIAN, mixed[2].source)
+        assertTrue(mixed.zipWithNext().take(4).all { (a, b) -> a.source != b.source })
+        assertEquals(emptyList<Headline>(), NewsFeed.interleave(emptyList()))
+    }
+
+    @Test
+    fun headerSizeTickerSpeedAndShuffleQuery() {
+        assertEquals(HeaderSize.MEDIUM, HeaderSize.fromName(null))
+        assertEquals(HeaderSize.LARGE, HeaderSize.fromName("LARGE"))
+        assertEquals(0.8f, HeaderSize.THIN.scale)
+        assertEquals(TickerSpeed.NORMAL, TickerSpeed.fromName("nope"))
+        assertTrue(TickerSpeed.SLOW.velocityDp < TickerSpeed.FAST.velocityDp)
+        assertTrue(TickerSpeed.SLOW.rotateMs > TickerSpeed.FAST.rotateMs)
+        assertNull(DisplayConfig(news = null).newsQuery())
+        val shuffled = DisplayConfig(news = null, newsShuffle = true)
+        assertEquals("shuffle", shuffled.newsQuery()?.cacheKey)
+        assertEquals(NewsSource.entries.toList(), shuffled.newsQuery()?.sources)
+        assertNull(DisplayConfig(newsShuffle = true, headerVisible = false).newsQuery())
+        assertEquals("BBC", NewsSource.BBC_WORLD.mark)
     }
 
     @Test
@@ -95,5 +128,65 @@ class HeaderLogicTest {
         // A VPN rides on a physical link; it must not hide it or count as the link itself.
         assertEquals(NetState(LinkType.WIFI, true), netStateFrom(listOf(vpn, wifi)))
         assertEquals(NetState(LinkType.NONE, true), netStateFrom(listOf(vpn)))
+    }
+
+    @Test
+    fun vpnTraceCountryCodes() {
+        val body = "ip=1.2.3.4\nts=1\nloc=IE\ncolo=DUB\n"
+        assertEquals("IE", VpnCountry.parseTrace(body))
+        assertEquals("UK", VpnCountry.parseTrace("loc=gb\n"))
+        assertEquals("US", VpnCountry.parseTrace("loc=US\n"))
+        assertNull(VpnCountry.parseTrace("ip=1.2.3.4\n"))
+        assertNull(VpnCountry.parseTrace("loc=Ireland\n"))
+        assertNull(VpnCountry.parseTrace("loc=\n"))
+    }
+
+    @Test
+    fun newsStoryKeepsSummaryAndPicture() {
+        val xml = """
+            <item>
+              <title>Big story</title>
+              <description><![CDATA[A <b>short</b> summary.]]></description>
+              <enclosure url="https://example.com/a.mp3" type="audio/mpeg"/>
+              <media:thumbnail url="https://example.com/a.jpg"/>
+            </item>
+        """.trimIndent()
+        val story = NewsFeed.parseStories(xml, 5).single()
+        assertEquals("Big story", story.title)
+        assertEquals("A short summary.", story.summary)
+        assertEquals("https://example.com/a.jpg", story.imageUrl)
+        assertEquals(story.title, NewsFeed.featured(listOf(Headline(NewsSource.BBC_WORLD, story.title, story.summary, story.imageUrl)))?.title)
+    }
+
+    @Test
+    fun forecastSkipsPastHoursAndKeepsHighsAndLows() {
+        val body = """
+            {"hourly":{"time":["2026-10-26T08:00","2026-10-26T09:00","2026-10-26T10:00"],
+            "temperature_2m":[1.2,2.2,3.2],"weather_code":[0,3,61],"is_day":[1,1,0]},
+            "daily":{"time":["2026-10-26","2026-10-27"],"weather_code":[3,61],
+            "temperature_2m_max":[10.4,11.2],"temperature_2m_min":[4.1,5.0]}}
+        """.trimIndent()
+        val forecast = WeatherClient.parseForecast(body, 8, 5, LocalDateTime.of(2026, 10, 26, 9, 15))
+        assertEquals(listOf("09:00", "10:00"), forecast.hours.map { it.label })
+        assertEquals(2.2, forecast.hours[0].temperatureC, 0.01)
+        assertEquals(false, forecast.hours[1].isDay)
+        assertEquals(2, forecast.days.size)
+        assertEquals(10.4, forecast.days[0].temperatureC, 0.01)
+        assertEquals(4.1, forecast.days[0].lowC ?: Double.NaN, 0.01)
+        assertTrue(forecast.days[0].allDay)
+    }
+
+    @Test
+    fun mediaCardsPinAheadOfNewerOnesAndKeepArt() {
+        val older = MediaCard("a", "One", "ep", "Jellyfin", "https://old", pinned = false, seenAt = 1)
+        val newer = MediaCard("b", "Two", "", "YouTube", null, pinned = false, seenAt = 2)
+        val merged = MediaCards.merge(listOf(older), newer, now = 3)
+        assertEquals(listOf("Two", "One"), merged.map { it.title })
+        val pinned = MediaCards.order(merged.map { if (it.title == "One") it.copy(pinned = true) else it })
+        assertEquals("One", pinned[0].title)
+        assertTrue(pinned[0].pinned)
+        val refreshed = MediaCards.merge(pinned, older.copy(artUri = null, pinned = false), now = 9)
+        assertEquals("https://old", refreshed.first { it.title == "One" }.artUri)
+        assertTrue(refreshed.first { it.title == "One" }.pinned)
     }
 }

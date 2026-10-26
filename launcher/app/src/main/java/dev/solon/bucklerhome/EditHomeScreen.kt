@@ -112,8 +112,12 @@ fun EditHomeScreen(
                 LayoutAndSizePickers(
                     style = layout.layout,
                     tileSize = layout.tileSize,
+                    showLabels = layout.showLabels,
+                    mainStage = layout.mainStage,
                     onStyle = { persist(layout.copy(layout = it)) },
                     onSize = { persist(layout.copy(tileSize = it)) },
+                    onLabels = { persist(layout.copy(showLabels = it)) },
+                    onStage = { persist(layout.copy(mainStage = it)) },
                 )
             }
             item {

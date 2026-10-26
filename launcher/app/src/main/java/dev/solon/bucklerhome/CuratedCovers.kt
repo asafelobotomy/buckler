@@ -12,10 +12,14 @@ data class CuratedCoverEntry(
     val poster: String? = null,
     val banner: String? = null,
 ) {
+    /**
+     * Art that actually matches [layout]. A copy of the icon is not a banner or a poster, so
+     * the tile falls back to the app icon instead of letterboxing the same logo.
+     */
     fun urlFor(layout: CoverLayout): String? = when (layout) {
-        CoverLayout.BANNER -> banner ?: poster ?: icon
-        CoverLayout.POSTER -> poster ?: banner ?: icon
-        CoverLayout.ICON -> icon ?: poster ?: banner
+        CoverLayout.BANNER -> banner?.takeIf { it.isNotBlank() && it != icon }
+        CoverLayout.POSTER -> poster?.takeIf { it.isNotBlank() && it != icon }
+        CoverLayout.ICON -> null
     }
 }
 

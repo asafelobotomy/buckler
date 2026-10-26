@@ -53,6 +53,17 @@ fun DisplayPane() {
     }
 
     Spacer(modifier = Modifier.height(12.dp))
+    SettingsRow("Header size: logo, clock, icons and Now Playing scale together")
+    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        HeaderSize.entries.forEach { size ->
+            SettingsAction(size.label, selected = size == cfg.headerSize) {
+                DisplayPrefs.setHeaderSize(context, size)
+                tick++
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
     SettingsRow(
         "Header shows: ${DisplayFormat.time(LocalTime.now(), cfg.use24h)}  ·  " +
             DisplayFormat.date(LocalDate.now(), cfg.dateStyle),
@@ -83,11 +94,40 @@ fun DisplayPane() {
     }
 
     Spacer(modifier = Modifier.height(12.dp))
-    SettingsRow("News: ${cfg.news?.label ?: "off"} (public RSS, a line under the header)")
-    SettingsAction("News source: ${cfg.news?.label ?: "Off"}") {
-        val next = if (cfg.news == null) NewsSource.entries.first() else cfg.news.next()
-        DisplayPrefs.setNews(context, next)
-        tick++
+    val newsLabel = when {
+        cfg.newsShuffle -> "shuffled across every source"
+        cfg.news != null -> cfg.news.label
+        else -> "off"
+    }
+    SettingsRow("News: $newsLabel (public RSS). Shuffle takes each next story from a different source.")
+    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        NewsSource.entries.forEach { source ->
+            SettingsAction(source.label, selected = !cfg.newsShuffle && cfg.news == source) {
+                DisplayPrefs.setNews(context, source)
+                DisplayPrefs.setNewsShuffle(context, false)
+                tick++
+            }
+        }
+        SettingsAction("Shuffle", selected = cfg.newsShuffle) {
+            DisplayPrefs.setNewsShuffle(context, !cfg.newsShuffle)
+            tick++
+        }
+        SettingsAction("Off", selected = cfg.news == null && !cfg.newsShuffle) {
+            DisplayPrefs.setNews(context, null)
+            DisplayPrefs.setNewsShuffle(context, false)
+            tick++
+        }
+    }
+    if (cfg.news != null || cfg.newsShuffle) {
+        Spacer(modifier = Modifier.height(8.dp))
+        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+            TickerSpeed.entries.forEach { speed ->
+                SettingsAction("Speed: ${speed.label}", selected = speed == cfg.tickerSpeed) {
+                    DisplayPrefs.setTickerSpeed(context, speed)
+                    tick++
+                }
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(12.dp))

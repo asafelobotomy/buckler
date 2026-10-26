@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -27,8 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -44,22 +41,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Surface
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 
-data class CoverSize(val width: Dp, val height: Dp, val icon: Dp)
+data class CoverSize(val width: Dp, val height: Dp, val artHeight: Dp)
 
-fun coverSize(layout: CoverLayout, tileSize: TileSize = TileSize.MEDIUM): CoverSize {
-    val base = when (layout) {
-        CoverLayout.ICON -> CoverSize(132.dp, 148.dp, 64.dp)
-        CoverLayout.POSTER -> CoverSize(120.dp, 190.dp, 72.dp)
-        CoverLayout.BANNER -> CoverSize(220.dp, 124.dp, 48.dp)
+fun coverSize(
+    layout: CoverLayout,
+    tileSize: TileSize = TileSize.MEDIUM,
+    showLabels: Boolean = false,
+): CoverSize {
+    val (width, art) = when (layout) {
+        // Square icon, 2:3 poster, 16:9 TV banner. The old sizes included a title band.
+        CoverLayout.ICON -> 132.dp to 132.dp
+        CoverLayout.POSTER -> 120.dp to 180.dp
+        CoverLayout.BANNER -> 220.dp to 124.dp
     }
     val k = tileSize.scale
-    return CoverSize(base.width * k, base.height * k, base.icon * k)
+    val label = if (!showLabels) 0.dp else if (layout == CoverLayout.BANNER) 32.dp else 44.dp
+    return CoverSize(width * k, art * k + label * k, art * k)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -73,15 +74,16 @@ fun CoverTile(
     focusRequester: FocusRequester? = null,
     moving: Boolean = false,
     tileSize: TileSize = TileSize.MEDIUM,
+    showLabels: Boolean = false,
     /** Set on the first tile of a shelf: pressing Left there (nothing further left) opens shelf options. */
     onLeftEdge: (() -> Unit)? = null,
 ) {
-    val size = coverSize(layout, tileSize)
+    val size = coverSize(layout, tileSize, showLabels)
     val bmp = remember(item.id, item.icon) {
-        item.icon?.toBitmap(128, 128)?.asImageBitmap()
+        item.icon?.toBitmap(256, 256)?.asImageBitmap()
     }
     val bannerBmp = remember(item.id, item.banner) {
-        item.banner?.toBitmap(320, 180)?.asImageBitmap()
+        item.banner?.toBitmap(480, 270)?.asImageBitmap()
     }
     val menu = rememberTvMenuInteraction(onOpen = onLaunch, onMenu = onLongPress)
     val interactionSource = remember { MutableInteractionSource() }
@@ -123,23 +125,22 @@ fun CoverTile(
     Box(modifier = boxModifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(10.dp),
+            modifier = Modifier.fillMaxSize(),
         ) {
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .height(size.artHeight),
                 contentAlignment = Alignment.Center,
             ) {
                 val model = item.imageUrl ?: item.imageUri
                 var remoteFailed by remember(item.id, model) { mutableStateOf(false) }
+                val scale = if (item.coverFit) ContentScale.Fit else ContentScale.Crop
                 if (model != null && !remoteFailed) {
                     AsyncImage(
                         model = model,
                         contentDescription = item.title,
-                        contentScale = if (item.coverFit) ContentScale.Fit else ContentScale.Crop,
+                        contentScale = scale,
                         modifier = Modifier.fillMaxSize(),
                         onState = { state ->
                             if (state is AsyncImagePainter.State.Error) {
@@ -158,21 +159,24 @@ fun CoverTile(
                     Image(
                         bitmap = bmp,
                         contentDescription = item.title,
-                        modifier = Modifier.size(size.icon),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             }
-            Text(
-                text = item.title,
-                fontSize = if (tileSize == TileSize.SMALL) 11.sp else 12.sp,
-                color = if (focused || moving) ColorOnBrand else ColorText,
-                maxLines = if (layout == CoverLayout.BANNER) 1 else 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp),
-            )
+            if (showLabels) {
+                Text(
+                    text = item.title,
+                    fontSize = if (tileSize == TileSize.SMALL) 11.sp else 12.sp,
+                    color = if (focused || moving) ColorOnBrand else ColorText,
+                    maxLines = if (layout == CoverLayout.BANNER) 1 else 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
         }
         if (moving) {
             Text(
@@ -181,73 +185,6 @@ fun CoverTile(
                 color = ColorOnBrand,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 2.dp),
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun HeroBanner(
-    item: ShelfItem,
-    onLaunch: () -> Unit,
-    modifier: Modifier = Modifier,
-    tileSize: TileSize = TileSize.MEDIUM,
-) {
-    val bmp = remember(item.id, item.icon) {
-        item.icon?.toBitmap(192, 192)?.asImageBitmap()
-    }
-    val scrim = LocalPalette.current.bgTop
-    Surface(
-        onClick = onLaunch,
-        modifier = modifier
-            .fillMaxWidth()
-            .height((160.dp * tileSize.scale).coerceIn(128.dp, 190.dp)),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = focusZoom(true, 1.02f)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = ColorTile,
-            focusedContainerColor = ColorFooter,
-            contentColor = ColorText,
-            focusedContentColor = ColorText,
-        ),
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            val model = item.imageUrl ?: item.imageUri
-            if (model != null) {
-                AsyncImage(
-                    model = model,
-                    contentDescription = item.title,
-                    contentScale = if (item.coverFit) ContentScale.Fit else ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else if (bmp != null) {
-                Image(
-                    bitmap = bmp,
-                    contentDescription = item.title,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(24.dp)
-                        .size(96.dp),
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(scrim.copy(alpha = 0.8f), scrim.copy(alpha = 0.4f), Color.Transparent),
-                        ),
-                    ),
-            )
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(24.dp),
-            ) {
-                Text(text = item.title, fontSize = 26.sp, color = ColorText, maxLines = 1)
-                item.subtitle?.let {
-                    Text(text = it, fontSize = 14.sp, color = ColorMuted, maxLines = 1)
-                }
-            }
         }
     }
 }

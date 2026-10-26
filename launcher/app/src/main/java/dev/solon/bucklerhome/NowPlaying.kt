@@ -21,15 +21,22 @@ import androidx.core.app.NotificationManagerCompat
 /**
  * Android only lets an app read other apps' media sessions when it holds notification-listener
  * access, so this service is the handle the user grants in Settings. The system keeps it bound,
- * which also lets it remember the last thing played for the Now Playing screensaver: video apps
- * such as YouTube drop their session as soon as the screensaver covers them.
+ * which also lets it remember the last thing played for the Now Playing screensaver.
+ *
+ * Video stops as soon as you leave the player. Home does not pause it, take audio focus, or
+ * finish its task — the player pauses in onPause, and YouTube, Netflix and most TV apps then
+ * drop the session. A play command cannot revive a session that is already gone, and on an app
+ * that only paused it can pull that app back over Home, so playback is left as the app left it.
  */
 class NowPlayingListener : NotificationListenerService() {
     private var model: NowPlayingModel? = null
 
     override fun onListenerConnected() {
         model = NowPlayingModel(this).also { m ->
-            m.onChange = { RecentMedia.remember(m.info) }
+            m.onChange = {
+                RecentMedia.remember(m.info)
+                m.info?.let { info -> MediaCards.remember(this, info) }
+            }
             m.start()
         }
     }

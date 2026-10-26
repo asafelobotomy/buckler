@@ -34,7 +34,11 @@ buckler home write && buckler home push   # layout defaults → import on HOME r
 
 On TV: first-run picks cover layout + shelves; the pencil icon in the Home header (**Edit Home**) adjusts later.
 
-### buckler-home 0.8.0 smoke
+### buckler-home 0.9.0 smoke
+
+- Settings → Header → Thin / Medium / Large scales the logo, clock, icons and Now Playing together
+- Settings → Header → Shuffle: each story is from the next source and starts with that source's logo; ticker speed Slow / Normal / Fast
+
 
 - Header: logo + clock with date and weather, Now Playing (only while playing), network / VPN icons, pencil / bag / gear icons, news ticker line
 - Header gear → Buckler Settings (not only stock); stock Settings still reachable inside
@@ -42,7 +46,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - Settings → Header: each element toggles on its own; Header: Off leaves only shelves, and ◀ on a shelf still offers Settings
 - Settings → Screensaver → Now Playing with music playing (album art) and over a paused YouTube video (thumbnail, Paused)
 - Settings → Screensaver: Preview 3D Maze, 3D Pipes, Mystify, Starfield (clock overlay toggles)
-- Settings → Header: 12/24 h and date format apply to Home; set a city and weather appears; news source cycles
+- Settings → Header: 12/24 h and date format apply to Home; set a city and weather appears; a news source, Shuffle or Off applies
 - Play music in any app: Now Playing shows title and prev / play-pause / next work (after media access is granted)
 - Network icon opens network settings; VPN icon opens the VPN app
 - Menu → Move: menu closes, ◀ ▶ slide the tile, OK places it (does not launch), Back cancels

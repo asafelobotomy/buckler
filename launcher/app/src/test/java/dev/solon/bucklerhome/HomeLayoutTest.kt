@@ -1,7 +1,9 @@
 package dev.solon.bucklerhome
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HomeLayoutTest {
@@ -49,8 +51,33 @@ class HomeLayoutTest {
 
     @Test
     fun roundTripsThroughJson() {
-        val original = HomeLayout.default(listOf("a", "b")).copy(layout = CoverLayout.ICON)
+        val original = HomeLayout.default(listOf("a", "b")).copy(layout = CoverLayout.ICON, showLabels = true)
         val parsed = HomeLayout.fromJson(original.toJson().toString())
         assertEquals(original, parsed)
+    }
+
+    @Test
+    fun labelsDefaultOffForOlderLayouts() {
+        val legacy = """{"schema":1,"layout":"banner","shelves":[]}"""
+        assertEquals(false, HomeLayout.fromJson(legacy).showLabels)
+        assertEquals(MainStage.NEWS, HomeLayout.fromJson(legacy).mainStage)
+        val staged = HomeLayout.default().copy(mainStage = MainStage.WEATHER)
+        assertEquals(MainStage.WEATHER, HomeLayout.fromJson(staged.toJson().toString()).mainStage)
+    }
+
+    @Test
+    fun layoutUsesItsOwnArtAndFallsBackToTheIcon() {
+        val same = CuratedCoverEntry("app", icon = "logo", poster = "logo", banner = "logo")
+        assertNull(same.urlFor(CoverLayout.BANNER))
+        assertNull(same.urlFor(CoverLayout.POSTER))
+        assertNull(same.urlFor(CoverLayout.ICON))
+        val distinct = CuratedCoverEntry("app", icon = "logo", poster = "poster", banner = "banner")
+        assertEquals("banner", distinct.urlFor(CoverLayout.BANNER))
+        assertEquals("poster", distinct.urlFor(CoverLayout.POSTER))
+        assertNull(distinct.urlFor(CoverLayout.ICON))
+        val posterOnly = CuratedCoverEntry("app", icon = "logo", banner = "logo", poster = "tall")
+        assertNull(posterOnly.urlFor(CoverLayout.BANNER))
+        assertEquals("tall", posterOnly.urlFor(CoverLayout.POSTER))
+        assertTrue(posterOnly.urlFor(CoverLayout.ICON) == null)
     }
 }

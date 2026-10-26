@@ -30,21 +30,50 @@ object CoverResolver {
         curated: Map<String, CuratedCoverEntry>,
     ): ShelfItem {
         val pkg = item.packageName ?: return item
+        // Episode and feed art already has its own picture; only app tiles follow the layout.
+        if (item.imageUrl != null || item.imageUri != null) return item
         val stored = overrides[pkg]?.takeIf { it.isNotBlank() }
-        return when {
-            CoverStore.isLocalIcon(stored) -> item.copy(imageUrl = null, imageUri = null)
-            CoverStore.isLocalBanner(stored) -> {
-                val banner = leanbackBanner(context, pkg)
-                item.copy(imageUrl = null, imageUri = null, banner = banner)
-            }
-            else -> {
-                val url = CoverStore.parseUrl(stored)
-                    ?: curated[pkg]?.urlFor(layout)
-                val logoArt = stored == null || stored.startsWith("curated:")
-                if (url == null) item else item.copy(imageUrl = url, imageUri = null, coverFit = logoArt)
-            }
+        val picked = CoverStore.parseUrl(stored)
+        if (stored != null && picked != null) {
+            return item.copy(
+                imageUrl = picked,
+                imageUri = null,
+                banner = null,
+                coverFit = stored.startsWith("curated:"),
+            )
         }
+        if (CoverStore.isLocalIcon(stored)) return iconArt(item)
+        if (CoverStore.isLocalBanner(stored)) {
+            return leanbackBanner(context, pkg)?.let { bannerArt(item, it) } ?: iconArt(item)
+        }
+        return automaticArt(context, item, layout, curated[pkg])
     }
+
+    /**
+     * Banner layout uses the app's TV banner, poster layout a real vertical cover, icon layout
+     * the launcher icon. A missing picture falls back to the icon — never a different shape's art.
+     */
+    private fun automaticArt(
+        context: Context,
+        item: ShelfItem,
+        layout: CoverLayout,
+        entry: CuratedCoverEntry?,
+    ): ShelfItem {
+        val pkg = item.packageName
+        if (layout == CoverLayout.BANNER && pkg != null) {
+            leanbackBanner(context, pkg)?.let { return bannerArt(item, it) }
+        }
+        entry?.urlFor(layout)?.let { url ->
+            return item.copy(imageUrl = url, imageUri = null, banner = null, coverFit = false)
+        }
+        return iconArt(item)
+    }
+
+    private fun bannerArt(item: ShelfItem, banner: Drawable): ShelfItem =
+        item.copy(imageUrl = null, imageUri = null, banner = banner, coverFit = false)
+
+    private fun iconArt(item: ShelfItem): ShelfItem =
+        item.copy(imageUrl = null, imageUri = null, banner = null, coverFit = false)
 
     fun leanbackBanner(context: Context, packageName: String): Drawable? {
         return runCatching {

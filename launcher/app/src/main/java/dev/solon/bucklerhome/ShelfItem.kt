@@ -11,7 +11,7 @@ data class ShelfItem(
     val packageName: String? = null,
     val launchIntent: Intent? = null,
     val icon: Drawable? = null,
-    /** Leanback banner chosen via Change cover (local:banner). */
+    /** Leanback banner for the banner layout, or the one chosen via Change cover. */
     val banner: Drawable? = null,
     val imageUri: Uri? = null,
     val imageUrl: String? = null,

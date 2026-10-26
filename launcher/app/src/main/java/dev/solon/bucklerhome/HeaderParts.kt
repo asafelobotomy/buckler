@@ -8,6 +8,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -19,19 +22,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Text
 
 /**
- * Icon-only, D-pad focusable header control. [dim] greys the glyph for an inactive state (for
- * example VPN off) while keeping it selectable.
+ * D-pad focusable header control. [dim] greys the glyph for an inactive state (for example VPN
+ * off) while keeping it selectable. [label] sits beside the glyph when there is a short status.
  */
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun HeaderIconButton(
     icon: Int,
@@ -39,8 +48,11 @@ fun HeaderIconButton(
     modifier: Modifier = Modifier,
     size: Dp = 40.dp,
     dim: Boolean = false,
+    /** Short status beside the glyph, e.g. the VPN exit country. */
+    label: String? = null,
     /** Where D-pad Down goes; without it the spatial search can land on a neighbouring icon. */
     down: FocusRequester? = null,
+    focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -55,7 +67,7 @@ fun HeaderIconButton(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .size(size)
+            .then(if (label.isNullOrEmpty()) Modifier.size(size) else Modifier.height(size).padding(horizontal = 8.dp))
             .scale(focusZoom(focused, 1.1f))
             .clip(shape)
             .background(if (focused) ColorBrand else Color.Transparent)
@@ -67,15 +79,27 @@ fun HeaderIconButton(
             .strongFocusRing(focused, shape)
             .semantics { contentDescription = description }
             .then(if (down != null) Modifier.focusProperties { this.down = down } else Modifier)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .focusable(interactionSource = interaction)
             .onSelectKeyUp(onClick)
             .pointerInput(onClick) { detectTapGestures(onTap = { onClick() }) },
     ) {
-        Image(
-            painter = painterResource(icon),
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(tint),
-            modifier = Modifier.size(size * 0.6f),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(icon),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(tint),
+                modifier = Modifier.size(size * 0.6f),
+            )
+            if (!label.isNullOrEmpty()) {
+                Text(
+                    text = label,
+                    color = tint,
+                    fontSize = (14 * (size.value / 44f)).sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(start = 2.dp),
+                )
+            }
+        }
     }
 }

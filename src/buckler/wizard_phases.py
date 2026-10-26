@@ -20,6 +20,16 @@ PHASES: tuple[Phase, ...] = (
     Phase("speech", "Voice & mics", "Disable Assistant / hotword / on-device speech (keep Chromecast)."),
     Phase("extras", "Extras", "Factory, SMB, OSC, welcome/registration leftovers."),
     Phase("home", "Home screen", "Install buckler-home and make it HOME."),
+    Phase(
+        "alternatives",
+        "App alternatives",
+        "Swap a stock app for an open one, or keep the stock app.",
+    ),
+    Phase(
+        "suggestions",
+        "Suggested apps",
+        "Optional open apps. Nothing here replaces a stock app.",
+    ),
     Phase("screensaver", "Screensaver", "ClockDream on; Backdrop off."),
     Phase("tune", "Tune", "Faster animations and speed-compile the launcher."),
     Phase("verify", "Verify", "Doctor: HOME, AI policy, Chromecast, sticky processes."),
@@ -38,3 +48,8 @@ def phase_index(phase_id: str) -> int:
 def banner(phase: Phase, index: int, total: int) -> str:
     bar = "█" * (index + 1) + "░" * (total - index - 1)
     return f"\n── [{index + 1}/{total}] {phase.title}  {bar}\n    {phase.summary}"
+
+
+def banner_for(phase_id: str) -> str:
+    index = phase_index(phase_id)
+    return banner(PHASES[index], index, len(PHASES))

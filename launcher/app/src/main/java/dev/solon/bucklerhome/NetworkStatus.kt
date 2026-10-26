@@ -13,11 +13,20 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class LinkType { NONE, WIFI, ETHERNET, OTHER }
 
-data class NetState(val link: LinkType = LinkType.NONE, val vpn: Boolean = false)
+data class NetState(
+    val link: LinkType = LinkType.NONE,
+    val vpn: Boolean = false,
+    /** ISO-style exit country while [vpn] is up, e.g. IE, UK, US. Null until the lookup returns. */
+    val country: String? = null,
+)
 
 /** Reduced view of one Android network so [NetState.from] stays unit-testable. */
 data class NetInfo(
@@ -39,9 +48,11 @@ fun netStateFrom(networks: List<NetInfo>): NetState {
     return NetState(link = link, vpn = networks.any { it.vpn })
 }
 
-private fun readNetState(cm: ConnectivityManager): NetState {
+private fun readNetState(cm: ConnectivityManager): Pair<NetState, Network?> {
+    var vpnNetwork: Network? = null
     val infos = cm.allNetworks.mapNotNull { network ->
         val caps = cm.getNetworkCapabilities(network) ?: return@mapNotNull null
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) vpnNetwork = network
         NetInfo(
             wifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
             ethernet = caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET),
@@ -50,25 +61,52 @@ private fun readNetState(cm: ConnectivityManager): NetState {
             internet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
         )
     }
-    return netStateFrom(infos)
+    return netStateFrom(infos) to vpnNetwork
 }
 
 /** Live Wi-Fi / Ethernet / VPN state for the header icons. */
 @Composable
 fun rememberNetState(): State<NetState> {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val state = remember { mutableStateOf(NetState()) }
     DisposableEffect(context) {
         val cm = context.getSystemService(ConnectivityManager::class.java)
         if (cm == null) {
             return@DisposableEffect onDispose { }
         }
-        state.value = readNetState(cm)
+        var generation = 0
+        var inFlight = false
+        fun publish(refreshCountry: Boolean) {
+            val (next, vpn) = readNetState(cm)
+            if (!next.vpn) {
+                generation++
+                inFlight = false
+                state.value = next.copy(country = null)
+                return
+            }
+            val known = if (refreshCountry) null else state.value.country
+            state.value = next.copy(country = known)
+            if (known != null || vpn == null || (inFlight && !refreshCountry)) return
+            inFlight = true
+            val ticket = ++generation
+            scope.launch {
+                val code = withContext(Dispatchers.IO) { VpnCountry.lookup(vpn) }
+                if (ticket != generation) return@launch
+                inFlight = false
+                if (state.value.vpn) state.value = state.value.copy(country = code)
+            }
+        }
+        publish(refreshCountry = false)
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { state.value = readNetState(cm) }
-            override fun onLost(network: Network) { state.value = readNetState(cm) }
+            override fun onAvailable(network: Network) {
+                val vpn = cm.getNetworkCapabilities(network)
+                    ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+                publish(refreshCountry = vpn)
+            }
+            override fun onLost(network: Network) { publish(refreshCountry = false) }
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                state.value = readNetState(cm)
+                publish(refreshCountry = false)
             }
         }
         // Not the default-network callback: that would hide the physical link while a VPN is up.

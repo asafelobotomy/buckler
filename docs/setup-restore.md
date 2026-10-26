@@ -32,7 +32,15 @@ buckler --host <IP> restore --journal journals/<file>.json
 
 ### What `setup` does (phase IDs)
 
-`connect` → `probe` → `privacy` → `speech` → `extras` → `home` → `screensaver` → `tune` → `verify` → `snapshot` → `finish`
+`connect` → `probe` → `privacy` → `speech` → `extras` → `home` → `alternatives` → `suggestions` → `screensaver` → `tune` → `verify` → `snapshot` → `finish`
+
+`alternatives` asks, per stock app, whether to pin an open client or keep the stock app. `suggestions` offers optional apps that replace nothing. Batch setup (no `--interactive`) keeps every stock dock app and installs nothing from either page. Opt in with `--swap` / `--suggest`, or answer the prompts. A swap installs and pins. It does not disable or uninstall the stock package. YouTube stays installed either way so Cast still works. Restore does not remove these apps.
+
+```bash
+buckler apps list
+buckler setup --swap smarttube --suggest localsend
+buckler apps apply --swap moonlight --dry-run
+```
 
 Same IDs are the contract for **kitetvOS Provisioner** first-boot ([kitetvos-bridge.md](kitetvos-bridge.md)).
 

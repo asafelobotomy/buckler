@@ -33,6 +33,30 @@ object DisplayFormat {
         date.format(DateTimeFormatter.ofPattern(style.pattern, locale))
 }
 
+/** How big the header row is. Widgets (logo, clock, icons, Now Playing, ticker) scale together. */
+enum class HeaderSize(val label: String, val scale: Float) {
+    THIN("Thin", 0.8f),
+    MEDIUM("Medium", 1f),
+    LARGE("Large", 1.3f),
+    ;
+
+    companion object {
+        fun fromName(raw: String?): HeaderSize = entries.firstOrNull { it.name == raw } ?: MEDIUM
+    }
+}
+
+/** Scroll speed of the news ticker, and how long each story stays when motion is reduced. */
+enum class TickerSpeed(val label: String, val velocityDp: Float, val rotateMs: Long) {
+    SLOW("Slow", 20f, 14_000),
+    NORMAL("Normal", 42f, 9_000),
+    FAST("Fast", 80f, 5_000),
+    ;
+
+    companion object {
+        fun fromName(raw: String?): TickerSpeed = entries.firstOrNull { it.name == raw } ?: NORMAL
+    }
+}
+
 /** Header pieces that can be switched off one by one in Settings → Header. */
 enum class HeaderElement(val label: String) {
     LOGO("Logo"),
@@ -53,6 +77,9 @@ data class DisplayConfig(
     val place: Place? = null,
     val fahrenheit: Boolean = false,
     val news: NewsSource? = NewsSource.BBC_WORLD,
+    val newsShuffle: Boolean = false,
+    val tickerSpeed: TickerSpeed = TickerSpeed.NORMAL,
+    val headerSize: HeaderSize = HeaderSize.MEDIUM,
     val nowPlaying: Boolean = true,
     /** Off: no header at all, only shelves. */
     val headerVisible: Boolean = true,
@@ -62,7 +89,10 @@ data class DisplayConfig(
 
     /** Weather is fetched only when it will be shown. */
     val weatherPlace: Place? get() = place?.takeIf { shows(HeaderElement.WEATHER) }
-    val showsNews: Boolean get() = headerVisible && news != null
+    val showsNews: Boolean get() = headerVisible && (newsShuffle || news != null)
+
+    /** Null when the ticker is off, so Home does not fetch feeds it will not show. */
+    fun newsQuery(): NewsQuery? = if (showsNews) NewsQuery(news, newsShuffle) else null
     val showsNowPlaying: Boolean get() = headerVisible && nowPlaying
 }
 
@@ -75,6 +105,9 @@ object DisplayPrefs {
     private const val KEY_PLACE_LON = "weather_place_lon"
     private const val KEY_FAHRENHEIT = "weather_fahrenheit"
     private const val KEY_NEWS = "news_source"
+    private const val KEY_NEWS_SHUFFLE = "news_shuffle"
+    private const val KEY_TICKER_SPEED = "news_ticker_speed"
+    private const val KEY_HEADER_SIZE = "header_size"
     private const val KEY_NOW_PLAYING = "now_playing_enabled"
     private const val KEY_HEADER_VISIBLE = "header_visible"
     private const val KEY_HEADER_HIDDEN = "header_hidden"
@@ -98,6 +131,9 @@ object DisplayPrefs {
             place = place,
             fahrenheit = p.getBoolean(KEY_FAHRENHEIT, false),
             news = if (newsRaw == NEWS_OFF) null else NewsSource.fromName(newsRaw),
+            newsShuffle = p.getBoolean(KEY_NEWS_SHUFFLE, false),
+            tickerSpeed = TickerSpeed.fromName(p.getString(KEY_TICKER_SPEED, null)),
+            headerSize = HeaderSize.fromName(p.getString(KEY_HEADER_SIZE, null)),
             nowPlaying = p.getBoolean(KEY_NOW_PLAYING, true),
             headerVisible = p.getBoolean(KEY_HEADER_VISIBLE, true),
             hidden = p.getStringSet(KEY_HEADER_HIDDEN, emptySet()).orEmpty()
@@ -126,6 +162,15 @@ object DisplayPrefs {
 
     fun setNews(context: Context, source: NewsSource?) =
         prefs(context).edit().putString(KEY_NEWS, source?.name ?: NEWS_OFF).apply()
+
+    fun setNewsShuffle(context: Context, value: Boolean) =
+        prefs(context).edit().putBoolean(KEY_NEWS_SHUFFLE, value).apply()
+
+    fun setTickerSpeed(context: Context, speed: TickerSpeed) =
+        prefs(context).edit().putString(KEY_TICKER_SPEED, speed.name).apply()
+
+    fun setHeaderSize(context: Context, size: HeaderSize) =
+        prefs(context).edit().putString(KEY_HEADER_SIZE, size.name).apply()
 
     fun setPlace(context: Context, place: Place?) {
         val edit = prefs(context).edit()

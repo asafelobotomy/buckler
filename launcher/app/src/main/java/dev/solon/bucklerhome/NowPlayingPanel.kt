@@ -26,11 +26,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
-
-private val ControlSize = 38.dp
 
 /**
  * Compact mini player: artwork, title / artist and prev / play-pause / next for whichever app is
@@ -39,7 +36,12 @@ private val ControlSize = 38.dp
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun NowPlayingPanel(model: NowPlayingModel, below: FocusRequester?, modifier: Modifier = Modifier) {
+fun NowPlayingPanel(
+    model: NowPlayingModel,
+    below: FocusRequester?,
+    metrics: HeaderMetrics,
+    modifier: Modifier = Modifier,
+) {
     val info = model.info
     when {
         info != null -> Row(
@@ -49,14 +51,14 @@ fun NowPlayingPanel(model: NowPlayingModel, below: FocusRequester?, modifier: Mo
                 .background(ColorFooter.copy(alpha = 0.55f))
                 .padding(start = 8.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
         ) {
-            Artwork(info)
-            Spacer(modifier = Modifier.size(12.dp))
+            Artwork(info, metrics)
+            Spacer(modifier = Modifier.size(metrics.clockGap))
             // The text yields first when space is tight, so the transport buttons always show.
-            Column(modifier = Modifier.weight(1f, fill = false).widthIn(max = 200.dp)) {
+            Column(modifier = Modifier.weight(1f, fill = false).widthIn(max = metrics.titleMax)) {
                 Text(
                     text = info.title,
                     color = ColorText,
-                    fontSize = 15.sp,
+                    fontSize = metrics.playingTitle,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -64,34 +66,34 @@ fun NowPlayingPanel(model: NowPlayingModel, below: FocusRequester?, modifier: Mo
                 Text(
                     text = info.subtitle.ifEmpty { info.appLabel },
                     color = ColorMuted,
-                    fontSize = 12.sp,
+                    fontSize = metrics.playingSubtitle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             Spacer(modifier = Modifier.size(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                HeaderIconButton(R.drawable.ic_prev, "Previous", size = ControlSize, down = below) { model.previous() }
+                HeaderIconButton(R.drawable.ic_prev, "Previous", size = metrics.control, down = below) { model.previous() }
                 HeaderIconButton(
                     icon = if (info.playing) R.drawable.ic_pause else R.drawable.ic_play,
                     description = if (info.playing) "Pause" else "Play",
-                    size = ControlSize,
+                    size = metrics.control,
                     down = below,
                 ) { model.togglePlayPause() }
-                HeaderIconButton(R.drawable.ic_next, "Next", size = ControlSize, down = below) { model.next() }
+                HeaderIconButton(R.drawable.ic_next, "Next", size = metrics.control, down = below) { model.next() }
             }
         }
-        !model.accessGranted -> AccessPrompt(below, modifier)
+        !model.accessGranted -> AccessPrompt(below, metrics, modifier)
         else -> Unit
     }
 }
 
 @Composable
-private fun Artwork(info: NowPlayingInfo) {
+private fun Artwork(info: NowPlayingInfo, metrics: HeaderMetrics) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(46.dp)
+            .size(metrics.art)
             .clip(RoundedCornerShape(8.dp))
             .background(ColorTile),
     ) {
@@ -101,27 +103,27 @@ private fun Artwork(info: NowPlayingInfo) {
                 bitmap = art.asImageBitmap(),
                 contentDescription = info.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(46.dp),
+                modifier = Modifier.size(metrics.art),
             )
         } else {
             Image(
                 painter = painterResource(R.drawable.ic_music),
                 contentDescription = null,
                 colorFilter = ColorFilter.tint(ColorHint),
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(metrics.artGlyph),
             )
         }
     }
 }
 
 @Composable
-private fun AccessPrompt(below: FocusRequester?, modifier: Modifier) {
+private fun AccessPrompt(below: FocusRequester?, metrics: HeaderMetrics, modifier: Modifier) {
     val context = LocalContext.current
     Box(modifier = modifier) {
         HeaderIconButton(
             icon = R.drawable.ic_music,
             description = "Allow media access to show Now Playing",
-            size = ControlSize + 6.dp,
+            size = metrics.icon,
             dim = true,
             down = below,
         ) {
