@@ -46,6 +46,18 @@ enum class HeaderSize(val label: String, val scale: Float) {
     }
 }
 
+/** How often the Main Stage advances to the next news story. */
+enum class NewsPace(val label: String, val millis: Long) {
+    S30("30s", 30_000),
+    S60("60s", 60_000),
+    S90("90s", 90_000),
+    ;
+
+    companion object {
+        fun fromName(raw: String?): NewsPace = entries.firstOrNull { it.name == raw } ?: S60
+    }
+}
+
 /** Scroll speed of the news ticker, and how long each story stays when motion is reduced. */
 enum class TickerSpeed(val label: String, val velocityDp: Float, val rotateMs: Long) {
     SLOW("Slow", 20f, 14_000),
@@ -79,6 +91,7 @@ data class DisplayConfig(
     val fahrenheit: Boolean = false,
     /** Chosen feeds, in catalog order. Several are mixed; none turns the ticker off. */
     val newsSources: List<NewsSource> = listOf(NewsSource.BBC_WORLD),
+    val newsPace: NewsPace = NewsPace.S60,
     val tickerSpeed: TickerSpeed = TickerSpeed.NORMAL,
     val headerSize: HeaderSize = HeaderSize.MEDIUM,
     val nowPlaying: Boolean = true,
@@ -108,6 +121,7 @@ object DisplayPrefs {
     private const val KEY_NEWS = "news_source"
     private const val KEY_NEWS_SHUFFLE = "news_shuffle"
     private const val KEY_NEWS_SOURCES = "news_sources"
+    private const val KEY_NEWS_PACE = "news_stage_pace"
     private const val KEY_TICKER_SPEED = "news_ticker_speed"
     private const val KEY_HEADER_SIZE = "header_size"
     private const val KEY_NOW_PLAYING = "now_playing_enabled"
@@ -132,6 +146,7 @@ object DisplayPrefs {
             place = place,
             fahrenheit = p.getBoolean(KEY_FAHRENHEIT, false),
             newsSources = readNewsSources(p),
+            newsPace = NewsPace.fromName(p.getString(KEY_NEWS_PACE, null)),
             tickerSpeed = TickerSpeed.fromName(p.getString(KEY_TICKER_SPEED, null)),
             headerSize = HeaderSize.fromName(p.getString(KEY_HEADER_SIZE, null)),
             nowPlaying = p.getBoolean(KEY_NOW_PLAYING, true),
@@ -176,6 +191,9 @@ object DisplayPrefs {
         if (raw == NEWS_OFF) return emptyList()
         return listOfNotNull(NewsSource.fromName(raw)).ifEmpty { listOf(NewsSource.BBC_WORLD) }
     }
+
+    fun setNewsPace(context: Context, pace: NewsPace) =
+        prefs(context).edit().putString(KEY_NEWS_PACE, pace.name).apply()
 
     fun setTickerSpeed(context: Context, speed: TickerSpeed) =
         prefs(context).edit().putString(KEY_TICKER_SPEED, speed.name).apply()

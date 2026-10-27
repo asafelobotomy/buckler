@@ -28,7 +28,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +38,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -46,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
+import kotlinx.coroutines.delay
 
 private val TileGap = 12.dp
 
@@ -83,7 +92,21 @@ fun ShelfSection(
     focus: ShelfFocus,
 ) {
     val menuFocus = remember { FocusRequester() }
+    var showOptions by remember(shelf.config.id) { mutableStateOf(false) }
+    var leaveOptions by remember(shelf.config.id) { mutableStateOf(false) }
     val artHeight = coverSize(coverLayout, tileSize).artHeight
+    LaunchedEffect(showOptions) {
+        if (!showOptions) {
+            leaveOptions = false
+            return@LaunchedEffect
+        }
+        delay(40)
+        val focused = runCatching {
+            menuFocus.requestFocus()
+            true
+        }.getOrDefault(false)
+        if (!focused) showOptions = false
+    }
     Column {
         Text(
             text = if (focus.movingShelf) "▲▼  ${shelf.config.title}" else shelf.config.title,
@@ -97,29 +120,32 @@ fun ShelfSection(
                 },
         )
         Row(verticalAlignment = Alignment.Top) {
-            Box(modifier = Modifier.height(artHeight), contentAlignment = Alignment.Center) {
-                ShelfOptionsButton(
-                    description = "${shelf.config.title} options",
-                    onClick = actions.onShelfMenu,
-                    up = focus.up,
-                    focusRequester = if (shelf.items.isEmpty()) {
-                        focus.shelfRequester ?: focus.first ?: menuFocus
-                    } else {
-                        menuFocus
-                    },
-                )
+            if (showOptions) {
+                Box(modifier = Modifier.height(artHeight), contentAlignment = Alignment.Center) {
+                    ShelfOptionsButton(
+                        description = "${shelf.config.title} options",
+                        onClick = actions.onShelfMenu,
+                        up = focus.up,
+                        focusRequester = menuFocus,
+                        onLeave = { leaveOptions = true },
+                        onFocusLost = { if (leaveOptions) showOptions = false },
+                    )
+                }
+                Spacer(modifier = Modifier.width(TileGap))
             }
-            Spacer(modifier = Modifier.width(TileGap))
             Box(modifier = Modifier.weight(1f)) {
                 when {
-                    shelf.items.isEmpty() -> Text(
-                        text = emptyShelfHint(shelf.config.type),
-                        color = ColorHint,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(top = 18.dp),
+                    shelf.items.isEmpty() -> EmptyShelfHint(
+                        type = shelf.config.type,
+                        up = focus.up,
+                        focusRequester = focus.shelfRequester ?: focus.first,
+                        onLeft = { showOptions = true },
                     )
                     shelf.config.type == ShelfType.LIBRARY ->
-                        LibraryGrid(shelf.items, coverLayout, tileSize, showLabels, actions, focus, menuFocus)
+                        LibraryGrid(
+                            shelf.items, coverLayout, tileSize, showLabels, actions, focus,
+                            onLeftEdge = { showOptions = true },
+                        )
                     else -> {
                         val isApps = shelf.config.type == ShelfType.APPS
                         ShelfRow(
@@ -129,7 +155,7 @@ fun ShelfSection(
                             showLabels = showLabels,
                             actions = actions,
                             focus = if (isApps) focus else focus.withoutAppMove(),
-                            menuFocus = menuFocus,
+                            onLeftEdge = { showOptions = true },
                         )
                     }
                 }
@@ -144,6 +170,8 @@ private fun ShelfOptionsButton(
     onClick: () -> Unit,
     up: FocusRequester?,
     focusRequester: FocusRequester,
+    onLeave: () -> Unit,
+    onFocusLost: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -159,6 +187,14 @@ private fun ShelfOptionsButton(
             .strongFocusRing(focused, shape)
             .semantics { contentDescription = description }
             .focusRequester(focusRequester)
+            .onPreviewKeyEvent { event ->
+                val leaving = event.key == Key.DirectionRight ||
+                    event.key == Key.DirectionUp ||
+                    event.key == Key.DirectionDown
+                if (event.type == KeyEventType.KeyDown && leaving) onLeave()
+                false
+            }
+            .onFocusChanged { if (!it.isFocused) onFocusLost() }
             .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
             .focusable(interactionSource = interaction)
             .onSelectKeyUp(onClick)
@@ -182,6 +218,31 @@ private fun ShelfFocus.firstTileRequester(index: Int, item: ShelfItem): FocusReq
     else -> null
 }
 
+@Composable
+private fun EmptyShelfHint(
+    type: ShelfType,
+    up: FocusRequester?,
+    focusRequester: FocusRequester?,
+    onLeft: () -> Unit,
+) {
+    val modifier = Modifier
+        .padding(top = 18.dp)
+        .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+        .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
+        .onPreviewKeyEvent { event ->
+            if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
+            if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onLeft()
+            true
+        }
+        .focusable()
+    Text(
+        text = emptyShelfHint(type),
+        color = ColorHint,
+        fontSize = 14.sp,
+        modifier = modifier,
+    )
+}
+
 private fun emptyShelfHint(type: ShelfType): String = when (type) {
     ShelfType.WATCH_NEXT -> "Nothing in Up Next yet — apps publish here when you watch."
     ShelfType.SUGGESTED -> "Launch a few apps to build suggestions."
@@ -196,7 +257,7 @@ private fun LibraryGrid(
     showLabels: Boolean,
     actions: ShelfActions,
     focus: ShelfFocus,
-    menuFocus: FocusRequester,
+    onLeftEdge: () -> Unit,
 ) {
     val tileWidth = coverSize(coverLayout, tileSize).width
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -219,7 +280,7 @@ private fun LibraryGrid(
                             showLabels = showLabels,
                             onLaunch = { actions.onLaunch(item) },
                             onLongPress = { actions.onLongPress(item) },
-                            left = if (rowIndex == 0 && col == 0) menuFocus else null,
+                            onLeftEdge = if (rowIndex == 0 && col == 0) onLeftEdge else null,
                             up = if (rowIndex == 0 && col == 0) focus.up else null,
                             focusRequester = if (rowIndex == 0 && col == 0) focus.shelfRequester ?: focus.first else null,
                         )
@@ -238,7 +299,7 @@ private fun ShelfRow(
     showLabels: Boolean,
     actions: ShelfActions,
     focus: ShelfFocus,
-    menuFocus: FocusRequester,
+    onLeftEdge: () -> Unit,
 ) {
     val listState = rememberLazyListState()
     val trackIndex = items.indexOfFirst { focus.focusPackage != null && it.packageName == focus.focusPackage }
@@ -261,7 +322,7 @@ private fun ShelfRow(
                 showLabels = showLabels,
                 onLaunch = { actions.onLaunch(item) },
                 onLongPress = { actions.onLongPress(item) },
-                left = if (index == 0) menuFocus else null,
+                onLeftEdge = if (index == 0) onLeftEdge else null,
                 up = if (index == 0) focus.up else null,
                 focusRequester = focus.firstTileRequester(index, item),
                 moving = focus.movingPackage != null && item.packageName == focus.movingPackage,

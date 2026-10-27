@@ -158,6 +158,22 @@ class HeaderLogicTest {
         assertEquals("Big story", story.title)
         assertEquals("A short summary.", story.summary)
         assertEquals("https://example.com/a.jpg", story.imageUrl)
+        assertEquals(
+            "https://ichef.bbci.co.uk/news/1024/branded_news/a.jpg",
+            NewsFeed.parseStories(
+                """
+                <item><title>Wide</title>
+                <media:thumbnail url="https://ichef.bbci.co.uk/news/240/branded_news/a.jpg" width="240" height="135"/>
+                <media:thumbnail url="https://ichef.bbci.co.uk/news/976/branded_news/a.jpg" width="976" height="549"/>
+                </item>
+                """.trimIndent(),
+                1,
+            ).single().imageUrl,
+        )
+        assertEquals(
+            "https://i.guim.co.uk/img/x.jpg?width=1400&quality=85",
+            NewsFeed.enlargeNewsImage("https://i.guim.co.uk/img/x.jpg?width=140&quality=85"),
+        )
         assertEquals("https://example.com/story", story.link)
         assertEquals(story.title, NewsFeed.featured(listOf(Headline(NewsSource.BBC_WORLD, story.title, story.summary, story.imageUrl, story.link)))?.title)
     }
@@ -178,6 +194,38 @@ class HeaderLogicTest {
         assertEquals(10.4, forecast.days[0].temperatureC, 0.01)
         assertEquals(4.1, forecast.days[0].lowC ?: Double.NaN, 0.01)
         assertTrue(forecast.days[0].allDay)
+    }
+
+    @Test
+    fun stagePoolKeepsStoriesThatHaveAPicture() {
+        val stories = listOf(
+            Headline(NewsSource.BBC_WORLD, "no art"),
+            Headline(NewsSource.NPR, "with art", imageUrl = "https://example.com/a.jpg"),
+            Headline(NewsSource.GUARDIAN, "also", imageUrl = "https://example.com/b.jpg"),
+        )
+        assertEquals(listOf("with art", "also"), NewsFeed.stagePool(stories).map { it.title })
+        assertEquals(NewsPace.S60, NewsPace.fromName(null))
+        assertEquals(30_000L, NewsPace.S30.millis)
+        assertEquals(90_000L, NewsPace.S90.millis)
+    }
+
+    @Test
+    fun readerKeepsTheArticleAndDropsChrome() {
+        val html = """
+            <html><body>
+            <script>alert("ad")</script>
+            <iframe src="https://ads.example/popup"></iframe>
+            <article>
+              <p>Subscribe to our newsletter</p>
+              <p>This is the real opening paragraph of the story and it is long enough to be kept in the reader.</p>
+              <p>A second paragraph follows with enough words to be the body of the article itself and nothing else.</p>
+            </article>
+            </body></html>
+        """.trimIndent()
+        val text = ArticleReader.extract(html)
+        assertEquals(2, text.size)
+        assertTrue(text[0].startsWith("This is the real"))
+        assertTrue(text.none { "Subscribe" in it || "alert" in it || "ads.example" in it })
     }
 
     @Test

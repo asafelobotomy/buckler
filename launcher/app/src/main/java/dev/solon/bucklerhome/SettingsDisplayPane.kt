@@ -129,6 +129,16 @@ fun DisplayPane() {
                 }
             }
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        SettingsRow("Main Stage changes story every")
+        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+            NewsPace.entries.forEach { pace ->
+                SettingsAction(pace.label, selected = pace == cfg.newsPace) {
+                    DisplayPrefs.setNewsPace(context, pace)
+                    tick++
+                }
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(12.dp))

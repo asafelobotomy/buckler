@@ -89,8 +89,13 @@ object NewsFeed {
     }
 
     /** Lead story for the Main Stage: the first one with a picture, otherwise the first story. */
-    fun featured(headlines: List<Headline>): Headline? =
-        headlines.firstOrNull { !it.imageUrl.isNullOrBlank() } ?: headlines.firstOrNull()
+    fun featured(headlines: List<Headline>): Headline? = stagePool(headlines).firstOrNull()
+
+    /** Stories the Main Stage cycles. Ones with a picture come first; the rest are used only if none do. */
+    fun stagePool(headlines: List<Headline>): List<Headline> {
+        val pictured = headlines.filter { !it.imageUrl.isNullOrBlank() }
+        return pictured.ifEmpty { headlines }
+    }
 
     /**
      * Round-robin: the first story of each source, then the second of each, and so on. A source
@@ -167,6 +172,7 @@ object NewsFeed {
     }
 
     private fun imageFrom(item: String): String? {
+        val found = ArrayList<Pair<String, Int>>()
         for (match in tagRe.findAll(item)) {
             val raw = match.value
             val url = attr(raw, "url") ?: continue
@@ -177,9 +183,35 @@ object NewsFeed {
             val enclosure = raw.startsWith("<enclosure")
             if (enclosure && !image) continue
             if (raw.startsWith("<media:content") && kind.isNotEmpty() && !image) continue
-            if (thumbnail || image) return url
+            if (!(thumbnail || image)) continue
+            found += enlargeNewsImage(url) to imageScore(raw, thumbnail)
         }
-        return imgSrc.find(item)?.groupValues?.get(1)?.takeIf { it.startsWith("https://") }
+        imgSrc.find(item)?.groupValues?.get(1)?.takeIf { it.startsWith("https://") }?.let { url ->
+            found += enlargeNewsImage(url) to 2
+        }
+        return found.maxByOrNull { it.second }?.first
+    }
+
+    /** Prefer a large declared size. Thumbnails and tiny icons lose to a full frame. */
+    private fun imageScore(tag: String, thumbnail: Boolean): Int {
+        val width = attr(tag, "width")?.toIntOrNull() ?: 0
+        val height = attr(tag, "height")?.toIntOrNull() ?: 0
+        if ((width in 1..160) || (height in 1..160)) return 1
+        var score = when {
+            width > 0 && height > 0 -> width * height
+            width > 0 -> width * width
+            else -> 10_000
+        }
+        if (thumbnail) score /= 4
+        if (tag.startsWith("<media:content")) score *= 2
+        return score
+    }
+
+    /** Ask known image CDNs for a frame large enough for a TV stage. */
+    fun enlargeNewsImage(url: String): String {
+        val bbc = Regex("""(ichef\.bbci\.co\.uk/(?:ace/standard|news)/)\d{2,4}/""")
+        val wider = bbc.replace(url) { "${it.groupValues[1]}1024/" }
+        return Regex("""([?&]width=)\d+""").replace(wider) { "${it.groupValues[1]}1400" }
     }
 
     private fun looksLikeImage(url: String): Boolean {

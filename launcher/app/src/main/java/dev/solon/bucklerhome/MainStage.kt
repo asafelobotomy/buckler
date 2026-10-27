@@ -10,11 +10,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -22,6 +28,9 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
+import kotlinx.coroutines.delay
 
 /** The band under the header. One of these is on screen at a time. */
 enum class MainStage(val label: String) {
@@ -51,6 +60,7 @@ fun MainStage(
     mode: MainStage,
     headlines: List<Headline>,
     newsSources: List<NewsSource>,
+    newsPace: NewsPace,
     forecast: Forecast?,
     place: Place?,
     fahrenheit: Boolean,
@@ -61,7 +71,7 @@ fun MainStage(
     onOpenStory: (Headline) -> Unit,
 ) {
     when (mode) {
-        MainStage.NEWS -> NewsStage(headlines, newsSources, stageFocus, below, onOpenStory)
+        MainStage.NEWS -> NewsStage(headlines, newsSources, newsPace, stageFocus, below, onOpenStory)
         MainStage.NOW_PLAYING -> NowPlayingStage(nowPlaying, stageFocus, below)
         MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h, stageFocus, below)
         MainStage.SUGGESTED -> SuggestedStage(nowPlaying, stageFocus, below)
@@ -92,11 +102,21 @@ fun StageHeading(title: String, note: String? = null) {
 private fun NewsStage(
     headlines: List<Headline>,
     newsSources: List<NewsSource>,
+    pace: NewsPace,
     stageFocus: FocusRequester,
     below: FocusRequester,
     onOpenStory: (Headline) -> Unit,
 ) {
-    val story = NewsFeed.featured(headlines)
+    val pool = remember(headlines) { NewsFeed.stagePool(headlines) }
+    var index by remember(pool) { mutableIntStateOf(0) }
+    LaunchedEffect(pool, pace) {
+        if (pool.size < 2) return@LaunchedEffect
+        while (true) {
+            delay(pace.millis)
+            index = (index + 1) % pool.size
+        }
+    }
+    val story = pool.getOrNull(index.coerceIn(0, (pool.size - 1).coerceAtLeast(0)))
     Column(modifier = Modifier.fillMaxWidth()) {
         StageHeading("News")
         Row(
@@ -158,8 +178,12 @@ private fun NewsStage(
             }
             val image = story?.imageUrl
             if (image != null) {
+                val context = LocalContext.current
                 AsyncImage(
-                    model = image,
+                    model = ImageRequest.Builder(context)
+                        .data(image)
+                        .size(Size.ORIGINAL)
+                        .build(),
                     contentDescription = story.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

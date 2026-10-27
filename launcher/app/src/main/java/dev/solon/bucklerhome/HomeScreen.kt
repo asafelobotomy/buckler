@@ -268,6 +268,7 @@ fun HomeScreen(
                 mode = layout.mainStage,
                 headlines = headlines,
                 newsSources = config.newsSources,
+                newsPace = config.newsPace,
                 forecast = forecast,
                 place = config.place,
                 fahrenheit = config.fahrenheit,

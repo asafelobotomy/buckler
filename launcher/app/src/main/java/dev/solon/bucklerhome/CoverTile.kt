@@ -28,6 +28,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
@@ -73,6 +78,8 @@ fun CoverTile(
     showLabels: Boolean = false,
     /** Shelf circle, to the left of the first tile. */
     left: FocusRequester? = null,
+    /** Left at the first tile reveals the shelf circle; it is not on screen until then. */
+    onLeftEdge: (() -> Unit)? = null,
     /** Main Stage, above the first shelf. */
     up: FocusRequester? = null,
 ) {
@@ -106,6 +113,13 @@ fun CoverTile(
         boxModifier = boxModifier.focusProperties {
             if (left != null) this.left = left
             if (up != null) this.up = up
+        }
+    }
+    if (onLeftEdge != null) {
+        boxModifier = boxModifier.onPreviewKeyEvent { event ->
+            if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
+            if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onLeftEdge()
+            true
         }
     }
     boxModifier = boxModifier
