@@ -61,10 +61,12 @@ fun AppearancePane() {
             tileSize = layout.tileSize,
             showLabels = layout.showLabels,
             mainStage = layout.mainStage,
+            stageSize = layout.stageSize,
             onStyle = { persist(layout.copy(layout = it)) },
             onSize = { persist(layout.copy(tileSize = it)) },
             onLabels = { persist(layout.copy(showLabels = it)) },
             onStage = { persist(layout.copy(mainStage = it)) },
+            onStageSize = { persist(layout.copy(stageSize = it)) },
         )
     }
 }

@@ -73,6 +73,7 @@ fun CoverTile(
     onLongPress: () -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
+    alsoRequester: FocusRequester? = null,
     moving: Boolean = false,
     tileSize: TileSize = TileSize.MEDIUM,
     showLabels: Boolean = false,
@@ -108,6 +109,9 @@ fun CoverTile(
     }
     if (focusRequester != null) {
         boxModifier = boxModifier.focusRequester(focusRequester)
+    }
+    if (alsoRequester != null && alsoRequester != focusRequester) {
+        boxModifier = boxModifier.focusRequester(alsoRequester)
     }
     if (left != null || up != null) {
         boxModifier = boxModifier.focusProperties {

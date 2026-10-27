@@ -94,7 +94,7 @@ tests/        policy / handover / journal / schema unit tests
 
 ## Launcher (buckler-home)
 
-Compose-for-TV HOME (**0.11.0**) with a live header, a Main Stage, cover layouts, shelves, **Buckler Settings**, GitHub OTA prompts, and keyless Change cover (local + curated pack). Optional SteamGridDB / IGDB link via TV QR / device-code — not required for covers.
+Compose-for-TV HOME (**0.12.0**) with a live header, a Main Stage, cover layouts, shelves, **Buckler Settings**, GitHub OTA prompts, and keyless Change cover (local + curated pack). Optional SteamGridDB / IGDB link via TV QR / device-code — not required for covers.
 
 ```bash
 buckler home write                 # journals/home-layout.json
@@ -108,7 +108,7 @@ buckler launcher build && buckler launcher install
 
 **Long-press / Menu:** Open, Change cover, Remove (unpin), Uninstall, Info, Pin, **Move** (closes the menu; ◀ ▶ slide the app along Apps, OK places it, Back cancels).
 
-**Main Stage** sits under the header and stays put while the shelves scroll. OK on it opens what it is showing: News opens the story in a reader (the article text, with page scripts left behind), Now Playing opens the app that is playing, Weather opens the weather app, and Suggested opens that title's app. News rotates every 30, 60, or 90 seconds (Settings → Header).
+**Main Stage** sits under the header and stays put while the shelves scroll. Small / Medium / Large (Edit Home, or Settings → Appearance) sets how tall that band is, so the shelves keep a full row. OK on it opens what it is showing: News opens the story in a reader (the article text, with page scripts left behind), Now Playing opens the app that is playing, Weather opens the weather app, and Suggested opens that title's app. News rotates every 30, 60, or 90 seconds (Settings → Header).
 
 **Shelves:** press ◀ on the first tile of a shelf to reveal the shelf button. OK on it opens *Move shelf* (▲ ▼ reorder, OK places, Back cancels) and *Hide shelf*. Up Next also offers *Sources*, and each chosen app contributes at most three cards. Edit Home and Settings are the pencil and gear in the header.
 
@@ -122,7 +122,7 @@ buckler launcher build && buckler launcher install
 
 **DNS:** `buckler dns status` (alias `get`) / `set --hostname …` / `off`.
 
-Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.11.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, header weather/news, online screensaver photos and optional linked APIs; `ACCESS_NETWORK_STATE` for the Wi-Fi / Ethernet / VPN icons — no ads, no account telemetry. Release APKs are signed with `launcher/keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; git-ignored) when present, otherwise with the machine-local debug key — OTA updates only install over an APK signed with the same key. Switching keys means one uninstall/reinstall. Backups are disabled (tokens live in encrypted prefs). Feeds and artwork must be `https://`.
+Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.12.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, header weather/news, online screensaver photos and optional linked APIs; `ACCESS_NETWORK_STATE` for the Wi-Fi / Ethernet / VPN icons — no ads, no account telemetry. Release APKs are signed with `launcher/keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; git-ignored) when present, otherwise with the machine-local debug key — OTA updates only install over an APK signed with the same key. Switching keys means one uninstall/reinstall. Backups are disabled (tokens live in encrypted prefs). Feeds and artwork must be `https://`.
 
 ## Development
 

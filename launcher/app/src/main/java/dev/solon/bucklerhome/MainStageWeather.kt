@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -35,13 +36,14 @@ fun WeatherStage(
     fahrenheit: Boolean,
     use24h: Boolean,
     stageFocus: FocusRequester,
-    below: FocusRequester,
+    onDown: () -> Unit,
+    metrics: StageMetrics,
 ) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .stageTarget(stageFocus, below, "Open weather") { launchWeatherApp(context) },
+            .stageTarget(stageFocus, onDown, "Open weather") { launchWeatherApp(context) },
     ) {
         StageHeading("Weather", place?.name)
         when {
@@ -52,8 +54,24 @@ fun WeatherStage(
             )
             forecast == null -> Text(text = "…", color = ColorMuted, fontSize = 15.sp)
             else -> {
-                SlotRow("Next hours", forecast.hours, fahrenheit, use24h)
-                SlotRow("Next days", forecast.days, fahrenheit, use24h)
+                SlotRow(
+                    "Next hours",
+                    forecast.hours.take(metrics.hours),
+                    fahrenheit,
+                    use24h,
+                    metrics.chipWidth,
+                    metrics.compact,
+                )
+                if (metrics.days > 0) {
+                    SlotRow(
+                        "Next days",
+                        forecast.days.take(metrics.days),
+                        fahrenheit,
+                        use24h,
+                        metrics.chipWidth,
+                        metrics.compact,
+                    )
+                }
             }
         }
     }
@@ -61,7 +79,14 @@ fun WeatherStage(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun SlotRow(title: String, slots: List<ForecastSlot>, fahrenheit: Boolean, use24h: Boolean) {
+private fun SlotRow(
+    title: String,
+    slots: List<ForecastSlot>,
+    fahrenheit: Boolean,
+    use24h: Boolean,
+    chipWidth: Dp,
+    compact: Boolean,
+) {
     if (slots.isEmpty()) return
     Text(
         text = title,
@@ -75,28 +100,34 @@ private fun SlotRow(title: String, slots: List<ForecastSlot>, fahrenheit: Boolea
         modifier = Modifier.focusProperties { canFocus = false },
     ) {
         items(slots, key = { "${it.allDay}-${it.label}" }) { slot ->
-            ForecastChip(slot, fahrenheit, use24h)
+            ForecastChip(slot, fahrenheit, use24h, chipWidth, compact)
         }
     }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ForecastChip(slot: ForecastSlot, fahrenheit: Boolean, use24h: Boolean) {
+private fun ForecastChip(
+    slot: ForecastSlot,
+    fahrenheit: Boolean,
+    use24h: Boolean,
+    chipWidth: Dp,
+    compact: Boolean,
+) {
     val (glyph, summary) = WeatherClient.describe(slot.code, slot.isDay)
     Column(
         modifier = Modifier
-            .width(92.dp)
+            .width(chipWidth)
             .clip(RoundedCornerShape(10.dp))
             .background(ColorTile)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
+            .padding(vertical = if (compact) 6.dp else 10.dp, horizontal = 4.dp),
     ) {
-        Text(text = slot.caption(use24h), color = ColorText, fontSize = 13.sp, maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text(text = glyph, fontSize = 22.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp))
+        Text(text = slot.caption(use24h), color = ColorText, fontSize = if (compact) 12.sp else 13.sp, maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(text = glyph, fontSize = if (compact) 16.sp else 20.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp))
         Text(
             text = temperatureLine(slot, fahrenheit),
             color = ColorText,
-            fontSize = 14.sp,
+            fontSize = if (compact) 13.sp else 14.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,

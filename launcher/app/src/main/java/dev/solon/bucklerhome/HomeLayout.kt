@@ -63,6 +63,8 @@ data class HomeLayout(
     val showLabels: Boolean = false,
     /** What fills the band under the header. */
     val mainStage: MainStage = MainStage.NEWS,
+    /** How tall that band may grow. Medium leaves a full shelf row on a 16:9 screen. */
+    val stageSize: StageSize = StageSize.MEDIUM,
 ) {
     fun toJson(): JSONObject {
         val shelvesArr = JSONArray()
@@ -83,6 +85,7 @@ data class HomeLayout(
             .put("tile_size", tileSize.wire())
             .put("show_labels", showLabels)
             .put("main_stage", mainStage.wire())
+            .put("stage_size", stageSize.wire())
             .put("suggested_feed_url", suggestedFeedUrl)
             .put("shelves", shelvesArr)
     }
@@ -202,6 +205,7 @@ data class HomeLayout(
                 tileSize = TileSize.fromWire(obj.optString("tile_size")),
                 showLabels = obj.optBoolean("show_labels", false),
                 mainStage = MainStage.fromWire(obj.optString("main_stage").takeIf { it.isNotBlank() }),
+                stageSize = StageSize.fromWire(obj.optString("stage_size").takeIf { it.isNotBlank() }),
             )
         }
 

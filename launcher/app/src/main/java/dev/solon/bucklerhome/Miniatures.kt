@@ -108,6 +108,24 @@ fun BoxScope.ThemeMiniature(theme: AppTheme, highContrast: Boolean) {
     }
 }
 
+/** Header strip, a stage band, and the shelf room left underneath. */
+@Composable
+fun BoxScope.StageSizeMiniature(size: StageSize) {
+    val band = when (size) {
+        StageSize.SMALL -> 8.dp
+        StageSize.MEDIUM -> 14.dp
+        StageSize.LARGE -> 22.dp
+    }
+    val palette = LocalPalette.current
+    Column(modifier = Modifier.fillMaxSize().background(palette.bgTop).padding(8.dp)) {
+        Box(Modifier.fillMaxWidth().height(4.dp).rounded(palette.text.copy(alpha = 0.7f)))
+        Spacer(Modifier.height(4.dp))
+        Box(Modifier.fillMaxWidth().height(band).rounded(palette.brand.copy(alpha = 0.45f), 3.dp))
+        Spacer(Modifier.height(4.dp))
+        Box(Modifier.fillMaxWidth().weight(1f).rounded(palette.tile, 3.dp))
+    }
+}
+
 /** A sample of the font, drawn in itself on the current theme. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

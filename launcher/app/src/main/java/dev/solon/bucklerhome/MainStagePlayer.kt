@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -39,7 +41,8 @@ import coil.compose.AsyncImage
 fun NowPlayingStage(
     model: NowPlayingModel,
     stageFocus: FocusRequester,
-    below: FocusRequester,
+    onDown: () -> Unit,
+    metrics: StageMetrics,
 ) {
     val context = LocalContext.current
     val info = model.info ?: RecentMedia.recent()
@@ -48,27 +51,27 @@ fun NowPlayingStage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(176.dp)
+                .height(metrics.cardHeight)
                 .clip(RoundedCornerShape(12.dp))
                 .background(ColorTile)
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (info != null) {
-                PlayingSummary(info, stageFocus, below) {
+                PlayingSummary(info, stageFocus, onDown, metrics.cardHeight - 32.dp) {
                     if (info.packageName.isNotBlank()) {
                         launchPackage(context, info.packageName, info.appLabel.ifBlank { info.title })
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    HeaderIconButton(R.drawable.ic_prev, "Previous", size = 52.dp, down = below) { model.previous() }
+                    HeaderIconButton(R.drawable.ic_prev, "Previous", size = 52.dp, onDown = onDown) { model.previous() }
                     HeaderIconButton(
                         icon = if (info.playing) R.drawable.ic_pause else R.drawable.ic_play,
                         description = if (info.playing) "Pause" else "Play",
                         size = 52.dp,
-                        down = below,
+                        onDown = onDown,
                     ) { model.togglePlayPause() }
-                    HeaderIconButton(R.drawable.ic_next, "Next", size = 52.dp, down = below) { model.next() }
+                    HeaderIconButton(R.drawable.ic_next, "Next", size = 52.dp, onDown = onDown) { model.next() }
                 }
             } else if (!model.accessGranted) {
                 Text(
@@ -77,7 +80,7 @@ fun NowPlayingStage(
                     fontSize = 16.sp,
                     modifier = Modifier.weight(1f),
                 )
-                GrantMediaAccess(stageFocus, below)
+                GrantMediaAccess(stageFocus, onDown)
             } else {
                 Text(
                     text = "Nothing playing.",
@@ -85,7 +88,7 @@ fun NowPlayingStage(
                     fontSize = 16.sp,
                     modifier = Modifier
                         .weight(1f)
-                        .stageTarget(stageFocus, below, "Now Playing") {},
+                        .stageTarget(stageFocus, onDown, "Now Playing") {},
                 )
             }
         }
@@ -97,24 +100,25 @@ fun NowPlayingStage(
 private fun RowScope.PlayingSummary(
     info: NowPlayingInfo,
     stageFocus: FocusRequester,
-    below: FocusRequester,
+    onDown: () -> Unit,
+    artSize: Dp,
     onOpen: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .weight(1f)
-            .stageTarget(stageFocus, below, "Open ${info.appLabel.ifBlank { info.title }}", onOpen),
+            .stageTarget(stageFocus, onDown, "Open ${info.appLabel.ifBlank { info.title }}", onOpen),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StageArt(info)
+        StageArt(info, artSize)
         Spacer(modifier = Modifier.size(20.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 text = info.title,
                 color = ColorText,
-                fontSize = 22.sp,
+                fontSize = if (artSize < 100.dp) 18.sp else 22.sp,
                 fontWeight = FontWeight.Medium,
-                maxLines = 2,
+                maxLines = if (artSize < 100.dp) 1 else 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
@@ -124,7 +128,7 @@ private fun RowScope.PlayingSummary(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (info.subtitle.isNotBlank()) {
+            if (info.subtitle.isNotBlank() && artSize >= 100.dp) {
                 Text(text = info.appLabel, color = ColorHint, fontSize = 13.sp, maxLines = 1)
             }
         }
@@ -132,11 +136,11 @@ private fun RowScope.PlayingSummary(
 }
 
 @Composable
-private fun StageArt(info: NowPlayingInfo?) {
+private fun StageArt(info: NowPlayingInfo?, artSize: Dp) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(144.dp)
+            .size(artSize)
             .clip(RoundedCornerShape(10.dp))
             .background(ColorFooter),
     ) {
@@ -147,13 +151,13 @@ private fun StageArt(info: NowPlayingInfo?) {
                 bitmap = art.asImageBitmap(),
                 contentDescription = info?.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(144.dp),
+                modifier = Modifier.fillMaxSize(),
             )
             !artUri.isNullOrBlank() -> AsyncImage(
                 model = artUri,
                 contentDescription = info?.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(144.dp),
+                modifier = Modifier.fillMaxSize(),
             )
             else -> Image(
                 painter = painterResource(R.drawable.ic_music),
@@ -166,13 +170,13 @@ private fun StageArt(info: NowPlayingInfo?) {
 }
 
 @Composable
-private fun GrantMediaAccess(stageFocus: FocusRequester, below: FocusRequester) {
+private fun GrantMediaAccess(stageFocus: FocusRequester, onDown: () -> Unit) {
     val context = LocalContext.current
     HeaderIconButton(
         icon = R.drawable.ic_music,
         description = "Allow media access to show Now Playing",
         size = 52.dp,
-        down = below,
+        onDown = onDown,
         focusRequester = stageFocus,
     ) {
         launchFirstThatWorks(

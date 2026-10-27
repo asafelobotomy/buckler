@@ -26,6 +26,17 @@ fun Key.isTvMenuKey(): Boolean = this == Key.Menu || this == Key.Info
 /** True for held-key auto-repeat KeyDown events (not a fresh press). */
 fun KeyEvent.isKeyRepeat(): Boolean = nativeKeyEvent.repeatCount > 0
 
+/**
+ * Move Down ourselves. [FocusRequester.requestFocus] throws when the target is not composed,
+ * and the framework's `focusProperties { down = ... }` lets that exception kill the activity.
+ * Consuming the key also keeps the KeyUp from landing on the destination as a click.
+ */
+fun Modifier.downTo(onDown: () -> Unit): Modifier = onPreviewKeyEvent { event ->
+    if (event.key != Key.DirectionDown) return@onPreviewKeyEvent false
+    if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onDown()
+    true
+}
+
 /** Activate on Select *release*, so a press that started elsewhere never triggers it. */
 @Composable
 fun Modifier.onSelectKeyUp(onSelect: () -> Unit): Modifier = onPreviewKeyEvent { event ->

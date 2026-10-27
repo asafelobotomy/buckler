@@ -16,6 +16,11 @@
       "enum": ["small", "medium", "large"],
       "description": "Optional size of every app tile; defaults to medium"
     },
+    "stage_size": {
+      "type": "string",
+      "enum": ["small", "medium", "large"],
+      "description": "Optional height of the main stage band; defaults to medium"
+    },
     "suggested_feed_url": {
       "type": ["string", "null"],
       "description": "Optional HTTPS JSON feed merged into the suggested shelf"

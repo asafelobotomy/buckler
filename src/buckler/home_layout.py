@@ -96,6 +96,9 @@ def validate_home_layout(doc: dict[str, Any]) -> None:
     tile_size = doc.get("tile_size", "medium")
     if tile_size not in ("small", "medium", "large"):
         raise HomeLayoutError(f"tile_size must be small|medium|large, got {tile_size!r}")
+    stage_size = doc.get("stage_size", "medium")
+    if stage_size not in ("small", "medium", "large"):
+        raise HomeLayoutError(f"stage_size must be small|medium|large, got {stage_size!r}")
     shelves = doc.get("shelves")
     if not isinstance(shelves, list) or not shelves:
         raise HomeLayoutError("shelves must be a non-empty array")

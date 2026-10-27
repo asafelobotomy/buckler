@@ -55,3 +55,13 @@ def test_tile_size_is_optional_and_validated() -> None:
     doc["tile_size"] = "huge"
     with pytest.raises(HomeLayoutError, match="tile_size"):
         validate_home_layout(doc)
+
+
+def test_stage_size_is_optional_and_validated() -> None:
+    validate_home_layout(default_home_layout())
+    doc = default_home_layout()
+    doc["stage_size"] = "small"
+    validate_home_layout(doc)
+    doc["stage_size"] = "huge"
+    with pytest.raises(HomeLayoutError, match="stage_size"):
+        validate_home_layout(doc)

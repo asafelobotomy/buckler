@@ -52,6 +52,8 @@ fun HeaderIconButton(
     label: String? = null,
     /** Where D-pad Down goes; without it the spatial search can land on a neighbouring icon. */
     down: FocusRequester? = null,
+    /** Down handled in code, so a shelf that is not composed yet cannot crash the activity. */
+    onDown: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
@@ -78,7 +80,13 @@ fun HeaderIconButton(
             )
             .strongFocusRing(focused, shape)
             .semantics { contentDescription = description }
-            .then(if (down != null) Modifier.focusProperties { this.down = down } else Modifier)
+            .then(
+                when {
+                    onDown != null -> Modifier.downTo(onDown)
+                    down != null -> Modifier.focusProperties { this.down = down }
+                    else -> Modifier
+                },
+            )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .focusable(interactionSource = interaction)
             .onSelectKeyUp(onClick)

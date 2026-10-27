@@ -66,14 +66,15 @@ fun MainStage(
     use24h: Boolean,
     nowPlaying: NowPlayingModel,
     stageFocus: FocusRequester,
-    below: FocusRequester,
+    onDown: () -> Unit,
     onOpenStory: (Headline) -> Unit,
+    metrics: StageMetrics,
 ) {
     when (mode) {
-        MainStage.NEWS -> NewsStage(headlines, newsSources, newsPace, stageFocus, below, onOpenStory)
-        MainStage.NOW_PLAYING -> NowPlayingStage(nowPlaying, stageFocus, below)
-        MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h, stageFocus, below)
-        MainStage.SUGGESTED -> SuggestedStage(nowPlaying, stageFocus, below)
+        MainStage.NEWS -> NewsStage(headlines, newsSources, newsPace, stageFocus, onDown, onOpenStory, metrics)
+        MainStage.NOW_PLAYING -> NowPlayingStage(nowPlaying, stageFocus, onDown, metrics)
+        MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h, stageFocus, onDown, metrics)
+        MainStage.SUGGESTED -> SuggestedStage(nowPlaying, stageFocus, onDown, metrics)
     }
 }
 
@@ -103,8 +104,9 @@ private fun NewsStage(
     newsSources: List<NewsSource>,
     pace: NewsPace,
     stageFocus: FocusRequester,
-    below: FocusRequester,
+    onDown: () -> Unit,
     onOpenStory: (Headline) -> Unit,
+    metrics: StageMetrics,
 ) {
     val pool = remember(headlines) { NewsFeed.stagePool(headlines) }
     var index by remember(pool) { mutableIntStateOf(0) }
@@ -122,13 +124,13 @@ private fun NewsStage(
             modifier = Modifier
                 .stageTarget(
                     focus = stageFocus,
-                    below = below,
+                    onDown = onDown,
                     description = story?.title ?: "News",
                 ) {
                     if (story != null) onOpenStory(story)
                 }
                 .fillMaxWidth()
-                .height(176.dp)
+                .height(metrics.cardHeight)
                 .clip(RoundedCornerShape(12.dp))
                 .background(ColorTile),
             verticalAlignment = Alignment.CenterVertically,
@@ -136,7 +138,7 @@ private fun NewsStage(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 22.dp, vertical = 16.dp),
+                    .padding(horizontal = 22.dp, vertical = if (metrics.cardHeight < 130.dp) 8.dp else 14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (story == null) {
@@ -159,7 +161,7 @@ private fun NewsStage(
                     Text(
                         text = story.title,
                         color = ColorText,
-                        fontSize = 22.sp,
+                        fontSize = if (metrics.cardHeight < 130.dp) 18.sp else 22.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -169,7 +171,7 @@ private fun NewsStage(
                             text = summary,
                             color = ColorMuted,
                             fontSize = 14.sp,
-                            maxLines = 3,
+                            maxLines = if (metrics.cardHeight < 130.dp) 1 else 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -186,8 +188,8 @@ private fun NewsStage(
                     contentDescription = story.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .width(300.dp)
-                        .height(176.dp),
+                        .width(metrics.artWidth)
+                        .height(metrics.cardHeight),
                 )
             }
         }

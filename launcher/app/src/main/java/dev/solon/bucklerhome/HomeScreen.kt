@@ -39,6 +39,7 @@ fun HomeScreen(
     var initialFocusDone by remember { mutableStateOf(false) }
     val firstFocus = remember { FocusRequester() }
     val stageFocus = remember { FocusRequester() }
+    val stageDown = remember { FocusRequester() }
     val move = remember { MoveMode() }
     val moveFocus = remember { FocusRequester() }
     var refocusTick by remember { mutableStateOf(0) }
@@ -240,6 +241,7 @@ fun HomeScreen(
         shelfMove = shelfMove,
         stageFocus = stageFocus,
         firstFocus = firstFocus,
+        stageDown = stageDown,
         shelfRequester = shelfRequester,
         moveFocus = moveFocus,
         focusShelfId = focusShelfId,

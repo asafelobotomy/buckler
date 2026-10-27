@@ -3,11 +3,15 @@ package dev.solon.bucklerhome
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -20,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Header, Main Stage, and shelves. State and dialogs stay in [HomeScreen]. */
@@ -43,6 +48,7 @@ fun HomeColumn(
     shelfMove: MoveMode,
     stageFocus: FocusRequester,
     firstFocus: FocusRequester,
+    stageDown: FocusRequester,
     shelfRequester: FocusRequester,
     moveFocus: FocusRequester,
     focusShelfId: String?,
@@ -56,14 +62,26 @@ fun HomeColumn(
     onStepShelf: (Int) -> Unit,
     onPlaceShelf: () -> Unit,
 ) {
-    Column(
+    val topShelf = shelves.firstOrNull()
+    fun leaveStage() {
+        scope.launch {
+            if (shelves.isNotEmpty() && listState.firstVisibleItemIndex != 0) listState.scrollToItem(0)
+            if (runCatching { stageDown.requestFocus(); true }.getOrDefault(false)) return@launch
+            delay(48)
+            runCatching { stageDown.requestFocus() }
+        }
+    }
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(HomeBgBrush)
             .moveModeKeys(move, onStep = onStepMove, onPlace = onPlaceMove)
             .moveModeKeys(shelfMove, onStep = onStepShelf, onPlace = onPlaceShelf)
-            .padding(horizontal = 56.dp, vertical = 28.dp),
+            .padding(start = 56.dp, top = 28.dp, end = 56.dp, bottom = 8.dp),
     ) {
+        val shelfArt = coverSize(layout.layout, layout.tileSize).artHeight
+        val metrics = stageMetrics(maxHeight, shelfArt, layout.stageSize, config.headerVisible)
+        Column(modifier = Modifier.fillMaxSize()) {
         if (config.headerVisible) {
             HomeHeader(
                 clock = clock,
@@ -80,9 +98,13 @@ fun HomeColumn(
         }
 
         Box(
-            Modifier.onFocusChanged { state ->
-                if (state.hasFocus) scope.launch { listState.scrollToItem(0) }
-            },
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = metrics.band)
+                .clipToBounds()
+                .onFocusChanged { state ->
+                    if (state.hasFocus) scope.launch { listState.scrollToItem(0) }
+                },
         ) {
             MainStage(
                 mode = layout.mainStage,
@@ -95,15 +117,16 @@ fun HomeColumn(
                 use24h = config.use24h,
                 nowPlaying = nowPlaying,
                 stageFocus = stageFocus,
-                below = firstFocus,
+                onDown = ::leaveStage,
                 onOpenStory = onOpenStory,
+                metrics = metrics,
             )
         }
         Spacer(modifier = Modifier.height(20.dp))
 
         LazyColumn(
             state = listState,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).clipToBounds(),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             items(shelves, key = { it.config.id }) { shelf ->
@@ -125,7 +148,8 @@ fun HomeColumn(
                         movingPackage = move.target,
                         focusPackage = focusPkg,
                         moveFocus = moveFocus,
-                        up = if (id == shelves.firstOrNull()?.config?.id) stageFocus else null,
+                        up = if (shelf == topShelf) stageFocus else null,
+                        fromStage = if (shelf == topShelf) stageDown else null,
                     ),
                 )
             }
@@ -143,6 +167,7 @@ fun HomeColumn(
                 fontSize = 15.sp,
                 modifier = Modifier.padding(top = 8.dp),
             )
+        }
         }
     }
 }

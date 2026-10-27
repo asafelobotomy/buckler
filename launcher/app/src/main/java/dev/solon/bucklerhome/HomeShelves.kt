@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -79,6 +80,8 @@ class ShelfFocus(
     val moveFocus: FocusRequester? = null,
     /** Main Stage above this shelf, when this is the first shelf. */
     val up: FocusRequester? = null,
+    /** Down from the Main Stage. Kept on the first shelf, which stays composed while the stage is focused. */
+    val fromStage: FocusRequester? = null,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -107,7 +110,7 @@ fun ShelfSection(
         }.getOrDefault(false)
         if (!focused) showOptions = false
     }
-    Column {
+    Column(modifier = Modifier.clipToBounds()) {
         Text(
             text = if (focus.movingShelf) "▲▼  ${shelf.config.title}" else shelf.config.title,
             color = if (focus.movingShelf) ColorBrand else ColorSection,
@@ -138,7 +141,7 @@ fun ShelfSection(
                     shelf.items.isEmpty() -> EmptyShelfHint(
                         type = shelf.config.type,
                         up = focus.up,
-                        focusRequester = focus.shelfRequester ?: focus.first,
+                        focusRequester = focus.shelfRequester ?: focus.fromStage ?: focus.first,
                         onLeft = { showOptions = true },
                     )
                     shelf.config.type == ShelfType.LIBRARY ->
@@ -209,8 +212,13 @@ private fun ShelfOptionsButton(
     }
 }
 
-private fun ShelfFocus.withoutAppMove() =
-    ShelfFocus(first = first, shelfRequester = shelfRequester, movingShelf = movingShelf, up = up)
+private fun ShelfFocus.withoutAppMove() = ShelfFocus(
+    first = first,
+    shelfRequester = shelfRequester,
+    movingShelf = movingShelf,
+    up = up,
+    fromStage = fromStage,
+)
 
 private fun ShelfFocus.firstTileRequester(index: Int, item: ShelfItem): FocusRequester? = when {
     focusPackage != null && item.packageName == focusPackage -> moveFocus
@@ -283,6 +291,7 @@ private fun LibraryGrid(
                             onLeftEdge = if (rowIndex == 0 && col == 0) onLeftEdge else null,
                             up = if (rowIndex == 0 && col == 0) focus.up else null,
                             focusRequester = if (rowIndex == 0 && col == 0) focus.shelfRequester ?: focus.first else null,
+                            alsoRequester = if (rowIndex == 0 && col == 0) focus.fromStage else null,
                         )
                     }
                 }
@@ -325,6 +334,7 @@ private fun ShelfRow(
                 onLeftEdge = if (index == 0) onLeftEdge else null,
                 up = if (index == 0) focus.up else null,
                 focusRequester = focus.firstTileRequester(index, item),
+                alsoRequester = if (index == 0) focus.fromStage else null,
                 moving = focus.movingPackage != null && item.packageName == focus.movingPackage,
             )
         }

@@ -72,6 +72,9 @@ class HomeLayoutTest {
         val legacy = """{"schema":1,"layout":"banner","shelves":[]}"""
         assertEquals(false, HomeLayout.fromJson(legacy).showLabels)
         assertEquals(MainStage.NEWS, HomeLayout.fromJson(legacy).mainStage)
+        assertEquals(StageSize.MEDIUM, HomeLayout.fromJson(legacy).stageSize)
+        val sized = HomeLayout.default().copy(stageSize = StageSize.LARGE)
+        assertEquals(StageSize.LARGE, HomeLayout.fromJson(sized.toJson().toString()).stageSize)
         val staged = HomeLayout.default().copy(mainStage = MainStage.WEATHER)
         assertEquals(MainStage.WEATHER, HomeLayout.fromJson(staged.toJson().toString()).mainStage)
     }

@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -40,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
@@ -55,7 +55,8 @@ import kotlinx.coroutines.withContext
 fun SuggestedStage(
     nowPlaying: NowPlayingModel,
     stageFocus: FocusRequester,
-    below: FocusRequester,
+    onDown: () -> Unit,
+    metrics: StageMetrics,
 ) {
     val context = LocalContext.current
     var cards by remember { mutableStateOf(MediaCards.load(context)) }
@@ -75,7 +76,7 @@ fun SuggestedStage(
                 fontSize = 15.sp,
                 modifier = Modifier
                     .focusRequester(stageFocus)
-                    .focusProperties { down = below }
+                    .downTo(onDown)
                     .focusable(),
             )
         } else {
@@ -87,7 +88,9 @@ fun SuggestedStage(
                     MediaCover(
                         card = card,
                         focusRequester = if (index == 0) stageFocus else null,
-                        below = below,
+                        onDown = onDown,
+                        cardWidth = metrics.suggestedWidth,
+                        cardHeight = metrics.suggestedHeight,
                         onOpen = { launchPackage(context, card.packageName, card.appLabel.ifBlank { card.title }) },
                         onPin = {
                             cards = MediaCards.togglePin(context, card)
@@ -106,7 +109,9 @@ fun SuggestedStage(
 private fun MediaCover(
     card: MediaCard,
     focusRequester: FocusRequester?,
-    below: FocusRequester,
+    onDown: () -> Unit,
+    cardWidth: Dp,
+    cardHeight: Dp,
     onOpen: () -> Unit,
     onPin: () -> Unit,
 ) {
@@ -121,9 +126,9 @@ private fun MediaCover(
         }
     }
     var cardModifier = Modifier
-        .width(200.dp)
+        .width(cardWidth)
         .scale(focusZoom(focused, 1.06f))
-        .focusProperties { down = below }
+        .downTo(onDown)
     if (focusRequester != null) cardModifier = cardModifier.focusRequester(focusRequester)
     cardModifier = cardModifier
         .focusable(interactionSource = interaction)
@@ -135,7 +140,7 @@ private fun MediaCover(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(112.dp)
+                .height(cardHeight)
                 .clip(RoundedCornerShape(8.dp))
                 .background(if (focused) ColorBrand else ColorTile),
         ) {

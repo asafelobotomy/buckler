@@ -12,18 +12,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
-/** One D-pad target for a Main Stage. OK runs [onClick]; Down moves to the shelves. */
+/** One D-pad target for a Main Stage. OK runs [onClick]; Down runs [onDown]. */
 @Composable
 fun Modifier.stageTarget(
     focus: FocusRequester,
-    below: FocusRequester,
+    onDown: () -> Unit,
     description: String,
     onClick: () -> Unit,
 ): Modifier {
@@ -40,7 +39,7 @@ fun Modifier.stageTarget(
         .strongFocusRing(focused, shape)
         .semantics { contentDescription = description }
         .focusRequester(focus)
-        .focusProperties { down = below }
+        .downTo(onDown)
         .focusable(interactionSource = interaction)
         .onSelectKeyUp(onClick)
         .pointerInput(onClick) { detectTapGestures(onTap = { onClick() }) }

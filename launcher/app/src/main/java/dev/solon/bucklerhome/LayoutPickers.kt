@@ -76,10 +76,12 @@ fun LayoutAndSizePickers(
     tileSize: TileSize,
     showLabels: Boolean,
     mainStage: MainStage,
+    stageSize: StageSize,
     onStyle: (CoverLayout) -> Unit,
     onSize: (TileSize) -> Unit,
     onLabels: (Boolean) -> Unit,
     onStage: (MainStage) -> Unit,
+    onStageSize: (StageSize) -> Unit,
 ) {
     Column {
         LayoutPicker(style, tileSize, onStyle)
@@ -94,6 +96,8 @@ fun LayoutAndSizePickers(
         )
         Spacer(modifier = Modifier.height(18.dp))
         MainStagePicker(mainStage, onStage)
+        Spacer(modifier = Modifier.height(18.dp))
+        StageSizePicker(stageSize, onStageSize)
     }
 }
 
@@ -106,6 +110,24 @@ fun MainStagePicker(mode: MainStage, onMode: (MainStage) -> Unit) {
         FlowRow(horizontalArrangement = CardGap, verticalArrangement = CardGap) {
             MainStage.entries.forEach { option ->
                 SettingsAction(option.label, selected = option == mode) { onMode(option) }
+            }
+        }
+    }
+}
+
+/** Small, Medium, or Large band under the header. The picture shows how much shelf room is left. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun StageSizePicker(size: StageSize, onSize: (StageSize) -> Unit) {
+    Column {
+        PickerTitle("Main stage size")
+        FlowRow(horizontalArrangement = CardGap, verticalArrangement = CardGap) {
+            StageSize.entries.forEach { option ->
+                PreviewCard(
+                    label = option.label,
+                    selected = option == size,
+                    onClick = { onSize(option) },
+                ) { StageSizeMiniature(option) }
             }
         }
     }
