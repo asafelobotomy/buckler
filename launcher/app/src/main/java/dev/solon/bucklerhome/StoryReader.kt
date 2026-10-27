@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -45,7 +46,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.size.Size
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -104,7 +104,12 @@ fun StoryReaderDialog(story: Headline, onDismiss: () -> Unit) {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    SettingsAction("Close", focusRequester = closeFocus, onClick = onDismiss)
+                    SettingsAction(
+                        "Close",
+                        modifier = Modifier.focusProperties { down = bodyFocus },
+                        focusRequester = closeFocus,
+                        onClick = onDismiss,
+                    )
                 }
                 Column(
                     modifier = Modifier
@@ -128,7 +133,10 @@ fun StoryReaderDialog(story: Headline, onDismiss: () -> Unit) {
                     if (image != null) {
                         val context = LocalContext.current
                         AsyncImage(
-                            model = ImageRequest.Builder(context).data(image).size(Size.ORIGINAL).build(),
+                            model = ImageRequest.Builder(context)
+                                .data(image)
+                                .size(NewsFeed.NEWS_IMAGE_PX, NewsFeed.NEWS_IMAGE_PX)
+                                .build(),
                             contentDescription = story.title,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(8.dp)),

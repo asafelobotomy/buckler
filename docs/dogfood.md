@@ -34,19 +34,19 @@ buckler home write && buckler home push   # layout defaults → import on HOME r
 
 On TV: first-run picks cover layout + shelves; the pencil icon in the Home header (**Edit Home**) adjusts later.
 
-### buckler-home 0.9.0 smoke
+### buckler-home smoke
 
 - Settings → Header → Thin / Medium / Large scales the logo, clock, icons and Now Playing together
-- Settings → Header → Shuffle: each story is from the next source and starts with that source's logo; ticker speed Slow / Normal / Fast
-
-
-- Header: logo + clock with date and weather, Now Playing (only while playing), network / VPN icons, pencil / bag / gear icons, news ticker line
+- Settings → Header → news: pick one source or several (world, gaming, business, tech). Several are interleaved, each story from the next source with that source's mark. Ticker speed Slow / Normal / Fast. No Hacker News and no Shuffle toggle
+- Settings → Header → Main Stage news changes every 30 / 60 / 90 seconds. OK on the News stage opens a reader with the article text
+- OK on Now Playing opens the app that is playing. OK on Weather opens the weather app. OK on Suggested opens that title's app. The stage stays on screen while shelves scroll
+- Header: logo + clock with date and weather, Now Playing (only while playing, and hidden while the stage is Now Playing), network / VPN icons (country code while VPN is up), pencil / bag / gear icons, news ticker line
 - Header gear → Buckler Settings (not only stock); stock Settings still reachable inside
 - Default scheme is Buckler (teal / sage); changing scheme recolours the header mark and the app-list icon / banner
-- Settings → Header: each element toggles on its own; Header: Off leaves only shelves, and ◀ on a shelf still offers Settings
+- Settings → Header: each element toggles on its own. Header: Off leaves the Main Stage and shelves. Edit Home and Settings are the header pencil and gear
 - Settings → Screensaver → Now Playing with music playing (album art) and over a paused YouTube video (thumbnail, Paused)
 - Settings → Screensaver: Preview 3D Maze, 3D Pipes, Mystify, Starfield (clock overlay toggles)
-- Settings → Header: 12/24 h and date format apply to Home; set a city and weather appears; a news source, Shuffle or Off applies
+- Settings → Header: 12/24 h and date format apply to Home; set a city and weather appears; chosen news sources or none apply
 - Play music in any app: Now Playing shows title and prev / play-pause / next work (after media access is granted)
 - Network icon opens network settings; VPN icon opens the VPN app
 - Menu → Move: menu closes, ◀ ▶ slide the tile, OK places it (does not launch), Back cancels
@@ -54,7 +54,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - Settings → Screensaver → Start after: presets, Custom… (step buttons) and Off apply (after `buckler launcher grant-settings`)
 - Settings → Appearance: each colour scheme, font, layout and app size changes Home immediately
 - Settings → Accessibility: high contrast, strong focus outline, text size, reduce motion, speak focused item
-- ◀ on the first tile of a shelf: Move shelf (▲ ▼ / OK / Back), Hide shelf, Edit Home
+- ◀ on the first tile of a shelf reveals the shelf button. OK opens Move shelf (▲ ▼ / OK / Back) and Hide shelf. Up Next also offers Sources (at most three cards per app)
 - Long-press / Menu: Open, Change cover, Remove, Uninstall (user apps), Info
 - Change cover works **without** linking accounts (icon / banner / curated)
 - Settings → Covers: Connect SteamGridDB (QR) / Connect IGDB (device code when `TWITCH_CLIENT_ID` set)

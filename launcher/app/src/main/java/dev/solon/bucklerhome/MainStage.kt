@@ -29,7 +29,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.size.Size
 import kotlinx.coroutines.delay
 
 /** The band under the header. One of these is on screen at a time. */
@@ -182,7 +181,7 @@ private fun NewsStage(
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(image)
-                        .size(Size.ORIGINAL)
+                        .size(NewsFeed.NEWS_IMAGE_PX, NewsFeed.NEWS_IMAGE_PX)
                         .build(),
                     contentDescription = story.title,
                     contentScale = ContentScale.Crop,

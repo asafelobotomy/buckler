@@ -3,15 +3,8 @@ package dev.solon.bucklerhome
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,18 +14,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun HomeScreen(
     resumeTick: Int,
@@ -158,9 +144,9 @@ fun HomeScreen(
         shelfSettleTick++
     }
 
-    fun hideShelf(config: ShelfConfig) {
+    fun hideShelf(shelf: ShelfConfig) {
         val current = homeLayout ?: return
-        val next = current.copy(shelves = current.shelves.map { if (it.id == config.id) it.copy(enabled = false) else it })
+        val next = current.copy(shelves = current.shelves.map { if (it.id == shelf.id) it.copy(enabled = false) else it })
         HomeLayout.save(context, next)
         homeLayout = next
         refocusTick++
@@ -236,95 +222,37 @@ fun HomeScreen(
 
     val actions = rememberHeaderActions(onOpenEditHome)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(HomeBgBrush)
-            .moveModeKeys(move, onStep = ::stepMove, onPlace = ::placeMove)
-            .moveModeKeys(shelfMove, onStep = ::stepShelf, onPlace = ::placeShelf)
-            .padding(horizontal = 56.dp, vertical = 28.dp),
-    ) {
-        if (config.headerVisible) {
-            HomeHeader(
-                clock = clock,
-                date = date,
-                config = config,
-                weather = weather,
-                headlines = headlines,
-                net = net,
-                nowPlaying = if (layout.mainStage == MainStage.NOW_PLAYING) null else nowPlaying,
-                actions = actions,
-                below = stageFocus,
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-        }
-
-        Box(
-            Modifier.onFocusChanged { state ->
-                if (state.hasFocus) scope.launch { listState.scrollToItem(0) }
-            },
-        ) {
-            MainStage(
-                mode = layout.mainStage,
-                headlines = headlines,
-                newsSources = config.newsSources,
-                newsPace = config.newsPace,
-                forecast = forecast,
-                place = config.place,
-                fahrenheit = config.fahrenheit,
-                use24h = config.use24h,
-                nowPlaying = nowPlaying,
-                stageFocus = stageFocus,
-                below = firstFocus,
-                onOpenStory = { reading = it },
-            )
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            items(shelves, key = { it.config.id }) { shelf ->
-                val id = shelf.config.id
-                ShelfSection(
-                    shelf = shelf,
-                    coverLayout = layout.layout,
-                    tileSize = layout.tileSize,
-                    showLabels = layout.showLabels,
-                    actions = ShelfActions(
-                        onLaunch = { launch(it) },
-                        onLongPress = { editTarget = it },
-                        onShelfMenu = { shelfMenu = shelf.config },
-                    ),
-                    focus = ShelfFocus(
-                        first = if (shelf == shelves.firstOrNull { it.items.isNotEmpty() }) firstFocus else null,
-                        shelfRequester = if (id == focusShelfId) shelfRequester else null,
-                        movingShelf = id == shelfMove.target,
-                        movingPackage = move.target,
-                        focusPackage = focusPkg,
-                        moveFocus = moveFocus,
-                        up = if (id == shelves.firstOrNull()?.config?.id) stageFocus else null,
-                    ),
-                )
-            }
-        }
-
-        val hint = when {
-            move.active -> "Moving app — ◀ ▶ to move · OK to place · Back to cancel"
-            shelfMove.active -> "Moving shelf — ▲ ▼ to move · OK to place · Back to cancel"
-            else -> null
-        }
-        if (hint != null) {
-            Text(
-                text = hint,
-                color = ColorBrand,
-                fontSize = 15.sp,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-    }
+    HomeColumn(
+        config = config,
+        layout = layout,
+        clock = clock,
+        date = date,
+        weather = weather,
+        headlines = headlines,
+        forecast = forecast,
+        net = net,
+        nowPlaying = nowPlaying,
+        actions = actions,
+        shelves = shelves,
+        listState = listState,
+        scope = scope,
+        move = move,
+        shelfMove = shelfMove,
+        stageFocus = stageFocus,
+        firstFocus = firstFocus,
+        shelfRequester = shelfRequester,
+        moveFocus = moveFocus,
+        focusShelfId = focusShelfId,
+        focusPkg = focusPkg,
+        onLaunch = { launch(it) },
+        onEdit = { editTarget = it },
+        onShelfMenu = { shelfMenu = it },
+        onOpenStory = { reading = it },
+        onStepMove = ::stepMove,
+        onPlaceMove = ::placeMove,
+        onStepShelf = ::stepShelf,
+        onPlaceShelf = ::placeShelf,
+    )
 
     HomeShelfDialogs(
         menu = shelfMenu,

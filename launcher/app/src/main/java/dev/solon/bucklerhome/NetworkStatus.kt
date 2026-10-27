@@ -48,20 +48,32 @@ fun netStateFrom(networks: List<NetInfo>): NetState {
     return NetState(link = link, vpn = networks.any { it.vpn })
 }
 
-private fun readNetState(cm: ConnectivityManager): Pair<NetState, Network?> {
-    var vpnNetwork: Network? = null
-    val infos = cm.allNetworks.mapNotNull { network ->
-        val caps = cm.getNetworkCapabilities(network) ?: return@mapNotNull null
-        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) vpnNetwork = network
-        NetInfo(
-            wifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
-            ethernet = caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET),
-            cellular = caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
-            vpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN),
-            internet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
-        )
+/** Networks reported by [ConnectivityManager.NetworkCallback], which replaces [ConnectivityManager.getAllNetworks]. */
+private class LiveNets {
+    private val caps = LinkedHashMap<Network, NetworkCapabilities>()
+
+    fun update(network: Network, capabilities: NetworkCapabilities) {
+        caps[network] = capabilities
     }
-    return netStateFrom(infos) to vpnNetwork
+
+    fun remove(network: Network) {
+        caps.remove(network)
+    }
+
+    fun snapshot(): Pair<NetState, Network?> {
+        var vpnNetwork: Network? = null
+        val infos = caps.map { (network, cap) ->
+            if (cap.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) vpnNetwork = network
+            NetInfo(
+                wifi = cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
+                ethernet = cap.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET),
+                cellular = cap.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
+                vpn = cap.hasTransport(NetworkCapabilities.TRANSPORT_VPN),
+                internet = cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
+            )
+        }
+        return netStateFrom(infos) to vpnNetwork
+    }
 }
 
 /** Live Wi-Fi / Ethernet / VPN state for the header icons. */
@@ -75,10 +87,11 @@ fun rememberNetState(): State<NetState> {
         if (cm == null) {
             return@DisposableEffect onDispose { }
         }
+        val nets = LiveNets()
         var generation = 0
         var inFlight = false
         fun publish(refreshCountry: Boolean) {
-            val (next, vpn) = readNetState(cm)
+            val (next, vpn) = nets.snapshot()
             if (!next.vpn) {
                 generation++
                 inFlight = false
@@ -97,16 +110,25 @@ fun rememberNetState(): State<NetState> {
                 if (state.value.vpn) state.value = state.value.copy(country = code)
             }
         }
-        publish(refreshCountry = false)
+        fun note(network: Network, caps: NetworkCapabilities?, refreshCountry: Boolean) {
+            if (caps == null) return
+            nets.update(network, caps)
+            publish(refreshCountry)
+        }
+        val active = cm.activeNetwork
+        if (active != null) note(active, cm.getNetworkCapabilities(active), refreshCountry = false)
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                val vpn = cm.getNetworkCapabilities(network)
-                    ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
-                publish(refreshCountry = vpn)
+                val caps = cm.getNetworkCapabilities(network)
+                val vpn = caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+                note(network, caps, refreshCountry = vpn)
             }
-            override fun onLost(network: Network) { publish(refreshCountry = false) }
-            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+            override fun onLost(network: Network) {
+                nets.remove(network)
                 publish(refreshCountry = false)
+            }
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+                note(network, caps, refreshCountry = false)
             }
         }
         // Not the default-network callback: that would hide the physical link while a VPN is up.

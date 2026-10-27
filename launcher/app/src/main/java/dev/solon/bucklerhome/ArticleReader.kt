@@ -6,18 +6,25 @@ package dev.solon.bucklerhome
  */
 object ArticleReader {
     fun fetch(url: String): List<String> {
-        if (!url.startsWith("https://")) return emptyList()
-        val res = runCatching {
-            HttpJson.get(url, headers = mapOf("Accept" to "text/html,application/xhtml+xml"))
-        }.getOrNull() ?: return emptyList()
-        if (res.code !in 200..299) return emptyList()
-        return extract(res.body)
+        val html = load(url) ?: return emptyList()
+        val text = extract(html)
+        if (text.isNotEmpty()) return text
+        val amp = ampLink(html) ?: return emptyList()
+        if (amp == url) return emptyList()
+        return extract(load(amp).orEmpty())
+    }
+
+    /** AMP href when the page declares one. Script-rendered stories often still publish a static AMP copy. */
+    internal fun ampLink(html: String): String? {
+        val tag = ampTag.find(html)?.value ?: return null
+        return ampHref.find(tag)?.groupValues?.get(1)
     }
 
     /** Structured article text when the page publishes it, otherwise the longest article's paragraphs. */
     fun extract(html: String): List<String> {
-        val structured = jsonLd(html)
-        val visible = paragraphs(html)
+        val page = html.take(MAX_HTML)
+        val structured = embeddedArticles(page)
+        val visible = paragraphs(page)
         val structuredLen = structured.sumOf { it.length }
         val visibleLen = visible.sumOf { it.length }
         return when {
@@ -27,10 +34,17 @@ object ArticleReader {
         }
     }
 
-    private val ldScript = Regex(
-        """<script\b[^>]*type=["']application/ld\+json["'][^>]*>(.*?)</script>""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
-    )
+    private fun load(url: String): String? {
+        if (!url.startsWith("https://")) return null
+        val res = runCatching {
+            HttpJson.get(url, headers = mapOf("Accept" to "text/html,application/xhtml+xml"))
+        }.getOrNull() ?: return null
+        return res.body.takeIf { res.code in 200..299 }
+    }
+
+    private const val MAX_HTML = 1_500_000
+    private val ampTag = Regex("""<link\b[^>]*rel=["']amphtml["'][^>]*>""", RegexOption.IGNORE_CASE)
+    private val ampHref = Regex("""href=["'](https://[^"']+)["']""", RegexOption.IGNORE_CASE)
     private val articleBody = Regex(""""articleBody"\s*:\s*"((?:\\.|[^"\\])*)"""")
     private val articleBlock = Regex(
         """<article\b[^>]*>(.*?)</article>""",
@@ -45,20 +59,28 @@ object ArticleReader {
         setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
     )
     private val tag = Regex("<[^>]+>")
-    private val noiseTags = listOf(
+    private val noise = listOf(
         "script", "style", "noscript", "iframe", "svg", "form", "nav", "footer", "header", "aside", "button",
-    )
+    ).map { name -> Regex("(?is)<$name\\b[^>]*>.*?</$name>") }
 
-    private fun jsonLd(html: String): List<String> {
+    /** `articleBody` from JSON-LD or from a page blob such as a script payload, not only typed script tags. */
+    private fun embeddedArticles(html: String): List<String> {
         val out = ArrayList<String>()
-        for (match in ldScript.findAll(html)) {
-            val raw = articleBody.find(match.groupValues[1])?.groupValues?.get(1) ?: continue
-            val text = oneBlock(unescapeJson(raw))
-            if (text.length < 80) continue
-            val parts = text.split('\n').map { it.trim() }.filter { it.length >= 40 && !promo(it) }
-            out += if (parts.size > 1) parts else listOf(text)
+        for (match in articleBody.findAll(html)) {
+            out += prose(unescapeJson(match.groupValues[1]))
         }
         return out.distinct().take(24)
+    }
+
+    private fun prose(raw: String): List<String> {
+        if ('<' in raw) {
+            val fromTags = paragraphs("<article>$raw</article>")
+            if (fromTags.isNotEmpty()) return fromTags
+        }
+        val block = oneBlock(raw)
+        if (block.length < 80) return emptyList()
+        val parts = block.split('\n').map { it.trim() }.filter { it.length >= 40 && !promo(it) }
+        return if (parts.size > 1) parts else listOf(block)
     }
 
     private fun paragraphs(html: String): List<String> {
@@ -76,9 +98,7 @@ object ArticleReader {
 
     private fun stripNoise(html: String): String {
         var out = html
-        for (name in noiseTags) {
-            out = Regex("(?is)<$name\\b[^>]*>.*?</$name>").replace(out, " ")
-        }
+        for (pattern in noise) out = pattern.replace(out, " ")
         return out
     }
 

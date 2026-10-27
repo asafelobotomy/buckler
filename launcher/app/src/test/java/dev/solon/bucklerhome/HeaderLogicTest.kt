@@ -174,6 +174,30 @@ class HeaderLogicTest {
             "https://i.guim.co.uk/img/x.jpg?width=1400&quality=85",
             NewsFeed.enlargeNewsImage("https://i.guim.co.uk/img/x.jpg?width=140&quality=85"),
         )
+        assertEquals(
+            "https://npr.brightspotcdn.com/x/resize/1400x933!/q",
+            NewsFeed.enlargeNewsImage("https://npr.brightspotcdn.com/x/resize/8287x5525!/q"),
+        )
+        assertEquals(
+            "https://cdn.mos.cms.futurecdn.net/abc-1400-80.jpg",
+            NewsFeed.enlargeNewsImage("https://cdn.mos.cms.futurecdn.net/abc-1920-80.jpg"),
+        )
+        assertEquals(
+            "https://cdn.mos.cms.futurecdn.net/abc-1400-70.png",
+            NewsFeed.enlargeNewsImage("https://cdn.mos.cms.futurecdn.net/abc-320-70.png"),
+        )
+        assertEquals(
+            "https://platform.theverge.com/a.jpg?w=1400&h=1400",
+            NewsFeed.enlargeNewsImage("https://platform.theverge.com/a.jpg?w=150&amp;h=150"),
+        )
+        assertEquals(
+            "https://media.npr.org/a.jpg?s=1400",
+            NewsFeed.enlargeNewsImage("https://media.npr.org/a.jpg?s=200"),
+        )
+        assertEquals(
+            "https://static0.polygonimages.com/a.jpg",
+            NewsFeed.enlargeNewsImage("https://static0.polygonimages.com/a.jpg"),
+        )
         assertEquals("https://example.com/story", story.link)
         assertEquals(story.title, NewsFeed.featured(listOf(Headline(NewsSource.BBC_WORLD, story.title, story.summary, story.imageUrl, story.link)))?.title)
     }
@@ -226,6 +250,17 @@ class HeaderLogicTest {
         assertEquals(2, text.size)
         assertTrue(text[0].startsWith("This is the real"))
         assertTrue(text.none { "Subscribe" in it || "alert" in it || "ads.example" in it })
+        val embedded = ArticleReader.extract(
+            """
+            <html><script>{"articleBody":"This is the real opening paragraph of the story and it is long enough to be kept in the reader.\nA second paragraph follows with enough words to be the body of the article itself and nothing else."}</script></html>
+            """.trimIndent(),
+        )
+        assertEquals(2, embedded.size)
+        assertTrue(embedded[0].startsWith("This is the real"))
+        assertEquals(
+            "https://example.com/amp/story",
+            ArticleReader.ampLink("""<link rel="amphtml" href="https://example.com/amp/story">"""),
+        )
     }
 
     @Test

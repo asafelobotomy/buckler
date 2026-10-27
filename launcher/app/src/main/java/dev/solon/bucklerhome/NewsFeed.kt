@@ -207,11 +207,42 @@ object NewsFeed {
         return score
     }
 
-    /** Ask known image CDNs for a frame large enough for a TV stage. */
+    /**
+     * Longest edge to request and to decode. BBC ichef only publishes a 1024 step in this path,
+     * so that host stays on 1024 while every other rewrite uses [NEWS_IMAGE_PX].
+     */
+    const val NEWS_IMAGE_PX = 1400
+
+    private val bbcSize = Regex("""(ichef\.bbci\.co\.uk/(?:ace/standard|news)/)\d{2,4}/""")
+    private val queryPx = Regex("""([?&](?:width|w|h|s)=)\d+""")
+    private val brightspotResize = Regex("""resize/(\d+)x(\d+)!""")
+    private val futureSize = Regex("""-(\d{2,4})-(\d{2,3})(\.(?:jpe?g|png|webp))""")
+
+    /** Ask known image CDNs for a frame large enough for a TV stage, and cap ones that are already huge. */
     fun enlargeNewsImage(url: String): String {
-        val bbc = Regex("""(ichef\.bbci\.co\.uk/(?:ace/standard|news)/)\d{2,4}/""")
-        val wider = bbc.replace(url) { "${it.groupValues[1]}1024/" }
-        return Regex("""([?&]width=)\d+""").replace(wider) { "${it.groupValues[1]}1400" }
+        var out = url.replace("&amp;", "&").replace("&#038;", "&").replace("&#38;", "&")
+        out = bbcSize.replace(out) { "${it.groupValues[1]}1024/" }
+        out = queryPx.replace(out) { match ->
+            val key = match.groupValues[1]
+            if (key.endsWith("s=") && "media.npr.org" !in out) match.value else "$key$NEWS_IMAGE_PX"
+        }
+        if ("brightspotcdn.com" in out) {
+            out = brightspotResize.replace(out) { match ->
+                val w = match.groupValues[1].toInt()
+                val h = match.groupValues[2].toInt()
+                val long = maxOf(w, h)
+                if (long <= NEWS_IMAGE_PX) match.value
+                else {
+                    val nw = if (w >= h) NEWS_IMAGE_PX else (w.toLong() * NEWS_IMAGE_PX / h).toInt().coerceAtLeast(1)
+                    val nh = if (h > w) NEWS_IMAGE_PX else (h.toLong() * NEWS_IMAGE_PX / w).toInt().coerceAtLeast(1)
+                    "resize/${nw}x${nh}!"
+                }
+            }
+        }
+        if ("futurecdn.net" in out) {
+            out = futureSize.replace(out) { "-$NEWS_IMAGE_PX-${it.groupValues[2]}${it.groupValues[3]}" }
+        }
+        return out
     }
 
     private fun looksLikeImage(url: String): Boolean {
