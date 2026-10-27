@@ -6,42 +6,66 @@ data class Headline(
     val title: String,
     val summary: String? = null,
     val imageUrl: String? = null,
+    /** Article URL. The News stage opens this in the reading overlay. */
+    val link: String? = null,
 )
 
-/** Title, short text and picture parsed from one RSS item. */
-data class NewsStory(val title: String, val summary: String? = null, val imageUrl: String? = null)
+/** Title, short text, picture and article link parsed from one RSS item. */
+data class NewsStory(
+    val title: String,
+    val summary: String? = null,
+    val imageUrl: String? = null,
+    val link: String? = null,
+)
 
-/**
- * What to fetch. Shuffle pulls every source and round-robins them so each story is followed by a
- * story from a different source; otherwise only [source] is used.
- */
-data class NewsQuery(val source: NewsSource?, val shuffle: Boolean) {
-    val sources: List<NewsSource> = if (shuffle) NewsSource.entries else listOfNotNull(source)
-    val cacheKey: String = if (shuffle) "shuffle" else source?.name ?: "off"
+/** Feeds to fetch, in catalog order. More than one is mixed so neighbouring stories differ. */
+data class NewsQuery(val sources: List<NewsSource>) {
+    val cacheKey: String = sources.joinToString("+") { it.name }.ifEmpty { "off" }
+}
+
+enum class NewsCategory(val label: String) {
+    WORLD("World"),
+    GAMING("Gaming"),
+    BUSINESS("Business"),
+    TECH("Tech"),
 }
 
 /**
  * Free public RSS feeds: no key, no account. [mark] is the short label drawn in front of a story,
  * in [markColor] with [onMark] text (brand colours, drawn by us rather than bundled artwork).
  */
-enum class NewsSource(val label: String, val url: String, val mark: String, val markColor: Long, val onMark: Long) {
-    BBC_WORLD("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml", "BBC", 0xFFBB1919, 0xFFFFFFFF),
-    NPR("NPR News", "https://feeds.npr.org/1001/rss.xml", "NPR", 0xFFF4F4F4, 0xFF111111),
-    GUARDIAN("The Guardian", "https://www.theguardian.com/world/rss", "Gdn", 0xFF052962, 0xFFFFFFFF),
-    AL_JAZEERA("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml", "AJ", 0xFFF5A623, 0xFF1A1208),
-    HACKER_NEWS("Hacker News", "https://hnrss.org/frontpage", "Y", 0xFFFF6600, 0xFF1A1208),
+enum class NewsSource(
+    val label: String,
+    val url: String,
+    val mark: String,
+    val markColor: Long,
+    val onMark: Long,
+    val category: NewsCategory,
+) {
+    BBC_WORLD("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml", "BBC", 0xFFBB1919, 0xFFFFFFFF, NewsCategory.WORLD),
+    NPR("NPR News", "https://feeds.npr.org/1001/rss.xml", "NPR", 0xFFF4F4F4, 0xFF111111, NewsCategory.WORLD),
+    GUARDIAN("The Guardian", "https://www.theguardian.com/world/rss", "Gdn", 0xFF052962, 0xFFFFFFFF, NewsCategory.WORLD),
+    AL_JAZEERA("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml", "AJ", 0xFFF5A623, 0xFF1A1208, NewsCategory.WORLD),
+    DW("DW", "https://rss.dw.com/rdf/rss-en-world", "DW", 0xFF003399, 0xFFFFFFFF, NewsCategory.WORLD),
+    POLYGON("Polygon", "https://www.polygon.com/rss/index.xml", "PLY", 0xFFFF0066, 0xFFFFFFFF, NewsCategory.GAMING),
+    EUROGAMER("Eurogamer", "https://www.eurogamer.net/feed", "EG", 0xFFE4002B, 0xFFFFFFFF, NewsCategory.GAMING),
+    PC_GAMER("PC Gamer", "https://www.pcgamer.com/rss/", "PCG", 0xFFB00000, 0xFFFFFFFF, NewsCategory.GAMING),
+    ROCK_PAPER_SHOTGUN("Rock Paper Shotgun", "https://www.rockpapershotgun.com/feed", "RPS", 0xFFF5C518, 0xFF1A1208, NewsCategory.GAMING),
+    BBC_BUSINESS("BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml", "Biz", 0xFFBB1919, 0xFFFFFFFF, NewsCategory.BUSINESS),
+    NPR_BUSINESS("NPR Business", "https://feeds.npr.org/1006/rss.xml", "NPR", 0xFFF4F4F4, 0xFF111111, NewsCategory.BUSINESS),
+    GUARDIAN_BUSINESS("Guardian Business", "https://www.theguardian.com/uk/business/rss", "Gdn", 0xFF052962, 0xFFFFFFFF, NewsCategory.BUSINESS),
+    ARS_TECHNICA("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index", "Ars", 0xFFFF4E00, 0xFF1A1208, NewsCategory.TECH),
+    THE_VERGE("The Verge", "https://www.theverge.com/rss/index.xml", "VRG", 0xFF5200FF, 0xFFFFFFFF, NewsCategory.TECH),
     ;
 
-    /** Next source in the cycle; after the last one comes null (news off). */
-    fun next(): NewsSource? = entries.getOrNull(ordinal + 1)
-
     companion object {
-        fun fromName(raw: String?): NewsSource = entries.firstOrNull { it.name == raw } ?: BBC_WORLD
+        fun fromName(raw: String?): NewsSource? = entries.firstOrNull { it.name == raw }
     }
 }
 
 object NewsFeed {
     private const val MAX_HEADLINES = 14
+    private const val MAX_MIXED = 28
     private val RSS_ACCEPT = mapOf("Accept" to "application/rss+xml, application/atom+xml, application/xml, text/xml")
 
     fun fetch(source: NewsSource): List<String> = fetchStories(source).map { it.title }
@@ -52,14 +76,16 @@ object NewsFeed {
         return if (res.code in 200..299) parseStories(res.body, MAX_HEADLINES) else emptyList()
     }
 
-    /** One source's headlines, or every source interleaved when [NewsQuery.shuffle] is set. */
+    /** One source's headlines, or the chosen sources mixed so each story is followed by another source. */
     fun load(query: NewsQuery): List<Headline> {
+        if (query.sources.isEmpty()) return emptyList()
         val groups = query.sources.map { source ->
-            source to fetchStories(source).map { story ->
-                Headline(source, story.title, story.summary, story.imageUrl)
+            fetchStories(source).map { story ->
+                Headline(source, story.title, story.summary, story.imageUrl, story.link)
             }
-        }.filter { it.second.isNotEmpty() }
-        return if (query.shuffle) interleaveHeadlines(groups.map { it.second }) else groups.flatMap { it.second }
+        }.filter { it.isNotEmpty() }
+        val mixed = if (groups.size > 1) interleaveHeadlines(groups) else groups.flatten()
+        return mixed.take(MAX_MIXED)
     }
 
     /** Lead story for the Main Stage: the first one with a picture, otherwise the first story. */
@@ -117,7 +143,27 @@ object NewsFeed {
         val title = titleRe.find(item)?.groupValues?.get(1)?.let(::clean)?.takeIf { it.isNotEmpty() } ?: return null
         val summary = descRe.find(item)?.groupValues?.get(2)?.let(::clean)?.let(::clip)
             ?.takeIf { it.isNotEmpty() && !it.equals(title, ignoreCase = true) }
-        return NewsStory(title, summary, imageFrom(item))
+        return NewsStory(title, summary, imageFrom(item), linkFrom(item))
+    }
+
+    private val rssLink = Regex("""<link\b[^>]*>([^<]+)</link>""", RegexOption.IGNORE_CASE)
+    private val atomLink = Regex("""<link\b([^>]*)/?>""", RegexOption.IGNORE_CASE)
+
+    /** RSS `<link>` body, otherwise an Atom alternate href. */
+    private fun linkFrom(item: String): String? {
+        val body = rssLink.find(item)?.groupValues?.get(1)?.trim()
+        if (body != null && body.startsWith("https://")) return body
+        var fallback: String? = null
+        for (match in atomLink.findAll(item)) {
+            val href = attr(match.value, "href") ?: continue
+            if (!href.startsWith("https://")) continue
+            when (attr(match.value, "rel")) {
+                null, "alternate" -> return href
+                "self", "enclosure" -> Unit
+                else -> if (fallback == null) fallback = href
+            }
+        }
+        return fallback
     }
 
     private fun imageFrom(item: String): String? {

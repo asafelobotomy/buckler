@@ -50,6 +50,8 @@ data class ShelfConfig(
     val title: String,
     val enabled: Boolean = true,
     val packages: List<String> = emptyList(),
+    /** Up Next: when true, [packages] is the allow-list. Each app still contributes at most 3 cards. */
+    val restrictSources: Boolean = false,
 )
 
 data class HomeLayout(
@@ -71,7 +73,8 @@ data class HomeLayout(
                     .put("type", s.type.wire())
                     .put("title", s.title)
                     .put("enabled", s.enabled)
-                    .put("packages", JSONArray(s.packages)),
+                    .put("packages", JSONArray(s.packages))
+                    .put("restrict_sources", s.restrictSources),
             )
         }
         return JSONObject()
@@ -125,6 +128,18 @@ data class HomeLayout(
         return copy(shelves = list)
     }
 
+    /** Up Next allow-list. [restrict] false shows every publisher, three cards each. */
+    fun withWatchNextSources(shelfId: String, restrict: Boolean, allowed: List<String>): HomeLayout =
+        copy(
+            shelves = shelves.map { shelf ->
+                if (shelf.id != shelfId || shelf.type != ShelfType.WATCH_NEXT) {
+                    shelf
+                } else {
+                    shelf.copy(restrictSources = restrict, packages = if (restrict) allowed else emptyList())
+                }
+            },
+        )
+
     fun withAppsPackages(packages: List<String>): HomeLayout =
         copy(
             shelves = shelves.map { s ->
@@ -173,6 +188,7 @@ data class HomeLayout(
                             title = s.optString("title", "Shelf"),
                             enabled = s.optBoolean("enabled", true),
                             packages = pkgs,
+                            restrictSources = s.optBoolean("restrict_sources", false),
                         ),
                     )
                 }

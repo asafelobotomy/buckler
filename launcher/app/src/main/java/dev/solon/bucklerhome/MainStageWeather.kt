@@ -13,6 +13,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,8 +34,15 @@ fun WeatherStage(
     place: Place?,
     fahrenheit: Boolean,
     use24h: Boolean,
+    stageFocus: FocusRequester,
+    below: FocusRequester,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .stageTarget(stageFocus, below, "Open weather") { launchWeatherApp(context) },
+    ) {
         StageHeading("Weather", place?.name)
         when {
             place == null -> Text(
@@ -62,6 +72,7 @@ private fun SlotRow(title: String, slots: List<ForecastSlot>, fahrenheit: Boolea
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(end = 12.dp),
+        modifier = Modifier.focusProperties { canFocus = false },
     ) {
         items(slots, key = { "${it.allDay}-${it.label}" }) { slot ->
             ForecastChip(slot, fahrenheit, use24h)

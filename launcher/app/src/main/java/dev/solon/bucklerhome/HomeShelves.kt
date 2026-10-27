@@ -1,22 +1,44 @@
 package dev.solon.bucklerhome
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -31,7 +53,7 @@ private val TileGap = 12.dp
 class ShelfActions(
     val onLaunch: (ShelfItem) -> Unit,
     val onLongPress: (ShelfItem) -> Unit,
-    /** Left pressed on the first tile of the shelf. */
+    /** Circle at the start of the shelf. */
     val onShelfMenu: () -> Unit,
 )
 
@@ -46,6 +68,8 @@ class ShelfFocus(
     /** Tile that owns [moveFocus]: the moved app, until focus has settled after a place / cancel. */
     val focusPackage: String? = null,
     val moveFocus: FocusRequester? = null,
+    /** Main Stage above this shelf, when this is the first shelf. */
+    val up: FocusRequester? = null,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -58,6 +82,8 @@ fun ShelfSection(
     actions: ShelfActions,
     focus: ShelfFocus,
 ) {
+    val menuFocus = remember { FocusRequester() }
+    val artHeight = coverSize(coverLayout, tileSize).artHeight
     Column {
         Text(
             text = if (focus.movingShelf) "▲▼  ${shelf.config.title}" else shelf.config.title,
@@ -70,32 +96,85 @@ fun ShelfSection(
                     heading()
                 },
         )
-        if (shelf.items.isEmpty()) {
-            Text(
-                text = emptyShelfHint(shelf.config.type),
-                color = ColorHint,
-                fontSize = 14.sp,
-            )
-            return
-        }
-        if (shelf.config.type == ShelfType.LIBRARY) {
-            LibraryGrid(shelf.items, coverLayout, tileSize, showLabels, actions, focus)
-        } else {
-            val isApps = shelf.config.type == ShelfType.APPS
-            ShelfRow(
-                items = shelf.items,
-                coverLayout = coverLayout,
-                tileSize = tileSize,
-                showLabels = showLabels,
-                actions = actions,
-                focus = if (isApps) focus else focus.withoutAppMove(),
-            )
+        Row(verticalAlignment = Alignment.Top) {
+            Box(modifier = Modifier.height(artHeight), contentAlignment = Alignment.Center) {
+                ShelfOptionsButton(
+                    description = "${shelf.config.title} options",
+                    onClick = actions.onShelfMenu,
+                    up = focus.up,
+                    focusRequester = if (shelf.items.isEmpty()) {
+                        focus.shelfRequester ?: focus.first ?: menuFocus
+                    } else {
+                        menuFocus
+                    },
+                )
+            }
+            Spacer(modifier = Modifier.width(TileGap))
+            Box(modifier = Modifier.weight(1f)) {
+                when {
+                    shelf.items.isEmpty() -> Text(
+                        text = emptyShelfHint(shelf.config.type),
+                        color = ColorHint,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 18.dp),
+                    )
+                    shelf.config.type == ShelfType.LIBRARY ->
+                        LibraryGrid(shelf.items, coverLayout, tileSize, showLabels, actions, focus, menuFocus)
+                    else -> {
+                        val isApps = shelf.config.type == ShelfType.APPS
+                        ShelfRow(
+                            items = shelf.items,
+                            coverLayout = coverLayout,
+                            tileSize = tileSize,
+                            showLabels = showLabels,
+                            actions = actions,
+                            focus = if (isApps) focus else focus.withoutAppMove(),
+                            menuFocus = menuFocus,
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
+@Composable
+private fun ShelfOptionsButton(
+    description: String,
+    onClick: () -> Unit,
+    up: FocusRequester?,
+    focusRequester: FocusRequester,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = CircleShape
+    AnnounceOnFocus(focused, description)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(56.dp)
+            .scale(focusZoom(focused, 1.08f))
+            .clip(shape)
+            .background(if (focused) ColorBrand else ColorTile)
+            .strongFocusRing(focused, shape)
+            .semantics { contentDescription = description }
+            .focusRequester(focusRequester)
+            .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
+            .focusable(interactionSource = interaction)
+            .onSelectKeyUp(onClick)
+            .pointerInput(onClick) { detectTapGestures(onTap = { onClick() }) },
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_more),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(if (focused) ColorOnBrand else ColorText),
+            modifier = Modifier.size(28.dp),
+        )
+    }
+}
+
 private fun ShelfFocus.withoutAppMove() =
-    ShelfFocus(first = first, shelfRequester = shelfRequester, movingShelf = movingShelf)
+    ShelfFocus(first = first, shelfRequester = shelfRequester, movingShelf = movingShelf, up = up)
 
 private fun ShelfFocus.firstTileRequester(index: Int, item: ShelfItem): FocusRequester? = when {
     focusPackage != null && item.packageName == focusPackage -> moveFocus
@@ -117,6 +196,7 @@ private fun LibraryGrid(
     showLabels: Boolean,
     actions: ShelfActions,
     focus: ShelfFocus,
+    menuFocus: FocusRequester,
 ) {
     val tileWidth = coverSize(coverLayout, tileSize).width
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -139,7 +219,8 @@ private fun LibraryGrid(
                             showLabels = showLabels,
                             onLaunch = { actions.onLaunch(item) },
                             onLongPress = { actions.onLongPress(item) },
-                            onLeftEdge = if (col == 0) actions.onShelfMenu else null,
+                            left = if (rowIndex == 0 && col == 0) menuFocus else null,
+                            up = if (rowIndex == 0 && col == 0) focus.up else null,
                             focusRequester = if (rowIndex == 0 && col == 0) focus.shelfRequester ?: focus.first else null,
                         )
                     }
@@ -157,6 +238,7 @@ private fun ShelfRow(
     showLabels: Boolean,
     actions: ShelfActions,
     focus: ShelfFocus,
+    menuFocus: FocusRequester,
 ) {
     val listState = rememberLazyListState()
     val trackIndex = items.indexOfFirst { focus.focusPackage != null && it.packageName == focus.focusPackage }
@@ -179,7 +261,8 @@ private fun ShelfRow(
                 showLabels = showLabels,
                 onLaunch = { actions.onLaunch(item) },
                 onLongPress = { actions.onLongPress(item) },
-                onLeftEdge = if (index == 0) actions.onShelfMenu else null,
+                left = if (index == 0) menuFocus else null,
+                up = if (index == 0) focus.up else null,
                 focusRequester = focus.firstTileRequester(index, item),
                 moving = focus.movingPackage != null && item.packageName == focus.movingPackage,
             )

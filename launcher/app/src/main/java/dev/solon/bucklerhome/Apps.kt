@@ -105,6 +105,26 @@ fun launchPackage(context: Context, packageName: String, label: String) {
     safeLaunch(context, intent, label)
 }
 
+/** Opens the installed weather app: an app named Weather, otherwise the first whose name says so. */
+fun launchWeatherApp(context: Context) {
+    val match = loadLaunchableApps(context.packageManager)
+        .filter { app ->
+            val label = app.label.lowercase()
+            "weather" in label || "weather" in app.packageName.lowercase()
+        }
+        .minWithOrNull(compareBy({ app -> weatherRank(app.label) }, { app -> app.label.lowercase() }))
+    if (match == null) {
+        Toast.makeText(context, "No weather app installed", Toast.LENGTH_SHORT).show()
+        return
+    }
+    launchPackage(context, match.packageName, match.label)
+}
+
+private fun weatherRank(label: String): Int = when (label.lowercase()) {
+    "weather" -> 0
+    else -> if ("weather" in label.lowercase()) 1 else 2
+}
+
 fun playStoreLaunchIntent(pm: PackageManager): Intent? {
     return pm.getLeanbackLaunchIntentForPackage(PLAY_STORE_PACKAGE)
         ?: pm.getLaunchIntentForPackage(PLAY_STORE_PACKAGE)

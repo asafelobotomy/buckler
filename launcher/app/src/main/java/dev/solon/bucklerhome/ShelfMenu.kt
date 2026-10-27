@@ -18,21 +18,54 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 
-/**
- * Options for a whole shelf, opened by pressing Left on its first tile (like the stock SHIELD
- * launcher's row menu). "Move shelf" closes the dialog and hands over to shelf move mode. Settings
- * is here too, so it stays reachable when the header (or its Settings icon) is switched off.
- */
+/** Shelf menu, Up Next sources, and the news reader. Kept together so Home stays readable. */
+@Composable
+fun HomeShelfDialogs(
+    menu: ShelfConfig?,
+    sources: ShelfConfig?,
+    reading: Headline?,
+    shelfCount: Int,
+    onMove: (ShelfConfig) -> Unit,
+    onHide: (ShelfConfig) -> Unit,
+    onSources: (ShelfConfig) -> Unit,
+    onDismissMenu: () -> Unit,
+    onApplySources: (ShelfConfig, Boolean, List<String>) -> Unit,
+    onDismissSources: () -> Unit,
+    onDismissStory: () -> Unit,
+) {
+    menu?.let { shelf ->
+        ShelfMenuDialog(
+            title = shelf.title,
+            canMove = shelfCount > 1,
+            canHide = shelfCount > 1,
+            showSources = shelf.type == ShelfType.WATCH_NEXT,
+            onMove = { onMove(shelf) },
+            onHide = { onHide(shelf) },
+            onSources = { onSources(shelf) },
+            onDismiss = onDismissMenu,
+        )
+    }
+    sources?.let { shelf ->
+        UpNextSourcesDialog(
+            shelf = shelf,
+            onApply = { restrict, packages -> onApplySources(shelf, restrict, packages) },
+            onDismiss = onDismissSources,
+        )
+    }
+    reading?.let { story -> StoryReaderDialog(story, onDismissStory) }
+}
+
+/** Options for one shelf, opened from the circle at the start of that shelf. */
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ShelfMenuDialog(
     title: String,
     canMove: Boolean,
     canHide: Boolean,
+    showSources: Boolean,
     onMove: () -> Unit,
     onHide: () -> Unit,
-    onEditHome: () -> Unit,
-    onSettings: () -> Unit,
+    onSources: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val firstFocus = remember { FocusRequester() }
@@ -56,18 +89,27 @@ fun ShelfMenuDialog(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     if (canMove) {
-                        SettingsAction("Move shelf", focusRequester = firstFocus, onClick = onMove)
+                        SettingsAction("Move", focusRequester = firstFocus, onClick = onMove)
                     }
                     if (canHide) {
-                        SettingsAction("Hide shelf", focusRequester = if (canMove) null else firstFocus, onClick = onHide)
+                        SettingsAction(
+                            "Hide shelf",
+                            focusRequester = if (canMove) null else firstFocus,
+                            onClick = onHide,
+                        )
+                    }
+                    if (showSources) {
+                        SettingsAction(
+                            "Sources",
+                            focusRequester = if (canMove || canHide) null else firstFocus,
+                            onClick = onSources,
+                        )
                     }
                     SettingsAction(
-                        "Edit Home",
-                        focusRequester = if (canMove || canHide) null else firstFocus,
-                        onClick = onEditHome,
+                        "Close",
+                        focusRequester = if (canMove || canHide || showSources) null else firstFocus,
+                        onClick = onDismiss,
                     )
-                    SettingsAction("Settings", onClick = onSettings)
-                    SettingsAction("Close", onClick = onDismiss)
                 }
             }
         }

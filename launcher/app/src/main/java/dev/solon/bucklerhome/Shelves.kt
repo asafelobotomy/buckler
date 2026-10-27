@@ -50,8 +50,10 @@ object Shelves {
                 apps.filterNot { it.isSystem }.map { it.toShelfItem() }
             ShelfType.RECENTS ->
                 LaunchStats.loadRecents(context).mapNotNull { byPkg[it]?.toShelfItem() }
-            ShelfType.WATCH_NEXT ->
-                WatchNextRepository.load(context)
+            ShelfType.WATCH_NEXT -> {
+                val allowed = if (config.restrictSources) config.packages.toSet() else null
+                WatchNextRepository.load(context, allowed)
+            }
             ShelfType.SUGGESTED ->
                 SuggestedRepository.load(context, apps, pinned, feedUrl)
         }

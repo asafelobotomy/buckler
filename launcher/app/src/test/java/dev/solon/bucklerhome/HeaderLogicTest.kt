@@ -58,18 +58,20 @@ class HeaderLogicTest {
         assertEquals(TickerSpeed.NORMAL, TickerSpeed.fromName("nope"))
         assertTrue(TickerSpeed.SLOW.velocityDp < TickerSpeed.FAST.velocityDp)
         assertTrue(TickerSpeed.SLOW.rotateMs > TickerSpeed.FAST.rotateMs)
-        assertNull(DisplayConfig(news = null).newsQuery())
-        val shuffled = DisplayConfig(news = null, newsShuffle = true)
-        assertEquals("shuffle", shuffled.newsQuery()?.cacheKey)
-        assertEquals(NewsSource.entries.toList(), shuffled.newsQuery()?.sources)
-        assertNull(DisplayConfig(newsShuffle = true, headerVisible = false).newsQuery())
+        assertNull(DisplayConfig(newsSources = emptyList()).newsQuery())
+        val mixed = DisplayConfig(newsSources = listOf(NewsSource.BBC_WORLD, NewsSource.NPR))
+        assertEquals("BBC_WORLD+NPR", mixed.newsQuery()?.cacheKey)
+        assertEquals(listOf(NewsSource.BBC_WORLD, NewsSource.NPR), mixed.newsQuery()?.sources)
+        assertNull(DisplayConfig(newsSources = listOf(NewsSource.BBC_WORLD), headerVisible = false).newsQuery())
+        val hidden = DisplayConfig(newsSources = listOf(NewsSource.NPR), headerVisible = false)
+        assertEquals(NewsSource.NPR, stageNewsQuery(hidden, MainStage.NEWS)?.sources?.single())
+        assertNull(stageNewsQuery(hidden, MainStage.WEATHER))
+        assertNull(stageNewsQuery(DisplayConfig(newsSources = emptyList()), MainStage.NEWS))
         assertEquals("BBC", NewsSource.BBC_WORLD.mark)
-    }
-
-    @Test
-    fun newsSourceCyclesThroughOff() {
-        assertEquals(NewsSource.NPR, NewsSource.BBC_WORLD.next())
-        assertNull(NewsSource.entries.last().next())
+        assertTrue(NewsSource.entries.none { it.name == "HACKER_NEWS" })
+        assertTrue(NewsSource.entries.any { it.category == NewsCategory.GAMING })
+        assertTrue(NewsSource.entries.any { it.category == NewsCategory.BUSINESS })
+        assertTrue(NewsSource.entries.any { it.category == NewsCategory.TECH })
     }
 
     @Test
@@ -146,6 +148,7 @@ class HeaderLogicTest {
         val xml = """
             <item>
               <title>Big story</title>
+              <link>https://example.com/story</link>
               <description><![CDATA[A <b>short</b> summary.]]></description>
               <enclosure url="https://example.com/a.mp3" type="audio/mpeg"/>
               <media:thumbnail url="https://example.com/a.jpg"/>
@@ -155,7 +158,8 @@ class HeaderLogicTest {
         assertEquals("Big story", story.title)
         assertEquals("A short summary.", story.summary)
         assertEquals("https://example.com/a.jpg", story.imageUrl)
-        assertEquals(story.title, NewsFeed.featured(listOf(Headline(NewsSource.BBC_WORLD, story.title, story.summary, story.imageUrl)))?.title)
+        assertEquals("https://example.com/story", story.link)
+        assertEquals(story.title, NewsFeed.featured(listOf(Headline(NewsSource.BBC_WORLD, story.title, story.summary, story.imageUrl, story.link)))?.title)
     }
 
     @Test
@@ -174,6 +178,27 @@ class HeaderLogicTest {
         assertEquals(10.4, forecast.days[0].temperatureC, 0.01)
         assertEquals(4.1, forecast.days[0].lowC ?: Double.NaN, 0.01)
         assertTrue(forecast.days[0].allDay)
+    }
+
+    @Test
+    fun atomAlternateLinkBeatsTheFeedLink() {
+        val xml = """
+            <entry>
+              <title>Atom story</title>
+              <link rel="self" href="https://example.com/feed"/>
+              <link rel="alternate" href="https://example.com/atom"/>
+            </entry>
+        """.trimIndent()
+        assertEquals("https://example.com/atom", NewsFeed.parseStories(xml, 2).single().link)
+    }
+
+    @Test
+    fun upNextKeepsThreeCardsFromEachSource() {
+        val pkgs = listOf("a", "a", "b", "a", "a", "b", "b", "b", "c")
+        assertEquals(listOf(0, 1, 2, 3, 5, 6, 8), capUpNextIndexes(pkgs, null))
+        assertEquals(listOf(2, 5, 6), capUpNextIndexes(pkgs, setOf("b")))
+        assertEquals(emptyList<Int>(), capUpNextIndexes(pkgs, emptySet()))
+        assertEquals(UP_NEXT_PER_SOURCE, 3)
     }
 
     @Test

@@ -39,17 +39,18 @@ enum class MainStage(val label: String) {
     }
 }
 
-/** Header ticker query, or a story for the stage when the ticker itself is off. */
-fun stageNewsQuery(config: DisplayConfig, stage: MainStage): NewsQuery? {
-    config.newsQuery()?.let { return it }
-    if (stage != MainStage.NEWS) return null
-    return NewsQuery(config.news ?: NewsSource.BBC_WORLD, false)
+/** Ticker query, and the same feeds for the News stage even when the header is hidden. */
+fun stageNewsQuery(config: DisplayConfig, stage: MainStage): NewsQuery? = when {
+    config.newsSources.isEmpty() -> null
+    stage == MainStage.NEWS || config.showsNews -> NewsQuery(config.newsSources)
+    else -> null
 }
 
 @Composable
 fun MainStage(
     mode: MainStage,
     headlines: List<Headline>,
+    newsSources: List<NewsSource>,
     forecast: Forecast?,
     place: Place?,
     fahrenheit: Boolean,
@@ -57,11 +58,12 @@ fun MainStage(
     nowPlaying: NowPlayingModel,
     stageFocus: FocusRequester,
     below: FocusRequester,
+    onOpenStory: (Headline) -> Unit,
 ) {
     when (mode) {
-        MainStage.NEWS -> NewsStage(headlines)
+        MainStage.NEWS -> NewsStage(headlines, newsSources, stageFocus, below, onOpenStory)
         MainStage.NOW_PLAYING -> NowPlayingStage(nowPlaying, stageFocus, below)
-        MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h)
+        MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h, stageFocus, below)
         MainStage.SUGGESTED -> SuggestedStage(nowPlaying, stageFocus, below)
     }
 }
@@ -87,12 +89,25 @@ fun StageHeading(title: String, note: String? = null) {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun NewsStage(headlines: List<Headline>) {
+private fun NewsStage(
+    headlines: List<Headline>,
+    newsSources: List<NewsSource>,
+    stageFocus: FocusRequester,
+    below: FocusRequester,
+    onOpenStory: (Headline) -> Unit,
+) {
     val story = NewsFeed.featured(headlines)
     Column(modifier = Modifier.fillMaxWidth()) {
         StageHeading("News")
         Row(
             modifier = Modifier
+                .stageTarget(
+                    focus = stageFocus,
+                    below = below,
+                    description = story?.title ?: "News",
+                ) {
+                    if (story != null) onOpenStory(story)
+                }
                 .fillMaxWidth()
                 .height(176.dp)
                 .clip(RoundedCornerShape(12.dp))
@@ -106,7 +121,15 @@ private fun NewsStage(headlines: List<Headline>) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (story == null) {
-                    Text(text = "No story yet.", color = ColorMuted, fontSize = 16.sp)
+                    Text(
+                        text = if (newsSources.isEmpty()) {
+                            "Choose news sources in Settings → Header."
+                        } else {
+                            "No story yet."
+                        },
+                        color = ColorMuted,
+                        fontSize = 16.sp,
+                    )
                 } else {
                     Text(
                         text = story.source.mark,

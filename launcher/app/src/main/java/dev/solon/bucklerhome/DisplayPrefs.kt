@@ -1,6 +1,7 @@
 package dev.solon.bucklerhome
 
 import android.content.Context
+import android.content.SharedPreferences
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -76,8 +77,8 @@ data class DisplayConfig(
     val dateStyle: DateStyle = DateStyle.SHORT,
     val place: Place? = null,
     val fahrenheit: Boolean = false,
-    val news: NewsSource? = NewsSource.BBC_WORLD,
-    val newsShuffle: Boolean = false,
+    /** Chosen feeds, in catalog order. Several are mixed; none turns the ticker off. */
+    val newsSources: List<NewsSource> = listOf(NewsSource.BBC_WORLD),
     val tickerSpeed: TickerSpeed = TickerSpeed.NORMAL,
     val headerSize: HeaderSize = HeaderSize.MEDIUM,
     val nowPlaying: Boolean = true,
@@ -89,10 +90,10 @@ data class DisplayConfig(
 
     /** Weather is fetched only when it will be shown. */
     val weatherPlace: Place? get() = place?.takeIf { shows(HeaderElement.WEATHER) }
-    val showsNews: Boolean get() = headerVisible && (newsShuffle || news != null)
+    val showsNews: Boolean get() = headerVisible && newsSources.isNotEmpty()
 
     /** Null when the ticker is off, so Home does not fetch feeds it will not show. */
-    fun newsQuery(): NewsQuery? = if (showsNews) NewsQuery(news, newsShuffle) else null
+    fun newsQuery(): NewsQuery? = if (showsNews) NewsQuery(newsSources) else null
     val showsNowPlaying: Boolean get() = headerVisible && nowPlaying
 }
 
@@ -106,6 +107,7 @@ object DisplayPrefs {
     private const val KEY_FAHRENHEIT = "weather_fahrenheit"
     private const val KEY_NEWS = "news_source"
     private const val KEY_NEWS_SHUFFLE = "news_shuffle"
+    private const val KEY_NEWS_SOURCES = "news_sources"
     private const val KEY_TICKER_SPEED = "news_ticker_speed"
     private const val KEY_HEADER_SIZE = "header_size"
     private const val KEY_NOW_PLAYING = "now_playing_enabled"
@@ -124,14 +126,12 @@ object DisplayPrefs {
         } else {
             null
         }
-        val newsRaw = p.getString(KEY_NEWS, NewsSource.BBC_WORLD.name)
         return DisplayConfig(
             use24h = p.getBoolean(KEY_24H, true),
             dateStyle = DateStyle.fromName(p.getString(KEY_DATE_STYLE, null)),
             place = place,
             fahrenheit = p.getBoolean(KEY_FAHRENHEIT, false),
-            news = if (newsRaw == NEWS_OFF) null else NewsSource.fromName(newsRaw),
-            newsShuffle = p.getBoolean(KEY_NEWS_SHUFFLE, false),
+            newsSources = readNewsSources(p),
             tickerSpeed = TickerSpeed.fromName(p.getString(KEY_TICKER_SPEED, null)),
             headerSize = HeaderSize.fromName(p.getString(KEY_HEADER_SIZE, null)),
             nowPlaying = p.getBoolean(KEY_NOW_PLAYING, true),
@@ -160,11 +160,22 @@ object DisplayPrefs {
     fun setHidden(context: Context, hidden: Set<HeaderElement>) =
         prefs(context).edit().putStringSet(KEY_HEADER_HIDDEN, hidden.map { it.name }.toSet()).apply()
 
-    fun setNews(context: Context, source: NewsSource?) =
-        prefs(context).edit().putString(KEY_NEWS, source?.name ?: NEWS_OFF).apply()
+    fun setNewsSources(context: Context, sources: List<NewsSource>) =
+        prefs(context).edit().putStringSet(KEY_NEWS_SOURCES, sources.map { it.name }.toSet()).apply()
 
-    fun setNewsShuffle(context: Context, value: Boolean) =
-        prefs(context).edit().putBoolean(KEY_NEWS_SHUFFLE, value).apply()
+    /** New multi-select, or the old single source / shuffle flag from before it existed. */
+    private fun readNewsSources(p: SharedPreferences): List<NewsSource> {
+        if (p.contains(KEY_NEWS_SOURCES)) {
+            val names = p.getStringSet(KEY_NEWS_SOURCES, emptySet()).orEmpty()
+            return NewsSource.entries.filter { it.name in names }
+        }
+        if (p.getBoolean(KEY_NEWS_SHUFFLE, false)) {
+            return listOf(NewsSource.BBC_WORLD, NewsSource.NPR, NewsSource.GUARDIAN, NewsSource.AL_JAZEERA)
+        }
+        val raw = p.getString(KEY_NEWS, NewsSource.BBC_WORLD.name)
+        if (raw == NEWS_OFF) return emptyList()
+        return listOfNotNull(NewsSource.fromName(raw)).ifEmpty { listOf(NewsSource.BBC_WORLD) }
+    }
 
     fun setTickerSpeed(context: Context, speed: TickerSpeed) =
         prefs(context).edit().putString(KEY_TICKER_SPEED, speed.name).apply()

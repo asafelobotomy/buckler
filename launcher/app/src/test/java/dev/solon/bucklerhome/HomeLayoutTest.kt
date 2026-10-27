@@ -57,6 +57,17 @@ class HomeLayoutTest {
     }
 
     @Test
+    fun upNextSourceAllowListRoundTrips() {
+        val layout = HomeLayout.default().withWatchNextSources("watch_next", true, listOf("com.netflix.ninja"))
+        val parsed = HomeLayout.fromJson(layout.toJson().toString())
+        val up = parsed.shelves.first { it.type == ShelfType.WATCH_NEXT }
+        assertTrue(up.restrictSources)
+        assertEquals(listOf("com.netflix.ninja"), up.packages)
+        val all = parsed.withWatchNextSources("watch_next", false, emptyList())
+        assertEquals(false, all.shelves.first { it.type == ShelfType.WATCH_NEXT }.restrictSources)
+    }
+
+    @Test
     fun labelsDefaultOffForOlderLayouts() {
         val legacy = """{"schema":1,"layout":"banner","shelves":[]}"""
         assertEquals(false, HomeLayout.fromJson(legacy).showLabels)

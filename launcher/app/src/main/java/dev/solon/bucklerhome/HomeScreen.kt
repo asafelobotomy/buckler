@@ -17,9 +17,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,6 +29,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -60,10 +63,13 @@ fun HomeScreen(
     var focusShelfId by remember { mutableStateOf<String?>(null) }
     var shelfSettleTick by remember { mutableStateOf(0) }
     var shelfMenu by remember { mutableStateOf<ShelfConfig?>(null) }
+    var sourceShelf by remember { mutableStateOf<ShelfConfig?>(null) }
+    var reading by remember { mutableStateOf<Headline?>(null) }
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
     val stage = homeLayout?.mainStage ?: MainStage.NEWS
-    val stageInteractive = stage == MainStage.NOW_PLAYING || stage == MainStage.SUGGESTED
+    val trackPlayback = stage == MainStage.NOW_PLAYING || stage == MainStage.SUGGESTED
     val weather by rememberWeather(config.weatherPlace)
     val headlines by rememberHeadlines(stageNewsQuery(config, stage))
     val forecast by rememberForecast(if (stage == MainStage.WEATHER) config.place else null)
@@ -71,7 +77,7 @@ fun HomeScreen(
     val clockText by rememberClockText(config)
     val (clock, date) = clockText
     val nowPlaying = rememberNowPlaying(
-        config.showsNowPlaying || stageInteractive,
+        config.showsNowPlaying || trackPlayback,
         resumeTick,
     )
 
@@ -182,7 +188,7 @@ fun HomeScreen(
     val movingShelfIndex = shelves.indexOfFirst { it.config.id == focusShelfId }
     LaunchedEffect(movingShelfIndex, focusShelfId) {
         if (movingShelfIndex >= 0) {
-            val index = movingShelfIndex + 1
+            val index = movingShelfIndex
             val info = listState.layoutInfo
             val shown = info.visibleItemsInfo.firstOrNull { it.index == index }
             val fullyVisible = shown != null && shown.offset >= 0 && shown.offset + shown.size <= info.viewportEndOffset
@@ -248,29 +254,37 @@ fun HomeScreen(
                 net = net,
                 nowPlaying = if (layout.mainStage == MainStage.NOW_PLAYING) null else nowPlaying,
                 actions = actions,
-                below = if (stageInteractive) stageFocus else firstFocus,
+                below = stageFocus,
             )
             Spacer(modifier = Modifier.height(14.dp))
         }
+
+        Box(
+            Modifier.onFocusChanged { state ->
+                if (state.hasFocus) scope.launch { listState.scrollToItem(0) }
+            },
+        ) {
+            MainStage(
+                mode = layout.mainStage,
+                headlines = headlines,
+                newsSources = config.newsSources,
+                forecast = forecast,
+                place = config.place,
+                fahrenheit = config.fahrenheit,
+                use24h = config.use24h,
+                nowPlaying = nowPlaying,
+                stageFocus = stageFocus,
+                below = firstFocus,
+                onOpenStory = { reading = it },
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
 
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            item(key = "main-stage") {
-                MainStage(
-                    mode = layout.mainStage,
-                    headlines = headlines,
-                    forecast = forecast,
-                    place = config.place,
-                    fahrenheit = config.fahrenheit,
-                    use24h = config.use24h,
-                    nowPlaying = nowPlaying,
-                    stageFocus = stageFocus,
-                    below = firstFocus,
-                )
-            }
             items(shelves, key = { it.config.id }) { shelf ->
                 val id = shelf.config.id
                 ShelfSection(
@@ -290,6 +304,7 @@ fun HomeScreen(
                         movingPackage = move.target,
                         focusPackage = focusPkg,
                         moveFocus = moveFocus,
+                        up = if (id == shelves.firstOrNull()?.config?.id) stageFocus else null,
                     ),
                 )
             }
@@ -310,31 +325,33 @@ fun HomeScreen(
         }
     }
 
-    shelfMenu?.let { config ->
-        val visible = shelves.size
-        ShelfMenuDialog(
-            title = config.title,
-            canMove = visible > 1,
-            canHide = visible > 1,
-            onMove = {
-                shelfMenu = null
-                shelfMove.begin(config.id, layout)
-            },
-            onHide = {
-                shelfMenu = null
-                hideShelf(config)
-            },
-            onEditHome = {
-                shelfMenu = null
-                onOpenEditHome()
-            },
-            onSettings = {
-                shelfMenu = null
-                actions.onSettings()
-            },
-            onDismiss = { shelfMenu = null },
-        )
-    }
+    HomeShelfDialogs(
+        menu = shelfMenu,
+        sources = sourceShelf,
+        reading = reading,
+        shelfCount = shelves.size,
+        onMove = { menu ->
+            shelfMenu = null
+            shelfMove.begin(menu.id, layout)
+        },
+        onHide = { menu ->
+            shelfMenu = null
+            hideShelf(menu)
+        },
+        onSources = { menu ->
+            shelfMenu = null
+            sourceShelf = menu
+        },
+        onDismissMenu = { shelfMenu = null },
+        onApplySources = { shelf, restrict, packages ->
+            val next = layout.withWatchNextSources(shelf.id, restrict, packages)
+            HomeLayout.save(context, next)
+            homeLayout = next
+            sourceShelf = null
+        },
+        onDismissSources = { sourceShelf = null },
+        onDismissStory = { reading = null },
+    )
 
     editTarget?.let { item ->
         HomeMenuHost(

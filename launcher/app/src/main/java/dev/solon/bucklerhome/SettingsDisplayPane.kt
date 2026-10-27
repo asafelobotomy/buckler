@@ -31,9 +31,9 @@ fun DisplayPane() {
     SectionTitle("Header")
     SettingsRow(
         if (cfg.headerVisible) {
-            "Pick what the top bar shows (● = shown). Settings is also under ◀ on any shelf."
+            "Pick what the top bar shows (● = shown)."
         } else {
-            "Header off: Home shows only shelves. Settings is under ◀ on the first tile of any shelf."
+            "Header off: Home shows the Main Stage and shelves. Edit Home and Settings stay in the header when it is on."
         },
     )
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
@@ -95,30 +95,31 @@ fun DisplayPane() {
 
     Spacer(modifier = Modifier.height(12.dp))
     val newsLabel = when {
-        cfg.newsShuffle -> "shuffled across every source"
-        cfg.news != null -> cfg.news.label
-        else -> "off"
+        cfg.newsSources.isEmpty() -> "off"
+        cfg.newsSources.size <= 3 -> cfg.newsSources.joinToString(", ") { it.label }
+        else -> "${cfg.newsSources.size} sources, mixed"
     }
-    SettingsRow("News: $newsLabel (public RSS). Shuffle takes each next story from a different source.")
+    SettingsRow("News: $newsLabel. Pick one or more. Several sources are mixed, one story from each in turn.")
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        NewsSource.entries.forEach { source ->
-            SettingsAction(source.label, selected = !cfg.newsShuffle && cfg.news == source) {
-                DisplayPrefs.setNews(context, source)
-                DisplayPrefs.setNewsShuffle(context, false)
-                tick++
+        SettingsAction("Off", selected = cfg.newsSources.isEmpty()) {
+            DisplayPrefs.setNewsSources(context, emptyList())
+            tick++
+        }
+    }
+    NewsCategory.entries.forEach { category ->
+        Spacer(modifier = Modifier.height(8.dp))
+        SettingsRow(category.label)
+        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+            NewsSource.entries.filter { it.category == category }.forEach { source ->
+                SettingsAction(source.label, selected = source in cfg.newsSources) {
+                    val next = if (source in cfg.newsSources) cfg.newsSources - source else cfg.newsSources + source
+                    DisplayPrefs.setNewsSources(context, NewsSource.entries.filter { it in next })
+                    tick++
+                }
             }
         }
-        SettingsAction("Shuffle", selected = cfg.newsShuffle) {
-            DisplayPrefs.setNewsShuffle(context, !cfg.newsShuffle)
-            tick++
-        }
-        SettingsAction("Off", selected = cfg.news == null && !cfg.newsShuffle) {
-            DisplayPrefs.setNews(context, null)
-            DisplayPrefs.setNewsShuffle(context, false)
-            tick++
-        }
     }
-    if (cfg.news != null || cfg.newsShuffle) {
+    if (cfg.newsSources.isNotEmpty()) {
         Spacer(modifier = Modifier.height(8.dp))
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             TickerSpeed.entries.forEach { speed ->
