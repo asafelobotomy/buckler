@@ -25,6 +25,8 @@ fun HomeShelfDialogs(
     sources: ShelfConfig?,
     reading: Headline?,
     shelfCount: Int,
+    /** False for the last shelf that keeps Home navigable. */
+    canHide: Boolean,
     onMove: (ShelfConfig) -> Unit,
     onHide: (ShelfConfig) -> Unit,
     onSources: (ShelfConfig) -> Unit,
@@ -37,7 +39,7 @@ fun HomeShelfDialogs(
         ShelfMenuDialog(
             title = shelf.title,
             canMove = shelfCount > 1,
-            canHide = shelfCount > 1,
+            canHide = canHide,
             showSources = shelf.type == ShelfType.WATCH_NEXT,
             onMove = { onMove(shelf) },
             onHide = { onHide(shelf) },

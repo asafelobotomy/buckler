@@ -2,6 +2,7 @@ package dev.solon.bucklerhome
 
 import android.content.Intent
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -33,7 +34,7 @@ fun DisplayPane() {
         if (cfg.headerVisible) {
             "Pick what the top bar shows (● = shown)."
         } else {
-            "Header off: Home shows the Main Stage and shelves. Edit Home and Settings stay in the header when it is on."
+            "Header off: Home shows the Main Stage and shelves, with a Home options card at the end for Settings."
         },
     )
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
@@ -44,6 +45,10 @@ fun DisplayPane() {
         if (cfg.headerVisible) {
             HeaderElement.entries.forEach { element ->
                 SettingsAction(element.label, selected = element !in cfg.hidden) {
+                    if (element !in cfg.hidden && !canHideHeaderElement(element, cfg.hidden)) {
+                        Toast.makeText(context, "Keep Edit Home or Settings in the header", Toast.LENGTH_SHORT).show()
+                        return@SettingsAction
+                    }
                     val hidden = if (element in cfg.hidden) cfg.hidden - element else cfg.hidden + element
                     DisplayPrefs.setHidden(context, hidden)
                     tick++

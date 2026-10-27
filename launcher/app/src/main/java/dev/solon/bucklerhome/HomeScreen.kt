@@ -1,5 +1,6 @@
 package dev.solon.bucklerhome
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ fun HomeScreen(
     var coverVersion by remember { mutableStateOf(0) }
     var updateDismissed by remember { mutableStateOf<GitHubRelease?>(null) }
     val availableUpdate by rememberAvailableUpdate(resumeTick)
+    var shelvesLoaded by remember { mutableStateOf(false) }
     var initialFocusDone by remember { mutableStateOf(false) }
     val firstFocus = remember { FocusRequester() }
     val stageFocus = remember { FocusRequester() }
@@ -87,13 +89,19 @@ fun HomeScreen(
                 shelf.copy(items = CoverResolver.applyAll(context, shelf.items, layout.layout))
             }
         }
+        shelvesLoaded = true
     }
 
     // Focus the first tile once; later reloads (cover/pin edits) must not steal focus.
-    LaunchedEffect(shelves) {
-        if (!initialFocusDone && shelves.any { it.items.isNotEmpty() }) {
-            initialFocusDone = true
+    // With no tiles at all, start on the stage so the remote always has somewhere to begin.
+    LaunchedEffect(shelves, shelvesLoaded) {
+        if (initialFocusDone || !shelvesLoaded) return@LaunchedEffect
+        initialFocusDone = true
+        if (shelves.any { it.items.isNotEmpty() }) {
             runCatching { firstFocus.requestFocus() }
+        } else {
+            delay(60)
+            runCatching { stageFocus.requestFocus() }
         }
     }
 
@@ -230,6 +238,18 @@ fun HomeScreen(
         homeLayout = next
     }
 
+    // Home options card: shelves and header back to how a new install has them.
+    fun resetHome() {
+        val next = HomeLayout.default(DockPrefs.loadPins(context))
+        HomeLayout.save(context, next)
+        homeLayout = next
+        DisplayPrefs.setHeaderVisible(context, true)
+        DisplayPrefs.setHidden(context, emptySet())
+        config = DisplayPrefs.load(context)
+        refocusTick++
+        Toast.makeText(context, "Home reset", Toast.LENGTH_SHORT).show()
+    }
+
     fun pickSpan(span: WeatherSpan) {
         DisplayPrefs.setWeatherSpan(context, span)
         config = config.copy(weatherSpan = span)
@@ -265,6 +285,7 @@ fun HomeScreen(
         onHoldStage = { pickingStage = true },
         onPickStage = ::pickStage,
         onPickSpan = ::pickSpan,
+        onResetHome = ::resetHome,
         onStepMove = ::stepMove,
         onPlaceMove = ::placeMove,
         onStepShelf = ::stepShelf,
@@ -288,6 +309,7 @@ fun HomeScreen(
         sources = sourceShelf,
         reading = reading,
         shelfCount = shelves.size,
+        canHide = shelfMenu?.let { layout.canHideShelf(it.id) } ?: false,
         onMove = { menu ->
             shelfMenu = null
             shelfMove.begin(menu.id, layout)

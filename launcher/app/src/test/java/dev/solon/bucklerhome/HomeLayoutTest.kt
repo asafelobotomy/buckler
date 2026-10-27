@@ -1,6 +1,7 @@
 package dev.solon.bucklerhome
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -68,13 +69,28 @@ class HomeLayoutTest {
     }
 
     @Test
-    fun emptyUpNextIsNotTheFocusLanding() {
-        val empty = ResolvedShelf(ShelfConfig("watch_next", ShelfType.WATCH_NEXT, "Up Next"), emptyList())
+    fun lastAlwaysDrawnShelfCannotBeHidden() {
+        val shelves = listOf(
+            ShelfConfig("watch_next", ShelfType.WATCH_NEXT, "Up Next", enabled = true),
+            ShelfConfig("recents", ShelfType.RECENTS, "Recent", enabled = true),
+            ShelfConfig("apps", ShelfType.APPS, "Apps", enabled = false),
+        )
+        val layout = HomeLayout(shelves = shelves)
+        assertFalse(layout.canHideShelf("watch_next"))
+        assertTrue(layout.canHideShelf("recents"))
+        val withApps = layout.copy(shelves = shelves.map { it.copy(enabled = true) })
+        assertTrue(withApps.canHideShelf("watch_next"))
+    }
+
+    @Test
+    fun homeOptionsShowWhenNothingLeadsToSettings() {
         val apps = ResolvedShelf(ShelfConfig("apps", ShelfType.APPS, "Apps"), emptyList())
-        assertEquals(1, focusLandingIndex(listOf(empty, apps)))
-        val filled = empty.copy(items = listOf(ShelfItem("netflix", "Netflix")))
-        assertEquals(0, focusLandingIndex(listOf(filled, apps)))
-        assertEquals(-1, focusLandingIndex(listOf(empty)))
+        assertFalse(needsHomeOptions(DisplayConfig(), listOf(apps)))
+        assertTrue(needsHomeOptions(DisplayConfig(), emptyList()))
+        assertTrue(needsHomeOptions(DisplayConfig(headerVisible = false), listOf(apps)))
+        val noRoutes = DisplayConfig(hidden = setOf(HeaderElement.EDIT, HeaderElement.SETTINGS))
+        assertTrue(needsHomeOptions(noRoutes, listOf(apps)))
+        assertFalse(needsHomeOptions(DisplayConfig(hidden = setOf(HeaderElement.EDIT)), listOf(apps)))
     }
 
     @Test

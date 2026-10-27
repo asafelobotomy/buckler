@@ -131,6 +131,10 @@ data class HomeLayout(
         return copy(shelves = list)
     }
 
+    /** Hiding [id] must leave a shelf that is always drawn (Recent drops out while empty). */
+    fun canHideShelf(id: String): Boolean =
+        shelves.any { it.enabled && it.id != id && it.type != ShelfType.RECENTS }
+
     /** Up Next allow-list. [restrict] false shows every publisher, three cards each. */
     fun withWatchNextSources(shelfId: String, restrict: Boolean, allowed: List<String>): HomeLayout =
         copy(

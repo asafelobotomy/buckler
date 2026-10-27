@@ -122,6 +122,15 @@ data class DisplayConfig(
     /** Null when the ticker is off, so Home does not fetch feeds it will not show. */
     fun newsQuery(): NewsQuery? = if (showsNews) NewsQuery(newsSources) else null
     val showsNowPlaying: Boolean get() = headerVisible && nowPlaying
+
+    /** Edit Home or Settings is in the header. Without either, Home adds a Home options card. */
+    val reachesSettings: Boolean get() = shows(HeaderElement.EDIT) || shows(HeaderElement.SETTINGS)
+}
+
+/** Edit Home and Settings can each be hidden, but not both: one of them is the way back here. */
+fun canHideHeaderElement(element: HeaderElement, hidden: Set<HeaderElement>): Boolean {
+    val routes = setOf(HeaderElement.EDIT, HeaderElement.SETTINGS)
+    return element !in routes || (routes - element).any { it !in hidden }
 }
 
 object DisplayPrefs {

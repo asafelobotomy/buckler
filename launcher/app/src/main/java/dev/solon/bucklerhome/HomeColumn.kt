@@ -16,9 +16,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -60,6 +63,7 @@ fun HomeColumn(
     onHoldStage: () -> Unit,
     onPickStage: (MainStage) -> Unit,
     onPickSpan: (WeatherSpan) -> Unit,
+    onResetHome: () -> Unit,
     onStepMove: (Int) -> Unit,
     onPlaceMove: () -> Unit,
     onStepShelf: (Int) -> Unit,
@@ -67,10 +71,32 @@ fun HomeColumn(
 ) {
     fun leaveStage() {
         scope.launch {
-            if (shelves.isNotEmpty() && listState.firstVisibleItemIndex != 0) listState.scrollToItem(0)
+            if (listState.firstVisibleItemIndex != 0) listState.scrollToItem(0)
             if (runCatching { stageDown.requestFocus(); true }.getOrDefault(false)) return@launch
             delay(48)
             runCatching { stageDown.requestFocus() }
+        }
+    }
+    val focusManager = LocalFocusManager.current
+    val headerEnd = remember { FocusRequester() }
+    val bottom = remember { FocusRequester() }
+    val homeOptions = needsHomeOptions(config, shelves)
+    val rows = shelves.size + if (homeOptions) 1 else 0
+    val hasHeaderEnd = config.headerVisible && headerEndElement(config, actions.onPlayStore != null) != null
+    // Down past the last row: the rightmost header icon, or the stage when the header has none.
+    fun wrapToTop() {
+        val top = if (hasHeaderEnd) headerEnd else stageFocus
+        if (!runCatching { top.requestFocus(); true }.getOrDefault(false)) runCatching { stageFocus.requestFocus() }
+        scope.launch { listState.scrollToItem(0) }
+    }
+    // Up past the top: the last shelf (or Home options), which may be scrolled out of the list.
+    fun wrapToBottom() {
+        if (rows == 0) return
+        scope.launch {
+            listState.scrollToItem(rows - 1)
+            if (runCatching { bottom.requestFocus(); true }.getOrDefault(false)) return@launch
+            delay(48)
+            runCatching { bottom.requestFocus() }
         }
     }
     BoxWithConstraints(
@@ -95,6 +121,8 @@ fun HomeColumn(
                 nowPlaying = if (layout.mainStage == MainStage.NOW_PLAYING) null else nowPlaying,
                 actions = actions,
                 below = stageFocus,
+                endFocus = headerEnd,
+                modifier = Modifier.wrapFocus(FocusDirection.Up, focusManager, ::wrapToBottom),
             )
             Spacer(modifier = Modifier.height(14.dp))
         }
@@ -104,6 +132,7 @@ fun HomeColumn(
                 .fillMaxWidth()
                 .heightIn(max = metrics.band)
                 .clipToBounds()
+                .wrapFocus(FocusDirection.Up, focusManager, ::wrapToBottom)
                 .onFocusChanged { state ->
                     if (state.hasFocus) scope.launch { listState.scrollToItem(0) }
                 },
@@ -130,7 +159,8 @@ fun HomeColumn(
         }
         Spacer(modifier = Modifier.height(20.dp))
 
-        val landing = shelves.getOrNull(focusLandingIndex(shelves))
+        val topShelf = shelves.firstOrNull()
+        val lastShelf = shelves.lastOrNull()?.takeIf { !homeOptions }
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).clipToBounds(),
@@ -138,30 +168,44 @@ fun HomeColumn(
         ) {
             items(shelves, key = { it.config.id }) { shelf ->
                 val id = shelf.config.id
-                ShelfSection(
-                    shelf = shelf,
-                    coverLayout = layout.layout,
-                    tileSize = layout.tileSize,
-                    showLabels = layout.showLabels,
-                    actions = ShelfActions(
-                        onLaunch = onLaunch,
-                        onLongPress = onEdit,
-                        onShelfMenu = { onShelfMenu(shelf.config) },
-                    ),
-                    focus = ShelfFocus(
-                        first = if (shelf == shelves.firstOrNull { it.items.isNotEmpty() }) firstFocus else null,
-                        shelfRequester = if (id == focusShelfId) shelfRequester else null,
-                        movingShelf = id == shelfMove.target,
-                        movingPackage = move.target,
-                        focusPackage = focusPkg,
-                        moveFocus = moveFocus,
-                        up = if (shelf == landing && shelves.takeWhile { it.config.id != id }.all {
-                            it.config.type == ShelfType.WATCH_NEXT && it.items.isEmpty()
-                        }) stageFocus else null,
-                        fromStage = if (shelf == landing) stageDown else null,
-                        skip = landing != null && shelf.config.type == ShelfType.WATCH_NEXT && shelf.items.isEmpty(),
-                    ),
-                )
+                val last = shelf == lastShelf
+                Box(if (last) Modifier.wrapFocus(FocusDirection.Down, focusManager, ::wrapToTop) else Modifier) {
+                    ShelfSection(
+                        shelf = shelf,
+                        coverLayout = layout.layout,
+                        tileSize = layout.tileSize,
+                        showLabels = layout.showLabels,
+                        actions = ShelfActions(
+                            onLaunch = onLaunch,
+                            onLongPress = onEdit,
+                            onShelfMenu = { onShelfMenu(shelf.config) },
+                        ),
+                        focus = ShelfFocus(
+                            first = if (shelf == shelves.firstOrNull { it.items.isNotEmpty() }) firstFocus else null,
+                            shelfRequester = if (id == focusShelfId) shelfRequester else null,
+                            movingShelf = id == shelfMove.target,
+                            movingPackage = move.target,
+                            focusPackage = focusPkg,
+                            moveFocus = moveFocus,
+                            up = if (shelf == topShelf) stageFocus else null,
+                            fromStage = if (shelf == topShelf) stageDown else null,
+                            bottom = if (last) bottom else null,
+                        ),
+                    )
+                }
+            }
+            if (homeOptions) {
+                item(key = "home_options") {
+                    Box(Modifier.wrapFocus(FocusDirection.Down, focusManager, ::wrapToTop)) {
+                        HomeOptionsCard(
+                            onReset = onResetHome,
+                            onSettings = actions.onSettings,
+                            fromStage = if (shelves.isEmpty()) stageDown else null,
+                            up = if (shelves.isEmpty()) stageFocus else null,
+                            bottom = bottom,
+                        )
+                    }
+                }
             }
         }
 

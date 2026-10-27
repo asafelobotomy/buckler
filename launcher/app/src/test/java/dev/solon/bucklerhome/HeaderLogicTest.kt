@@ -302,4 +302,21 @@ class HeaderLogicTest {
         assertEquals("https://old", refreshed.first { it.title == "One" }.artUri)
         assertTrue(refreshed.first { it.title == "One" }.pinned)
     }
+
+    @Test
+    fun editHomeAndSettingsCannotBothBeHidden() {
+        assertTrue(canHideHeaderElement(HeaderElement.EDIT, emptySet()))
+        assertTrue(!canHideHeaderElement(HeaderElement.EDIT, setOf(HeaderElement.SETTINGS)))
+        assertTrue(!canHideHeaderElement(HeaderElement.SETTINGS, setOf(HeaderElement.EDIT)))
+        assertTrue(canHideHeaderElement(HeaderElement.CLOCK, setOf(HeaderElement.EDIT, HeaderElement.SETTINGS)))
+    }
+
+    @Test
+    fun downFromTheBottomWrapsToTheRightmostIcon() {
+        assertEquals(HeaderElement.SETTINGS, headerEndElement(DisplayConfig(), hasStore = true))
+        val noSettings = DisplayConfig(hidden = setOf(HeaderElement.SETTINGS))
+        assertEquals(HeaderElement.STORE, headerEndElement(noSettings, hasStore = true))
+        assertEquals(HeaderElement.EDIT, headerEndElement(noSettings, hasStore = false))
+        assertNull(headerEndElement(DisplayConfig(headerVisible = false), hasStore = true))
+    }
 }

@@ -1,5 +1,6 @@
 package dev.solon.bucklerhome
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -132,9 +133,13 @@ fun EditHomeScreen(
                     canMoveUp = index > 0,
                     canMoveDown = index < layout.shelves.lastIndex,
                     onToggle = {
-                        val shelves = layout.shelves.toMutableList()
-                        shelves[index] = shelf.copy(enabled = !shelf.enabled)
-                        persist(layout.copy(shelves = shelves))
+                        if (shelf.enabled && !layout.canHideShelf(shelf.id)) {
+                            Toast.makeText(context, "Keep at least one shelf on Home", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val shelves = layout.shelves.toMutableList()
+                            shelves[index] = shelf.copy(enabled = !shelf.enabled)
+                            persist(layout.copy(shelves = shelves))
+                        }
                     },
                     onUp = { moveShelf(index, -1) },
                     onDown = { moveShelf(index, 1) },

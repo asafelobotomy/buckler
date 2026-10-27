@@ -82,8 +82,8 @@ class ShelfFocus(
     val up: FocusRequester? = null,
     /** Down from the Main Stage. Kept on the first shelf focus should land on. */
     val fromStage: FocusRequester? = null,
-    /** Empty Up Next: drawn, but not a D-pad stop. */
-    val skip: Boolean = false,
+    /** Wrap target for Up from the top of Home, when this is the last shelf. */
+    val bottom: FocusRequester? = null,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -143,9 +143,9 @@ fun ShelfSection(
                     shelf.items.isEmpty() -> EmptyShelfHint(
                         type = shelf.config.type,
                         up = focus.up,
-                        focusRequester = if (focus.skip) null else focus.shelfRequester ?: focus.fromStage ?: focus.first,
+                        focusRequester = focus.shelfRequester ?: focus.fromStage ?: focus.first,
+                        bottom = focus.bottom,
                         onLeft = { showOptions = true },
-                        focusable = !focus.skip,
                     )
                     shelf.config.type == ShelfType.LIBRARY ->
                         LibraryGrid(
@@ -221,8 +221,11 @@ private fun ShelfFocus.withoutAppMove() = ShelfFocus(
     movingShelf = movingShelf,
     up = up,
     fromStage = fromStage,
-    skip = skip,
+    bottom = bottom,
 )
+
+private fun FocusRequester?.asRequester(): Modifier =
+    if (this != null) Modifier.focusRequester(this) else Modifier
 
 private fun ShelfFocus.firstTileRequester(index: Int, item: ShelfItem): FocusRequester? = when {
     focusPackage != null && item.packageName == focusPackage -> moveFocus
@@ -235,23 +238,21 @@ private fun EmptyShelfHint(
     type: ShelfType,
     up: FocusRequester?,
     focusRequester: FocusRequester?,
+    bottom: FocusRequester?,
     onLeft: () -> Unit,
-    focusable: Boolean = true,
 ) {
-    val modifier = if (!focusable) {
-        Modifier.padding(top = 18.dp).focusProperties { canFocus = false }
-    } else {
-        Modifier
-            .padding(top = 18.dp)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
-            .onPreviewKeyEvent { event ->
-                if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
-                if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onLeft()
-                true
-            }
-            .focusable()
-    }
+    // A D-pad stop like any shelf: Left opens the shelf circle, OK does nothing.
+    val modifier = Modifier
+        .padding(top = 18.dp)
+        .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+        .then(if (bottom != null) Modifier.focusRequester(bottom) else Modifier)
+        .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
+        .onPreviewKeyEvent { event ->
+            if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
+            if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onLeft()
+            true
+        }
+        .focusable()
     Text(
         text = emptyShelfHint(type),
         color = ColorHint,
@@ -287,11 +288,13 @@ private fun LibraryGrid(
                 .heightIn(max = 360.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            items.chunked(columns).forEachIndexed { rowIndex, row ->
+            val rows = items.chunked(columns)
+            rows.forEachIndexed { rowIndex, row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(TileGap)) {
                     row.forEachIndexed { col, item ->
                         CoverTile(
                             item = item,
+                            modifier = focus.bottom.takeIf { rowIndex == rows.lastIndex && col == 0 }.asRequester(),
                             layout = coverLayout,
                             tileSize = tileSize,
                             showLabels = showLabels,
@@ -340,6 +343,7 @@ private fun ShelfRow(
                 showLabels = showLabels,
                 onLaunch = { actions.onLaunch(item) },
                 onLongPress = { actions.onLongPress(item) },
+                modifier = focus.bottom.takeIf { index == 0 }.asRequester(),
                 onLeftEdge = if (index == 0) onLeftEdge else null,
                 up = focus.up,
                 focusRequester = focus.firstTileRequester(index, item),

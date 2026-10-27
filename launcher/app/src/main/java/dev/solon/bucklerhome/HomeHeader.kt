@@ -51,9 +51,12 @@ fun HomeHeader(
     nowPlaying: NowPlayingModel?,
     actions: HeaderActions,
     below: FocusRequester?,
+    /** Rightmost icon, where Down from the bottom of Home wraps to. */
+    endFocus: FocusRequester? = null,
+    modifier: Modifier = Modifier,
 ) {
     val metrics = HeaderMetrics(config.headerSize)
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -62,7 +65,7 @@ fun HomeHeader(
             Box(modifier = Modifier.weight(1f).padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
                 if (config.showsNowPlaying && nowPlaying != null) NowPlayingPanel(nowPlaying, below, metrics)
             }
-            StatusAndActions(net, config, actions, below, metrics)
+            StatusAndActions(net, config, actions, below, endFocus, metrics)
         }
         if (headlines.isNotEmpty()) {
             Spacer(modifier = Modifier.height(metrics.tickerGap))
@@ -133,8 +136,11 @@ private fun StatusAndActions(
     config: DisplayConfig,
     actions: HeaderActions,
     below: FocusRequester?,
+    endFocus: FocusRequester?,
     metrics: HeaderMetrics,
 ) {
+    val end = headerEndElement(config, hasStore = actions.onPlayStore != null)
+    fun focusOf(element: HeaderElement) = if (element == end) endFocus else null
     val status = listOf(HeaderElement.NETWORK, HeaderElement.VPN).any(config::shows)
     val shortcuts = listOf(HeaderElement.EDIT, HeaderElement.STORE, HeaderElement.SETTINGS).any(config::shows)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -145,6 +151,7 @@ private fun StatusAndActions(
                 dim = net.link == LinkType.NONE,
                 size = metrics.icon,
                 down = below,
+                focusRequester = focusOf(HeaderElement.NETWORK),
             ) { actions.onNetwork(net.link) }
         }
         if (config.shows(HeaderElement.VPN)) {
@@ -155,6 +162,7 @@ private fun StatusAndActions(
                 label = net.country?.takeIf { net.vpn },
                 size = metrics.icon,
                 down = below,
+                focusRequester = focusOf(HeaderElement.VPN),
             ) { actions.onVpn() }
         }
         if (status && shortcuts) {
@@ -167,18 +175,32 @@ private fun StatusAndActions(
             )
         }
         if (config.shows(HeaderElement.EDIT)) {
-            HeaderIconButton(R.drawable.ic_edit, "Edit Home", size = metrics.icon, down = below) { actions.onEditHome() }
+            HeaderIconButton(
+                R.drawable.ic_edit, "Edit Home", size = metrics.icon, down = below,
+                focusRequester = focusOf(HeaderElement.EDIT),
+            ) { actions.onEditHome() }
         }
         if (config.shows(HeaderElement.STORE)) {
             actions.onPlayStore?.let { open ->
-                HeaderIconButton(R.drawable.ic_store, "Play Store", size = metrics.icon, down = below) { open() }
+                HeaderIconButton(
+                    R.drawable.ic_store, "Play Store", size = metrics.icon, down = below,
+                    focusRequester = focusOf(HeaderElement.STORE),
+                ) { open() }
             }
         }
         if (config.shows(HeaderElement.SETTINGS)) {
-            HeaderIconButton(R.drawable.ic_settings, "Settings", size = metrics.icon, down = below) { actions.onSettings() }
+            HeaderIconButton(
+                R.drawable.ic_settings, "Settings", size = metrics.icon, down = below,
+                focusRequester = focusOf(HeaderElement.SETTINGS),
+            ) { actions.onSettings() }
         }
     }
 }
+
+/** Rightmost icon the header shows, or null when it has none. */
+fun headerEndElement(config: DisplayConfig, hasStore: Boolean): HeaderElement? =
+    listOf(HeaderElement.NETWORK, HeaderElement.VPN, HeaderElement.EDIT, HeaderElement.STORE, HeaderElement.SETTINGS)
+        .lastOrNull { config.shows(it) && (it != HeaderElement.STORE || hasStore) }
 
 private fun vpnDescription(net: NetState): String = when {
     net.vpn && net.country != null -> "VPN connected, ${net.country}"
