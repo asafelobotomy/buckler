@@ -24,10 +24,12 @@ fun Modifier.stageTarget(
     focus: FocusRequester,
     onDown: () -> Unit,
     description: String,
+    onLongPress: () -> Unit = {},
     onClick: () -> Unit,
 ): Modifier {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val menu = rememberTvMenuInteraction(onOpen = onClick, onMenu = onLongPress)
     val shape = RoundedCornerShape(12.dp)
     AnnounceOnFocus(focused, description)
     return this
@@ -41,6 +43,8 @@ fun Modifier.stageTarget(
         .focusRequester(focus)
         .downTo(onDown)
         .focusable(interactionSource = interaction)
-        .onSelectKeyUp(onClick)
-        .pointerInput(onClick) { detectTapGestures(onTap = { onClick() }) }
+        .tvMenuKeys(menu)
+        .pointerInput(onClick, onLongPress) {
+            detectTapGestures(onLongPress = { menu.openMenu() }, onTap = { menu.open() })
+        }
 }

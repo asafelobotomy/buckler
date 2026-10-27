@@ -52,6 +52,7 @@ fun HomeScreen(
     var shelfMenu by remember { mutableStateOf<ShelfConfig?>(null) }
     var sourceShelf by remember { mutableStateOf<ShelfConfig?>(null) }
     var reading by remember { mutableStateOf<Headline?>(null) }
+    var pickingStage by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -223,6 +224,17 @@ fun HomeScreen(
 
     val actions = rememberHeaderActions(onOpenEditHome)
 
+    fun pickStage(mode: MainStage) {
+        val next = layout.copy(mainStage = mode)
+        HomeLayout.save(context, next)
+        homeLayout = next
+    }
+
+    fun pickSpan(span: WeatherSpan) {
+        DisplayPrefs.setWeatherSpan(context, span)
+        config = config.copy(weatherSpan = span)
+    }
+
     HomeColumn(
         config = config,
         layout = layout,
@@ -250,11 +262,26 @@ fun HomeScreen(
         onEdit = { editTarget = it },
         onShelfMenu = { shelfMenu = it },
         onOpenStory = { reading = it },
+        onHoldStage = { pickingStage = true },
+        onPickStage = ::pickStage,
+        onPickSpan = ::pickSpan,
         onStepMove = ::stepMove,
         onPlaceMove = ::placeMove,
         onStepShelf = ::stepShelf,
         onPlaceShelf = ::placeShelf,
     )
+
+    if (pickingStage) {
+        StageSwitchDialog(
+            current = layout.mainStage,
+            span = config.weatherSpan,
+            pinLabel = null,
+            onPickStage = ::pickStage,
+            onPickSpan = ::pickSpan,
+            onPin = null,
+            onDismiss = { pickingStage = false },
+        )
+    }
 
     HomeShelfDialogs(
         menu = shelfMenu,

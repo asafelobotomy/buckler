@@ -60,8 +60,9 @@ fun coverSize(
         CoverLayout.BANNER -> 220.dp to 124.dp
     }
     val k = tileSize.scale
+    val h = tileSize.heightScale
     val label = if (!showLabels) 0.dp else if (layout == CoverLayout.BANNER) 32.dp else 44.dp
-    return CoverSize(width * k, art * k + label * k, art * k)
+    return CoverSize(width * k, art * h + label * h, art * h)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -181,7 +182,7 @@ fun CoverTile(
             if (showLabels) {
                 Text(
                     text = item.title,
-                    fontSize = if (tileSize == TileSize.SMALL) 11.sp else 12.sp,
+                    fontSize = if (tileSize == TileSize.SMALL || tileSize == TileSize.THIN) 11.sp else 12.sp,
                     color = if (focused || moving) ColorOnBrand else ColorText,
                     maxLines = if (layout == CoverLayout.BANNER) 1 else 2,
                     overflow = TextOverflow.Ellipsis,

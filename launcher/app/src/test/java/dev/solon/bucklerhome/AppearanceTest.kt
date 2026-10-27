@@ -38,11 +38,13 @@ class AppearanceTest {
     @Test
     fun tileSizeScalesEveryLayout() {
         for (layout in CoverLayout.entries) {
+            val thin = coverSize(layout, TileSize.THIN)
             val medium = coverSize(layout, TileSize.MEDIUM)
             val small = coverSize(layout, TileSize.SMALL)
             val large = coverSize(layout, TileSize.LARGE)
-            assertTrue(small.width < medium.width && medium.width < large.width)
-            assertTrue(small.height < medium.height && medium.height < large.height)
+            assertTrue(thin.width < small.width && small.width < medium.width && medium.width < large.width)
+            assertTrue(thin.height < small.height && small.height < medium.height && medium.height < large.height)
+            assertTrue(thin.artHeight < small.artHeight)
             assertEquals(medium.width * 1.25f, large.width)
         }
         assertEquals(220.dp, coverSize(CoverLayout.BANNER).width)
@@ -61,6 +63,7 @@ class AppearanceTest {
         assertEquals(TileSize.LARGE, HomeLayout.fromJson(saved.toJson().toString()).tileSize)
         val legacy = """{"schema":1,"layout":"banner","shelves":[]}"""
         assertEquals(TileSize.MEDIUM, HomeLayout.fromJson(legacy).tileSize)
+        assertEquals(TileSize.THIN, TileSize.fromWire("thin"))
         assertEquals(TileSize.SMALL, TileSize.fromWire("Small"))
         assertEquals(TileSize.MEDIUM, TileSize.fromWire("tiny"))
     }

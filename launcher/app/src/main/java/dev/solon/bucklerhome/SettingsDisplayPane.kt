@@ -92,6 +92,16 @@ fun DisplayPane() {
             tick++
         }
     }
+    Spacer(modifier = Modifier.height(8.dp))
+    SettingsRow("Weather stage")
+    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        WeatherSpan.entries.forEach { span ->
+            SettingsAction(span.label, selected = span == cfg.weatherSpan) {
+                DisplayPrefs.setWeatherSpan(context, span)
+                tick++
+            }
+        }
+    }
 
     Spacer(modifier = Modifier.height(12.dp))
     val newsLabel = when {
@@ -99,6 +109,16 @@ fun DisplayPane() {
         cfg.newsSources.size <= 3 -> cfg.newsSources.joinToString(", ") { it.label }
         else -> "${cfg.newsSources.size} sources, mixed"
     }
+    SettingsRow("News region. Choosing one loads that region's headlines and keeps gaming, business, and tech.")
+    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        NewsRegion.entries.forEach { region ->
+            SettingsAction(region.label, selected = region == cfg.newsRegion) {
+                DisplayPrefs.setNewsRegion(context, region)
+                tick++
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
     SettingsRow("News: $newsLabel. Pick one or more. Several sources are mixed, one story from each in turn.")
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
         SettingsAction("Off", selected = cfg.newsSources.isEmpty()) {
@@ -110,7 +130,13 @@ fun DisplayPane() {
         Spacer(modifier = Modifier.height(8.dp))
         SettingsRow(category.label)
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            NewsSource.entries.filter { it.category == category }.forEach { source ->
+            NewsSource.entries.filter { source ->
+                source.category == category && (
+                    category != NewsCategory.WORLD ||
+                        cfg.newsRegion in source.regions ||
+                        source in cfg.newsSources
+                    )
+            }.forEach { source ->
                 SettingsAction(source.label, selected = source in cfg.newsSources) {
                     val next = if (source in cfg.newsSources) cfg.newsSources - source else cfg.newsSources + source
                     DisplayPrefs.setNewsSources(context, NewsSource.entries.filter { it in next })

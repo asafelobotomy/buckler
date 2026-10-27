@@ -48,7 +48,13 @@ enum class TextSize(val label: String, val scale: Float) {
 }
 
 /** App tile size, applied to every cover layout. Stored with the home layout. */
-enum class TileSize(val label: String, val scale: Float) {
+enum class TileSize(
+    val label: String,
+    val scale: Float,
+    /** Height factor. Thin is shorter than its width, so banners become a slim strip. */
+    val heightScale: Float = scale,
+) {
+    THIN("Thin", 0.68f, 0.48f),
     SMALL("Small", 0.8f),
     MEDIUM("Medium", 1f),
     LARGE("Large", 1.25f),

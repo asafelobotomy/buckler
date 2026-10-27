@@ -43,7 +43,7 @@ object WeatherClient {
     }
 
     /** Next [hourCount] hours and [dayCount] days, for the Main Stage weather strip. */
-    fun fetchForecast(place: Place, hourCount: Int = 8, dayCount: Int = 5): Forecast? {
+    fun fetchForecast(place: Place, hourCount: Int = 8, dayCount: Int = 10): Forecast? {
         val url = "$FORECAST?latitude=${place.lat}&longitude=${place.lon}" +
             "&hourly=temperature_2m,weather_code,is_day" +
             "&daily=weather_code,temperature_2m_max,temperature_2m_min" +

@@ -46,6 +46,17 @@ enum class HeaderSize(val label: String, val scale: Float) {
     }
 }
 
+/** One row on the Weather stage: the coming hours, or the next ten days. */
+enum class WeatherSpan(val label: String) {
+    HOURS("Next hours"),
+    DAYS("Next 10 days"),
+    ;
+
+    companion object {
+        fun fromName(raw: String?): WeatherSpan = entries.firstOrNull { it.name == raw } ?: HOURS
+    }
+}
+
 /** How often the Main Stage advances to the next news story. */
 enum class NewsPace(val label: String, val millis: Long) {
     S30("30s", 30_000),
@@ -91,7 +102,10 @@ data class DisplayConfig(
     val fahrenheit: Boolean = false,
     /** Chosen feeds, in catalog order. Several are mixed; none turns the ticker off. */
     val newsSources: List<NewsSource> = listOf(NewsSource.BBC_WORLD),
+    val newsRegion: NewsRegion = NewsRegion.WORLDWIDE,
     val newsPace: NewsPace = NewsPace.S60,
+    /** Hours or ten days, for the Weather stage only. */
+    val weatherSpan: WeatherSpan = WeatherSpan.HOURS,
     val tickerSpeed: TickerSpeed = TickerSpeed.NORMAL,
     val headerSize: HeaderSize = HeaderSize.MEDIUM,
     val nowPlaying: Boolean = true,
@@ -121,6 +135,8 @@ object DisplayPrefs {
     private const val KEY_NEWS = "news_source"
     private const val KEY_NEWS_SHUFFLE = "news_shuffle"
     private const val KEY_NEWS_SOURCES = "news_sources"
+    private const val KEY_NEWS_REGION = "news_region"
+    private const val KEY_WEATHER_SPAN = "weather_span"
     private const val KEY_NEWS_PACE = "news_stage_pace"
     private const val KEY_TICKER_SPEED = "news_ticker_speed"
     private const val KEY_HEADER_SIZE = "header_size"
@@ -146,7 +162,9 @@ object DisplayPrefs {
             place = place,
             fahrenheit = p.getBoolean(KEY_FAHRENHEIT, false),
             newsSources = readNewsSources(p),
+            newsRegion = NewsRegion.fromName(p.getString(KEY_NEWS_REGION, null)),
             newsPace = NewsPace.fromName(p.getString(KEY_NEWS_PACE, null)),
+            weatherSpan = WeatherSpan.fromName(p.getString(KEY_WEATHER_SPAN, null)),
             tickerSpeed = TickerSpeed.fromName(p.getString(KEY_TICKER_SPEED, null)),
             headerSize = HeaderSize.fromName(p.getString(KEY_HEADER_SIZE, null)),
             nowPlaying = p.getBoolean(KEY_NOW_PLAYING, true),
@@ -177,6 +195,17 @@ object DisplayPrefs {
 
     fun setNewsSources(context: Context, sources: List<NewsSource>) =
         prefs(context).edit().putStringSet(KEY_NEWS_SOURCES, sources.map { it.name }.toSet()).apply()
+
+    fun setNewsRegion(context: Context, region: NewsRegion) {
+        val sources = sourcesForRegion(region, load(context).newsSources)
+        prefs(context).edit()
+            .putString(KEY_NEWS_REGION, region.name)
+            .putStringSet(KEY_NEWS_SOURCES, sources.map { it.name }.toSet())
+            .apply()
+    }
+
+    fun setWeatherSpan(context: Context, span: WeatherSpan) =
+        prefs(context).edit().putString(KEY_WEATHER_SPAN, span.name).apply()
 
     /** New multi-select, or the old single source / shuffle flag from before it existed. */
     private fun readNewsSources(p: SharedPreferences): List<NewsSource> {

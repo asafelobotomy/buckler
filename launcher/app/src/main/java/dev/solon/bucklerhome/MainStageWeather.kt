@@ -3,16 +3,13 @@ package dev.solon.bucklerhome
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -37,13 +34,14 @@ fun WeatherStage(
     use24h: Boolean,
     stageFocus: FocusRequester,
     onDown: () -> Unit,
-    metrics: StageMetrics,
+    span: WeatherSpan,
+    onHold: () -> Unit,
 ) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .stageTarget(stageFocus, onDown, "Open weather") { launchWeatherApp(context) },
+            .stageTarget(stageFocus, onDown, "Open weather", onLongPress = onHold) { launchWeatherApp(context) },
     ) {
         StageHeading("Weather", place?.name)
         when {
@@ -54,24 +52,13 @@ fun WeatherStage(
             )
             forecast == null -> Text(text = "…", color = ColorMuted, fontSize = 15.sp)
             else -> {
+                val days = span == WeatherSpan.DAYS
                 SlotRow(
-                    "Next hours",
-                    forecast.hours.take(metrics.hours),
-                    fahrenheit,
-                    use24h,
-                    metrics.chipWidth,
-                    metrics.compact,
+                    title = if (days) "Next 10 days" else "Next hours",
+                    slots = if (days) forecast.days.take(10) else forecast.hours.take(8),
+                    fahrenheit = fahrenheit,
+                    use24h = use24h,
                 )
-                if (metrics.days > 0) {
-                    SlotRow(
-                        "Next days",
-                        forecast.days.take(metrics.days),
-                        fahrenheit,
-                        use24h,
-                        metrics.chipWidth,
-                        metrics.compact,
-                    )
-                }
             }
         }
     }
@@ -84,70 +71,72 @@ private fun SlotRow(
     slots: List<ForecastSlot>,
     fahrenheit: Boolean,
     use24h: Boolean,
-    chipWidth: Dp,
-    compact: Boolean,
 ) {
     if (slots.isEmpty()) return
+    val crowded = slots.size >= 8
+    val brief = slots.size >= 10
     Text(
         text = title,
         color = ColorHint,
         fontSize = 13.sp,
         modifier = Modifier.padding(top = 8.dp, bottom = 6.dp),
     )
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(end = 12.dp),
-        modifier = Modifier.focusProperties { canFocus = false },
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().focusProperties { canFocus = false },
     ) {
-        items(slots, key = { "${it.allDay}-${it.label}" }) { slot ->
-            ForecastChip(slot, fahrenheit, use24h, chipWidth, compact)
+        slots.forEach { slot ->
+            ForecastChip(slot, fahrenheit, use24h, crowded, brief)
         }
     }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ForecastChip(
+private fun RowScope.ForecastChip(
     slot: ForecastSlot,
     fahrenheit: Boolean,
     use24h: Boolean,
-    chipWidth: Dp,
-    compact: Boolean,
+    crowded: Boolean,
+    brief: Boolean,
 ) {
     val (glyph, summary) = WeatherClient.describe(slot.code, slot.isDay)
     Column(
         modifier = Modifier
-            .width(chipWidth)
+            .weight(1f)
             .clip(RoundedCornerShape(10.dp))
             .background(ColorTile)
-            .padding(vertical = if (compact) 6.dp else 10.dp, horizontal = 4.dp),
+            .padding(vertical = if (crowded) 6.dp else 10.dp, horizontal = 2.dp),
     ) {
-        Text(text = slot.caption(use24h), color = ColorText, fontSize = if (compact) 12.sp else 13.sp, maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text(text = glyph, fontSize = if (compact) 16.sp else 20.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp))
+        Text(text = slot.caption(use24h), color = ColorText, fontSize = if (crowded) 11.sp else 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(text = glyph, fontSize = if (crowded) 14.sp else 20.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp))
         Text(
-            text = temperatureLine(slot, fahrenheit),
+            text = temperatureLine(slot, fahrenheit, brief),
             color = ColorText,
-            fontSize = if (compact) 13.sp else 14.sp,
+            fontSize = if (crowded) 12.sp else 14.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
-        Text(
-            text = summary,
-            color = ColorMuted,
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (!brief) {
+            Text(
+                text = summary,
+                color = ColorMuted,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
-private fun temperatureLine(slot: ForecastSlot, fahrenheit: Boolean): String {
+private fun temperatureLine(slot: ForecastSlot, fahrenheit: Boolean, crowded: Boolean): String {
     val high = WeatherClient.formatTemperature(slot.temperatureC, fahrenheit)
     val low = slot.lowC ?: return high
+    if (crowded) return high
     val lowNumber = WeatherClient.formatTemperature(low, fahrenheit).substringBefore('°')
     return "$lowNumber–$high"
 }

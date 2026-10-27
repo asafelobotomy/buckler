@@ -68,13 +68,19 @@ fun MainStage(
     stageFocus: FocusRequester,
     onDown: () -> Unit,
     onOpenStory: (Headline) -> Unit,
+    onHold: () -> Unit,
+    onPickStage: (MainStage) -> Unit,
+    onPickSpan: (WeatherSpan) -> Unit,
     metrics: StageMetrics,
+    weatherSpan: WeatherSpan,
 ) {
     when (mode) {
-        MainStage.NEWS -> NewsStage(headlines, newsSources, newsPace, stageFocus, onDown, onOpenStory, metrics)
-        MainStage.NOW_PLAYING -> NowPlayingStage(nowPlaying, stageFocus, onDown, metrics)
-        MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h, stageFocus, onDown, metrics)
-        MainStage.SUGGESTED -> SuggestedStage(nowPlaying, stageFocus, onDown, metrics)
+        MainStage.NEWS -> NewsStage(headlines, newsSources, newsPace, stageFocus, onDown, onOpenStory, onHold, metrics)
+        MainStage.NOW_PLAYING -> NowPlayingStage(nowPlaying, stageFocus, onDown, onHold, metrics)
+        MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h, stageFocus, onDown, weatherSpan, onHold)
+        MainStage.SUGGESTED -> SuggestedStage(
+            nowPlaying, stageFocus, onDown, onPickStage, weatherSpan, onPickSpan, metrics,
+        )
     }
 }
 
@@ -106,6 +112,7 @@ private fun NewsStage(
     stageFocus: FocusRequester,
     onDown: () -> Unit,
     onOpenStory: (Headline) -> Unit,
+    onHold: () -> Unit,
     metrics: StageMetrics,
 ) {
     val pool = remember(headlines) { NewsFeed.stagePool(headlines) }
@@ -126,6 +133,7 @@ private fun NewsStage(
                     focus = stageFocus,
                     onDown = onDown,
                     description = story?.title ?: "News",
+                    onLongPress = onHold,
                 ) {
                     if (story != null) onOpenStory(story)
                 }

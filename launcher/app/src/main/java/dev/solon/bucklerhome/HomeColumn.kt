@@ -57,12 +57,14 @@ fun HomeColumn(
     onEdit: (ShelfItem) -> Unit,
     onShelfMenu: (ShelfConfig) -> Unit,
     onOpenStory: (Headline) -> Unit,
+    onHoldStage: () -> Unit,
+    onPickStage: (MainStage) -> Unit,
+    onPickSpan: (WeatherSpan) -> Unit,
     onStepMove: (Int) -> Unit,
     onPlaceMove: () -> Unit,
     onStepShelf: (Int) -> Unit,
     onPlaceShelf: () -> Unit,
 ) {
-    val topShelf = shelves.firstOrNull()
     fun leaveStage() {
         scope.launch {
             if (shelves.isNotEmpty() && listState.firstVisibleItemIndex != 0) listState.scrollToItem(0)
@@ -119,11 +121,16 @@ fun HomeColumn(
                 stageFocus = stageFocus,
                 onDown = ::leaveStage,
                 onOpenStory = onOpenStory,
+                onHold = onHoldStage,
+                onPickStage = onPickStage,
+                onPickSpan = onPickSpan,
                 metrics = metrics,
+                weatherSpan = config.weatherSpan,
             )
         }
         Spacer(modifier = Modifier.height(20.dp))
 
+        val landing = shelves.getOrNull(focusLandingIndex(shelves))
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).clipToBounds(),
@@ -148,8 +155,11 @@ fun HomeColumn(
                         movingPackage = move.target,
                         focusPackage = focusPkg,
                         moveFocus = moveFocus,
-                        up = if (shelf == topShelf) stageFocus else null,
-                        fromStage = if (shelf == topShelf) stageDown else null,
+                        up = if (shelf == landing && shelves.takeWhile { it.config.id != id }.all {
+                            it.config.type == ShelfType.WATCH_NEXT && it.items.isEmpty()
+                        }) stageFocus else null,
+                        fromStage = if (shelf == landing) stageDown else null,
+                        skip = landing != null && shelf.config.type == ShelfType.WATCH_NEXT && shelf.items.isEmpty(),
                     ),
                 )
             }

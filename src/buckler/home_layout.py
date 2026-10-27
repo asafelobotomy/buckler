@@ -94,8 +94,8 @@ def validate_home_layout(doc: dict[str, Any]) -> None:
     if layout not in ("icon", "poster", "banner"):
         raise HomeLayoutError(f"layout must be icon|poster|banner, got {layout!r}")
     tile_size = doc.get("tile_size", "medium")
-    if tile_size not in ("small", "medium", "large"):
-        raise HomeLayoutError(f"tile_size must be small|medium|large, got {tile_size!r}")
+    if tile_size not in ("thin", "small", "medium", "large"):
+        raise HomeLayoutError(f"tile_size must be thin|small|medium|large, got {tile_size!r}")
     stage_size = doc.get("stage_size", "medium")
     if stage_size not in ("small", "medium", "large"):
         raise HomeLayoutError(f"stage_size must be small|medium|large, got {stage_size!r}")

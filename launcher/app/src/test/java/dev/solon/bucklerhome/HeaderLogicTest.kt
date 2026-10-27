@@ -72,6 +72,11 @@ class HeaderLogicTest {
         assertTrue(NewsSource.entries.any { it.category == NewsCategory.GAMING })
         assertTrue(NewsSource.entries.any { it.category == NewsCategory.BUSINESS })
         assertTrue(NewsSource.entries.any { it.category == NewsCategory.TECH })
+        val uk = sourcesForRegion(NewsRegion.UK, listOf(NewsSource.POLYGON))
+        assertTrue(uk.contains(NewsSource.BBC_UK))
+        assertTrue(uk.contains(NewsSource.POLYGON))
+        assertTrue(uk.none { it == NewsSource.NPR })
+        assertTrue(sourcesForRegion(NewsRegion.US, emptyList()).all { NewsRegion.US in it.regions })
     }
 
     @Test

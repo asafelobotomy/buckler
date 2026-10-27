@@ -56,10 +56,16 @@ fun SuggestedStage(
     nowPlaying: NowPlayingModel,
     stageFocus: FocusRequester,
     onDown: () -> Unit,
+    onPickStage: (MainStage) -> Unit,
+    weatherSpan: WeatherSpan,
+    onPickSpan: (WeatherSpan) -> Unit,
     metrics: StageMetrics,
 ) {
     val context = LocalContext.current
     var cards by remember { mutableStateOf(MediaCards.load(context)) }
+    var held by remember { mutableStateOf<MediaCard?>(null) }
+    var holdEmpty by remember { mutableStateOf(false) }
+    val emptyMenu = rememberTvMenuInteraction(onOpen = {}, onMenu = { holdEmpty = true })
     val info = nowPlaying.info
     LaunchedEffect(info?.packageName, info?.title, info?.artUri) {
         cards = withContext(Dispatchers.IO) {
@@ -68,7 +74,7 @@ fun SuggestedStage(
         }
     }
     Column(modifier = Modifier.fillMaxWidth()) {
-        StageHeading("Suggested", "Hold OK to pin. OK opens the app.")
+        StageHeading("Suggested", "Hold OK to change the stage. OK opens the app.")
         if (cards.isEmpty()) {
             Text(
                 text = "Nothing here yet. Play something and it will stay as a card.",
@@ -77,7 +83,8 @@ fun SuggestedStage(
                 modifier = Modifier
                     .focusRequester(stageFocus)
                     .downTo(onDown)
-                    .focusable(),
+                    .focusable()
+                    .tvMenuKeys(emptyMenu),
             )
         } else {
             LazyRow(
@@ -92,15 +99,33 @@ fun SuggestedStage(
                         cardWidth = metrics.suggestedWidth,
                         cardHeight = metrics.suggestedHeight,
                         onOpen = { launchPackage(context, card.packageName, card.appLabel.ifBlank { card.title }) },
-                        onPin = {
-                            cards = MediaCards.togglePin(context, card)
-                            val pinned = cards.firstOrNull { it.sameAs(card) }?.pinned == true
-                            Toast.makeText(context, if (pinned) "Pinned" else "Unpinned", Toast.LENGTH_SHORT).show()
-                        },
+                        onPin = { held = card },
                     )
                 }
             }
         }
+    }
+    val card = held
+    if (card != null || holdEmpty) {
+        StageSwitchDialog(
+            current = MainStage.SUGGESTED,
+            span = weatherSpan,
+            pinLabel = card?.let { if (it.pinned) "Unpin" else "Pin" },
+            onPickStage = onPickStage,
+            onPickSpan = onPickSpan,
+            onPin = card?.let { picked ->
+                {
+                    cards = MediaCards.togglePin(context, picked)
+                    val pinned = cards.firstOrNull { it.sameAs(picked) }?.pinned == true
+                    Toast.makeText(context, if (pinned) "Pinned" else "Unpinned", Toast.LENGTH_SHORT).show()
+                    held = null
+                }
+            },
+            onDismiss = {
+                held = null
+                holdEmpty = false
+            },
+        )
     }
 }
 

@@ -68,6 +68,16 @@ class HomeLayoutTest {
     }
 
     @Test
+    fun emptyUpNextIsNotTheFocusLanding() {
+        val empty = ResolvedShelf(ShelfConfig("watch_next", ShelfType.WATCH_NEXT, "Up Next"), emptyList())
+        val apps = ResolvedShelf(ShelfConfig("apps", ShelfType.APPS, "Apps"), emptyList())
+        assertEquals(1, focusLandingIndex(listOf(empty, apps)))
+        val filled = empty.copy(items = listOf(ShelfItem("netflix", "Netflix")))
+        assertEquals(0, focusLandingIndex(listOf(filled, apps)))
+        assertEquals(-1, focusLandingIndex(listOf(empty)))
+    }
+
+    @Test
     fun labelsDefaultOffForOlderLayouts() {
         val legacy = """{"schema":1,"layout":"banner","shelves":[]}"""
         assertEquals(false, HomeLayout.fromJson(legacy).showLabels)

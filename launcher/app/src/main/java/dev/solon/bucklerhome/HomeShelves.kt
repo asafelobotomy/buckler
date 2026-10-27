@@ -80,8 +80,10 @@ class ShelfFocus(
     val moveFocus: FocusRequester? = null,
     /** Main Stage above this shelf, when this is the first shelf. */
     val up: FocusRequester? = null,
-    /** Down from the Main Stage. Kept on the first shelf, which stays composed while the stage is focused. */
+    /** Down from the Main Stage. Kept on the first shelf focus should land on. */
     val fromStage: FocusRequester? = null,
+    /** Empty Up Next: drawn, but not a D-pad stop. */
+    val skip: Boolean = false,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -141,8 +143,9 @@ fun ShelfSection(
                     shelf.items.isEmpty() -> EmptyShelfHint(
                         type = shelf.config.type,
                         up = focus.up,
-                        focusRequester = focus.shelfRequester ?: focus.fromStage ?: focus.first,
+                        focusRequester = if (focus.skip) null else focus.shelfRequester ?: focus.fromStage ?: focus.first,
                         onLeft = { showOptions = true },
+                        focusable = !focus.skip,
                     )
                     shelf.config.type == ShelfType.LIBRARY ->
                         LibraryGrid(
@@ -218,6 +221,7 @@ private fun ShelfFocus.withoutAppMove() = ShelfFocus(
     movingShelf = movingShelf,
     up = up,
     fromStage = fromStage,
+    skip = skip,
 )
 
 private fun ShelfFocus.firstTileRequester(index: Int, item: ShelfItem): FocusRequester? = when {
@@ -232,17 +236,22 @@ private fun EmptyShelfHint(
     up: FocusRequester?,
     focusRequester: FocusRequester?,
     onLeft: () -> Unit,
+    focusable: Boolean = true,
 ) {
-    val modifier = Modifier
-        .padding(top = 18.dp)
-        .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-        .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
-        .onPreviewKeyEvent { event ->
-            if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
-            if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onLeft()
-            true
-        }
-        .focusable()
+    val modifier = if (!focusable) {
+        Modifier.padding(top = 18.dp).focusProperties { canFocus = false }
+    } else {
+        Modifier
+            .padding(top = 18.dp)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
+            .onPreviewKeyEvent { event ->
+                if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
+                if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onLeft()
+                true
+            }
+            .focusable()
+    }
     Text(
         text = emptyShelfHint(type),
         color = ColorHint,
@@ -289,7 +298,7 @@ private fun LibraryGrid(
                             onLaunch = { actions.onLaunch(item) },
                             onLongPress = { actions.onLongPress(item) },
                             onLeftEdge = if (rowIndex == 0 && col == 0) onLeftEdge else null,
-                            up = if (rowIndex == 0 && col == 0) focus.up else null,
+                            up = if (rowIndex == 0) focus.up else null,
                             focusRequester = if (rowIndex == 0 && col == 0) focus.shelfRequester ?: focus.first else null,
                             alsoRequester = if (rowIndex == 0 && col == 0) focus.fromStage else null,
                         )
@@ -332,7 +341,7 @@ private fun ShelfRow(
                 onLaunch = { actions.onLaunch(item) },
                 onLongPress = { actions.onLongPress(item) },
                 onLeftEdge = if (index == 0) onLeftEdge else null,
-                up = if (index == 0) focus.up else null,
+                up = focus.up,
                 focusRequester = focus.firstTileRequester(index, item),
                 alsoRequester = if (index == 0) focus.fromStage else null,
                 moving = focus.movingPackage != null && item.packageName == focus.movingPackage,

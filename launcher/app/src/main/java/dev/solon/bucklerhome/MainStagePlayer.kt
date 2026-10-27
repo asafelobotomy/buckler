@@ -42,6 +42,7 @@ fun NowPlayingStage(
     model: NowPlayingModel,
     stageFocus: FocusRequester,
     onDown: () -> Unit,
+    onHold: () -> Unit,
     metrics: StageMetrics,
 ) {
     val context = LocalContext.current
@@ -58,7 +59,7 @@ fun NowPlayingStage(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (info != null) {
-                PlayingSummary(info, stageFocus, onDown, metrics.cardHeight - 32.dp) {
+                PlayingSummary(info, stageFocus, onDown, onHold, metrics.cardHeight - 32.dp) {
                     if (info.packageName.isNotBlank()) {
                         launchPackage(context, info.packageName, info.appLabel.ifBlank { info.title })
                     }
@@ -88,7 +89,7 @@ fun NowPlayingStage(
                     fontSize = 16.sp,
                     modifier = Modifier
                         .weight(1f)
-                        .stageTarget(stageFocus, onDown, "Now Playing") {},
+                        .stageTarget(stageFocus, onDown, "Now Playing", onLongPress = onHold) {},
                 )
             }
         }
@@ -101,13 +102,14 @@ private fun RowScope.PlayingSummary(
     info: NowPlayingInfo,
     stageFocus: FocusRequester,
     onDown: () -> Unit,
+    onHold: () -> Unit,
     artSize: Dp,
     onOpen: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .weight(1f)
-            .stageTarget(stageFocus, onDown, "Open ${info.appLabel.ifBlank { info.title }}", onOpen),
+            .stageTarget(stageFocus, onDown, "Open ${info.appLabel.ifBlank { info.title }}", onHold, onOpen),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StageArt(info, artSize)

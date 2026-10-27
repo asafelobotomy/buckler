@@ -13,7 +13,7 @@
     },
     "tile_size": {
       "type": "string",
-      "enum": ["small", "medium", "large"],
+      "enum": ["thin", "small", "medium", "large"],
       "description": "Optional size of every app tile; defaults to medium"
     },
     "stage_size": {

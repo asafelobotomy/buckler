@@ -30,6 +30,21 @@ enum class NewsCategory(val label: String) {
     TECH("Tech"),
 }
 
+/** Which world's headlines the ticker and News stage prefer. */
+enum class NewsRegion(val label: String) {
+    UK("UK"),
+    US("US"),
+    EUROPE("Europe"),
+    WORLDWIDE("Worldwide"),
+    ;
+
+    companion object {
+        fun fromName(raw: String?): NewsRegion = entries.firstOrNull { it.name == raw } ?: WORLDWIDE
+    }
+}
+
+private val EVERY_REGION = NewsRegion.entries.toSet()
+
 /**
  * Free public RSS feeds: no key, no account. [mark] is the short label drawn in front of a story,
  * in [markColor] with [onMark] text (brand colours, drawn by us rather than bundled artwork).
@@ -41,26 +56,40 @@ enum class NewsSource(
     val markColor: Long,
     val onMark: Long,
     val category: NewsCategory,
+    val regions: Set<NewsRegion>,
 ) {
-    BBC_WORLD("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml", "BBC", 0xFFBB1919, 0xFFFFFFFF, NewsCategory.WORLD),
-    NPR("NPR News", "https://feeds.npr.org/1001/rss.xml", "NPR", 0xFFF4F4F4, 0xFF111111, NewsCategory.WORLD),
-    GUARDIAN("The Guardian", "https://www.theguardian.com/world/rss", "Gdn", 0xFF052962, 0xFFFFFFFF, NewsCategory.WORLD),
-    AL_JAZEERA("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml", "AJ", 0xFFF5A623, 0xFF1A1208, NewsCategory.WORLD),
-    DW("DW", "https://rss.dw.com/rdf/rss-en-world", "DW", 0xFF003399, 0xFFFFFFFF, NewsCategory.WORLD),
-    POLYGON("Polygon", "https://www.polygon.com/rss/index.xml", "PLY", 0xFFFF0066, 0xFFFFFFFF, NewsCategory.GAMING),
-    EUROGAMER("Eurogamer", "https://www.eurogamer.net/feed", "EG", 0xFFE4002B, 0xFFFFFFFF, NewsCategory.GAMING),
-    PC_GAMER("PC Gamer", "https://www.pcgamer.com/rss/", "PCG", 0xFFB00000, 0xFFFFFFFF, NewsCategory.GAMING),
-    ROCK_PAPER_SHOTGUN("Rock Paper Shotgun", "https://www.rockpapershotgun.com/feed", "RPS", 0xFFF5C518, 0xFF1A1208, NewsCategory.GAMING),
-    BBC_BUSINESS("BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml", "Biz", 0xFFBB1919, 0xFFFFFFFF, NewsCategory.BUSINESS),
-    NPR_BUSINESS("NPR Business", "https://feeds.npr.org/1006/rss.xml", "NPR", 0xFFF4F4F4, 0xFF111111, NewsCategory.BUSINESS),
-    GUARDIAN_BUSINESS("Guardian Business", "https://www.theguardian.com/uk/business/rss", "Gdn", 0xFF052962, 0xFFFFFFFF, NewsCategory.BUSINESS),
-    ARS_TECHNICA("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index", "Ars", 0xFFFF4E00, 0xFF1A1208, NewsCategory.TECH),
-    THE_VERGE("The Verge", "https://www.theverge.com/rss/index.xml", "VRG", 0xFF5200FF, 0xFFFFFFFF, NewsCategory.TECH),
+    BBC_UK("BBC UK", "https://feeds.bbci.co.uk/news/uk/rss.xml", "BBC", 0xFFBB1919, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.UK)),
+    GUARDIAN_UK("Guardian UK", "https://www.theguardian.com/uk-news/rss", "Gdn", 0xFF052962, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.UK)),
+    SKY_NEWS("Sky News", "https://feeds.skynews.com/feeds/rss/uk.xml", "Sky", 0xFF0072C6, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.UK)),
+    NPR("NPR News", "https://feeds.npr.org/1001/rss.xml", "NPR", 0xFFF4F4F4, 0xFF111111, NewsCategory.WORLD, setOf(NewsRegion.US)),
+    CBS_NEWS("CBS News", "https://www.cbsnews.com/latest/rss/main", "CBS", 0xFF1B4F9C, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.US)),
+    EURONEWS("Euronews", "https://www.euronews.com/rss", "EN", 0xFF00205B, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.EUROPE)),
+    FRANCE24("France 24", "https://www.france24.com/en/europe/rss", "F24", 0xFFE20134, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.EUROPE)),
+    DW("DW", "https://rss.dw.com/rdf/rss-en-world", "DW", 0xFF003399, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.EUROPE, NewsRegion.WORLDWIDE)),
+    BBC_WORLD("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml", "BBC", 0xFFBB1919, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.WORLDWIDE)),
+    GUARDIAN("The Guardian", "https://www.theguardian.com/world/rss", "Gdn", 0xFF052962, 0xFFFFFFFF, NewsCategory.WORLD, setOf(NewsRegion.WORLDWIDE)),
+    AL_JAZEERA("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml", "AJ", 0xFFF5A623, 0xFF1A1208, NewsCategory.WORLD, setOf(NewsRegion.WORLDWIDE)),
+    POLYGON("Polygon", "https://www.polygon.com/rss/index.xml", "PLY", 0xFFFF0066, 0xFFFFFFFF, NewsCategory.GAMING, EVERY_REGION),
+    EUROGAMER("Eurogamer", "https://www.eurogamer.net/feed", "EG", 0xFFE4002B, 0xFFFFFFFF, NewsCategory.GAMING, EVERY_REGION),
+    PC_GAMER("PC Gamer", "https://www.pcgamer.com/rss/", "PCG", 0xFFB00000, 0xFFFFFFFF, NewsCategory.GAMING, EVERY_REGION),
+    ROCK_PAPER_SHOTGUN("Rock Paper Shotgun", "https://www.rockpapershotgun.com/feed", "RPS", 0xFFF5C518, 0xFF1A1208, NewsCategory.GAMING, EVERY_REGION),
+    BBC_BUSINESS("BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml", "Biz", 0xFFBB1919, 0xFFFFFFFF, NewsCategory.BUSINESS, EVERY_REGION),
+    NPR_BUSINESS("NPR Business", "https://feeds.npr.org/1006/rss.xml", "NPR", 0xFFF4F4F4, 0xFF111111, NewsCategory.BUSINESS, EVERY_REGION),
+    GUARDIAN_BUSINESS("Guardian Business", "https://www.theguardian.com/uk/business/rss", "Gdn", 0xFF052962, 0xFFFFFFFF, NewsCategory.BUSINESS, EVERY_REGION),
+    ARS_TECHNICA("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index", "Ars", 0xFFFF4E00, 0xFF1A1208, NewsCategory.TECH, EVERY_REGION),
+    THE_VERGE("The Verge", "https://www.theverge.com/rss/index.xml", "VRG", 0xFF5200FF, 0xFFFFFFFF, NewsCategory.TECH, EVERY_REGION),
     ;
 
     companion object {
         fun fromName(raw: String?): NewsSource? = entries.firstOrNull { it.name == raw }
     }
+}
+
+/** World feeds for [region], plus any gaming, business, or tech sources already chosen. */
+fun sourcesForRegion(region: NewsRegion, current: List<NewsSource>): List<NewsSource> {
+    val topical = current.filter { it.category != NewsCategory.WORLD }
+    val regional = NewsSource.entries.filter { it.category == NewsCategory.WORLD && region in it.regions }
+    return (regional + topical).distinct()
 }
 
 object NewsFeed {

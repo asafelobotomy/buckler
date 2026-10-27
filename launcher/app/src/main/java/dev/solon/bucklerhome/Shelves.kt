@@ -7,6 +7,10 @@ data class ResolvedShelf(
     val items: List<ShelfItem>,
 )
 
+/** Empty Up Next is still drawn, but D-pad Up and Down move past it. -1 when every shelf is that. */
+fun focusLandingIndex(shelves: List<ResolvedShelf>): Int =
+    shelves.indexOfFirst { it.config.type != ShelfType.WATCH_NEXT || it.items.isNotEmpty() }
+
 object Shelves {
     fun resolve(
         context: Context,

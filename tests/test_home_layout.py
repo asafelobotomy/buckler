@@ -50,6 +50,8 @@ def test_rejects_non_string_packages() -> None:
 def test_tile_size_is_optional_and_validated() -> None:
     validate_home_layout(default_home_layout())
     doc = default_home_layout()
+    doc["tile_size"] = "thin"
+    validate_home_layout(doc)
     doc["tile_size"] = "large"
     validate_home_layout(doc)
     doc["tile_size"] = "huge"
