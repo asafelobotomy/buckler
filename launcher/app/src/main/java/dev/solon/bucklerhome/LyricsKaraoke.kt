@@ -280,6 +280,25 @@ object LyricsPrefs {
     fun clearSongOffsets(context: Context) =
         context.getSharedPreferences(SONG_PREFS, Context.MODE_PRIVATE).edit().clear().apply()
 
+    private const val AUTO_PREFS = "bucklerhome_lyrics_auto"
+    private const val KEY_AUTO_SYNC = "lyrics_auto_sync"
+
+    /** Opt-in: listen to what is playing to time lyrics ([LyricsSyncService]). */
+    fun autoSyncEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_AUTO_SYNC, false)
+
+    fun setAutoSyncEnabled(context: Context, on: Boolean) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_AUTO_SYNC, on).apply()
+
+    /** The offset auto-sync measured for a song on an earlier play, if any. */
+    fun autoOffset(context: Context, key: String): Long? =
+        context.getSharedPreferences(AUTO_PREFS, Context.MODE_PRIVATE).let { p ->
+            if (p.contains(key)) p.getLong(key, 0L) else null
+        }
+
+    fun setAutoOffset(context: Context, key: String, ms: Long) =
+        context.getSharedPreferences(AUTO_PREFS, Context.MODE_PRIVATE).edit().putLong(key, ms).apply()
+
     /** "+0.3 s" style, for the stage's title line. */
     fun signed(ms: Long): String = "${if (ms < 0) "−" else "+"}${"%.1f".format(kotlin.math.abs(ms) / 1000.0)} s"
 

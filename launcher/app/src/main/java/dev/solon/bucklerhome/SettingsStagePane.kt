@@ -115,6 +115,8 @@ fun MainStagePane() {
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(18.dp))
+            AutoSyncSection()
             Spacer(modifier = Modifier.height(12.dp))
             MediaAccessSection()
         }

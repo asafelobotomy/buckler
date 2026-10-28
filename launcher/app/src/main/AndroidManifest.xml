@@ -8,6 +8,12 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
+    <!-- Lyrics auto-sync (opt-in): hears what is playing to time lyrics; audio never leaves the TV. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
     <!--
       Optional system settings (screensaver delay, mono audio). Neither is granted at install; both
       are switched on once from a computer with `buckler launcher grant-settings`.
@@ -278,6 +284,12 @@
             android:exported="false" />
 
         <!-- Lets the header Now Playing panel read and control media sessions (user grants access). -->
+        <!-- Both types: Android 11 feeds zeros to a background capture without "microphone". -->
+        <service
+            android:name=".LyricsSyncService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection|microphone" />
+
         <service
             android:name=".NowPlayingListener"
             android:exported="true"

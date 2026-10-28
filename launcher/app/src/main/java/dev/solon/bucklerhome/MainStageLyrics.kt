@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -94,7 +96,15 @@ fun LyricsStage(
     val songKey = music?.let { LyricsPrefs.songKey(it.title, it.artist) }
     var songTune by remember(songKey) { mutableLongStateOf(songKey?.let { LyricsPrefs.songOffset(context, it) } ?: 0L) }
     val deviceShift = routeTune - route.delayMs
-    val shift = deviceShift + songTune
+    // Auto-sync's measured offset for this song (live, or saved from an earlier play), when on.
+    val autoStatus by AutoSync.status.collectAsState()
+    val autoOn = remember(autoStatus) { LyricsPrefs.autoSyncEnabled(context) }
+    val autoResult by AutoSync.result.collectAsState()
+    val autoShift = if (autoOn && songKey != null) AutoSync.offsetFor(context, songKey, autoResult) else null
+    val shift = deviceShift + songTune + (autoShift ?: 0L)
+    val syncedLines = ((state as? LyricsState.Ready)?.lyrics as? Lyrics.Synced)?.lines
+    LaunchedEffect(songKey, music, syncedLines) { AutoSync.follow(songKey, music, syncedLines) }
+    DisposableEffect(Unit) { onDispose { AutoSync.follow(null, null, null) } }
     // Updated every frame while playing, and read only in derivedStateOf and draw lambdas, so the
     // card recomposes when the line or word changes and the dot just redraws.
     val position = remember { mutableLongStateOf(0L) }
@@ -145,7 +155,14 @@ fun LyricsStage(
         ) {
             if (credit != null) {
                 val song = if (songTune == 0L) "◀ ▶ this song" else "this song ${LyricsPrefs.describe(songTune)}"
-                val timing = "${route.kind.label} ${LyricsPrefs.signed(deviceShift)}  ·  $song"
+                val auto = when {
+                    !autoOn -> null
+                    autoShift != null -> "auto ${LyricsPrefs.signed(autoShift)}"
+                    autoStatus == AutoSync.Status.LISTENING -> "auto: listening"
+                    else -> "auto: ${autoStatus.label}"
+                }
+                val timing = listOfNotNull("${route.kind.label} ${LyricsPrefs.signed(deviceShift)}", auto, song)
+                    .joinToString("  ·  ")
                 Text(
                     text = "$credit  ·  ${source ?: "lyrics"}  ·  $timing",
                     color = ColorSection,
