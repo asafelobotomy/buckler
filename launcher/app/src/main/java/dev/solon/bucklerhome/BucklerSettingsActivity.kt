@@ -143,19 +143,19 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
             Box(modifier = Modifier.width(IntrinsicSize.Max)) {
                 Column(modifier = Modifier.height(0.dp).alpha(0f)) {
                     (listOf("Global") + SettingsPane.entries.filter { it.parent != null }.map { it.label }).forEach {
-                        Text(it, modifier = Modifier.padding(start = NavStart, end = NavEnd), fontSize = 16.sp, maxLines = 1)
+                        Text(it, modifier = Modifier.padding(start = SubNavStart, end = SubNavEnd), fontSize = SubNavFont, maxLines = 1)
                     }
                 }
                 if (children.isNotEmpty()) Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .trapVerticalFocus(onLeft = { navFocus.getValue(section) }),
                 ) {
-                    SettingsNav("Global", pane == section, subFocus.getValue(section)) { pane = section }
+                    SettingsNav("Global", pane == section, subFocus.getValue(section), sub = true) { pane = section }
                     children.forEach { child ->
-                        SettingsNav(child.label, pane == child, subFocus.getValue(child)) { pane = child }
+                        SettingsNav(child.label, pane == child, subFocus.getValue(child), sub = true) { pane = child }
                     }
                 }
             }
@@ -240,11 +240,17 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
 private val NavStart = 16.dp
 private val NavEnd = 28.dp
 
+// Sub-pages are a size down from the main list, so they read as part of the chosen section.
+private val SubNavStart = 14.dp
+private val SubNavEnd = 24.dp
+private val SubNavFont = 14.sp
+
 @Composable
 private fun SettingsNav(
     label: String,
     selected: Boolean,
     focusRequester: FocusRequester,
+    sub: Boolean = false,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -261,8 +267,12 @@ private fun SettingsNav(
         Text(
             text = label,
             // A little more room after the label than before it.
-            modifier = Modifier.padding(start = NavStart, end = NavEnd, top = 8.dp, bottom = 8.dp),
-            fontSize = 16.sp,
+            modifier = if (sub) {
+                Modifier.padding(start = SubNavStart, end = SubNavEnd, top = 6.dp, bottom = 6.dp)
+            } else {
+                Modifier.padding(start = NavStart, end = NavEnd, top = 8.dp, bottom = 8.dp)
+            },
+            fontSize = if (sub) SubNavFont else 16.sp,
             maxLines = 1,
         )
     }
