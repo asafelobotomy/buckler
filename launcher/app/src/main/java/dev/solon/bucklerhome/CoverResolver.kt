@@ -42,16 +42,17 @@ object CoverResolver {
                 coverFit = stored.startsWith("curated:"),
             )
         }
-        if (CoverStore.isLocalIcon(stored)) return iconArt(item)
+        if (CoverStore.isLocalIcon(stored)) return iconArt(item, layout)
         if (CoverStore.isLocalBanner(stored)) {
-            return leanbackBanner(context, pkg)?.let { bannerArt(item, it) } ?: iconArt(item)
+            return leanbackBanner(context, pkg)?.let { fittedArt(item, it, layout, fromBanner = true) } ?: iconArt(item, layout)
         }
         return automaticArt(context, item, layout, curated[pkg])
     }
 
     /**
-     * Banner layout uses the app's TV banner, poster layout a real vertical cover, icon layout
-     * the launcher icon. A missing picture falls back to the icon — never a different shape's art.
+     * Banner layout uses the app's TV banner, poster layout a curated vertical cover, icon layout
+     * the launcher icon. An app with no picture of the tile's shape gets one made from what it
+     * has: its TV banner (for a poster) or its icon, fitted whole on its own edge colour.
      */
     private fun automaticArt(
         context: Context,
@@ -60,20 +61,39 @@ object CoverResolver {
         entry: CuratedCoverEntry?,
     ): ShelfItem {
         val pkg = item.packageName
-        if (layout == CoverLayout.BANNER && pkg != null) {
-            leanbackBanner(context, pkg)?.let { return bannerArt(item, it) }
-        }
+        val banner = if (layout != CoverLayout.ICON && pkg != null) leanbackBanner(context, pkg) else null
+        if (layout == CoverLayout.BANNER && banner != null) return bannerArt(item, banner)
         entry?.urlFor(layout)?.let { url ->
-            return item.copy(imageUrl = url, imageUri = null, banner = null, coverFit = false)
+            // The curated pack's pictures are square logos: letterbox them in a poster or banner.
+            return item.copy(imageUrl = url, imageUri = null, banner = null, coverFit = layout != CoverLayout.ICON)
         }
-        return iconArt(item)
+        // A poster made from the TV banner shows the app's name and art; else the icon.
+        if (layout == CoverLayout.POSTER && banner != null) return fittedArt(item, banner, layout, fromBanner = true)
+        return iconArt(item, layout)
     }
 
     private fun bannerArt(item: ShelfItem, banner: Drawable): ShelfItem =
         item.copy(imageUrl = null, imageUri = null, banner = banner, coverFit = false)
 
-    private fun iconArt(item: ShelfItem): ShelfItem =
-        item.copy(imageUrl = null, imageUri = null, banner = null, coverFit = false)
+    /** The icon: as it is on a square tile, fitted into a poster or banner. An icon-pack icon fits itself. */
+    private fun iconArt(item: ShelfItem, layout: CoverLayout): ShelfItem {
+        val icon = item.icon
+        if (layout == CoverLayout.ICON || icon == null || icon is PackIconDrawable) {
+            return item.copy(imageUrl = null, imageUri = null, banner = null, coverFit = false)
+        }
+        return fittedArt(item, icon, layout, fromBanner = false)
+    }
+
+    private fun fittedArt(item: ShelfItem, art: Drawable, layout: CoverLayout, fromBanner: Boolean): ShelfItem {
+        if (layout == CoverLayout.BANNER && fromBanner) return bannerArt(item, art)
+        val fill = FittedArt.edgeColour(art) ?: TILE_FALLBACK
+        // A banner spans the poster's width; an icon sits with room around it, as on a TV banner.
+        val share = if (fromBanner) 0.94f else 0.62f
+        return bannerArt(item, FittedArt(art.constantState?.newDrawable()?.mutate() ?: art, fill, share))
+    }
+
+    /** Behind a cut-out logo with no edge colour: a dark neutral that suits every theme's tiles. */
+    private const val TILE_FALLBACK = 0xFF2A2A2E.toInt()
 
     fun leanbackBanner(context: Context, packageName: String): Drawable? {
         return runCatching {
