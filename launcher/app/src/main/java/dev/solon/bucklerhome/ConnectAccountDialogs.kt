@@ -55,7 +55,10 @@ fun ConnectIgdbDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
             val deadline = System.currentTimeMillis() + s.expiresInSeconds * 1000L
             while (isActive && System.currentTimeMillis() < deadline) {
                 delay(interval * 1000L)
-                val poll = withContext(Dispatchers.IO) { TwitchDeviceAuth.poll(s) }
+                // A network blip mid-poll is just another pending round, not a crash.
+                val poll = withContext(Dispatchers.IO) {
+                    runCatching { TwitchDeviceAuth.poll(s) }.getOrDefault(DevicePollResult.Pending)
+                }
                 when (poll) {
                     is DevicePollResult.Success -> {
                         CoverAccounts.setIgdbTokens(

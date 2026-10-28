@@ -130,7 +130,9 @@ fun StoryReaderDialog(story: Headline, onDismiss: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     val image = story.imageUrl
-                    if (image != null) {
+                    // A failed image would otherwise leave a 280dp blank above the text.
+                    var imageFailed by remember(image) { mutableStateOf(false) }
+                    if (image != null && !imageFailed) {
                         val context = LocalContext.current
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -139,6 +141,7 @@ fun StoryReaderDialog(story: Headline, onDismiss: () -> Unit) {
                                 .build(),
                             contentDescription = story.title,
                             contentScale = ContentScale.Crop,
+                            onError = { imageFailed = true },
                             modifier = Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(8.dp)),
                         )
                     }

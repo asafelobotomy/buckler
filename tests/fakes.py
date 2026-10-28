@@ -32,6 +32,10 @@ class FakeAdb:
         self.disabled.add(package)
         return f"Package {package} new state: disabled-user"
 
+    def force_stop(self, package: str) -> str:
+        self.force_stopped.append(package)
+        return ""
+
     def enable(self, package: str) -> str:
         self.disabled.discard(package)
         return f"Package {package} new state: enabled"

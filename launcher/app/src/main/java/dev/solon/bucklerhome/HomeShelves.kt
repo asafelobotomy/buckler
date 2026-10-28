@@ -80,9 +80,10 @@ class ShelfFocus(
     val moveFocus: FocusRequester? = null,
     /** Main Stage above this shelf, when this is the first shelf. */
     val up: FocusRequester? = null,
-    /** Down from the Main Stage. Kept on the first shelf focus should land on. */
-    val fromStage: FocusRequester? = null,
-    /** Wrap target for Up from the top of Home, when this is the last shelf. */
+    /**
+     * Wrap target for Up from the top of Home, on the Library's last row (always composed).
+     * Lazy rows take it on the shelf container instead, since their first tile can be disposed.
+     */
     val bottom: FocusRequester? = null,
 )
 
@@ -143,8 +144,7 @@ fun ShelfSection(
                     shelf.items.isEmpty() -> EmptyShelfHint(
                         type = shelf.config.type,
                         up = focus.up,
-                        focusRequester = focus.shelfRequester ?: focus.fromStage ?: focus.first,
-                        bottom = focus.bottom,
+                        focusRequester = focus.shelfRequester ?: focus.first,
                         onLeft = { showOptions = true },
                     )
                     shelf.config.type == ShelfType.LIBRARY ->
@@ -220,7 +220,6 @@ private fun ShelfFocus.withoutAppMove() = ShelfFocus(
     shelfRequester = shelfRequester,
     movingShelf = movingShelf,
     up = up,
-    fromStage = fromStage,
     bottom = bottom,
 )
 
@@ -238,14 +237,12 @@ private fun EmptyShelfHint(
     type: ShelfType,
     up: FocusRequester?,
     focusRequester: FocusRequester?,
-    bottom: FocusRequester?,
     onLeft: () -> Unit,
 ) {
     // A D-pad stop like any shelf: Left opens the shelf circle, OK does nothing.
     val modifier = Modifier
         .padding(top = 18.dp)
         .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-        .then(if (bottom != null) Modifier.focusRequester(bottom) else Modifier)
         .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
         .onPreviewKeyEvent { event ->
             if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
@@ -303,7 +300,6 @@ private fun LibraryGrid(
                             onLeftEdge = if (rowIndex == 0 && col == 0) onLeftEdge else null,
                             up = if (rowIndex == 0) focus.up else null,
                             focusRequester = if (rowIndex == 0 && col == 0) focus.shelfRequester ?: focus.first else null,
-                            alsoRequester = if (rowIndex == 0 && col == 0) focus.fromStage else null,
                         )
                     }
                 }
@@ -343,11 +339,9 @@ private fun ShelfRow(
                 showLabels = showLabels,
                 onLaunch = { actions.onLaunch(item) },
                 onLongPress = { actions.onLongPress(item) },
-                modifier = focus.bottom.takeIf { index == 0 }.asRequester(),
                 onLeftEdge = if (index == 0) onLeftEdge else null,
                 up = focus.up,
                 focusRequester = focus.firstTileRequester(index, item),
-                alsoRequester = if (index == 0) focus.fromStage else null,
                 moving = focus.movingPackage != null && item.packageName == focus.movingPackage,
             )
         }

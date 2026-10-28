@@ -126,11 +126,15 @@ object ScreensaverImages {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.path, bounds)
         if (bounds.outWidth <= 0) return null
+        // Either side over the limit halves again: a 3024×4032 portrait or a long panorama used to
+        // slip through at full size (needing both sides large), ~48 MB or more per slide.
         var sample = 1
-        while (bounds.outWidth / (sample * 2) >= maxDim && bounds.outHeight / (sample * 2) >= maxDim / 2) {
+        while (bounds.outWidth / sample > maxDim || bounds.outHeight / sample > maxDim) {
             sample *= 2
         }
-        return BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+        return runCatching {
+            BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+        }.getOrNull()
     }
 
     private fun enc(v: String): String = URLEncoder.encode(v, StandardCharsets.UTF_8.name())

@@ -3,6 +3,7 @@ package dev.solon.bucklerhome
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -87,14 +88,16 @@ fun SuggestedStage(
                     .tvMenuKeys(emptyMenu),
             )
         } else {
+            // The stage requester sits on the row, not on card 0: a scrolled-away card is disposed,
+            // and Up / Down aimed at a detached requester crashes the activity.
             LazyRow(
+                modifier = Modifier.focusRequester(stageFocus).focusGroup(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(end = 16.dp),
             ) {
-                itemsIndexed(cards, key = { _, card -> "${card.packageName}\n${card.title}" }) { index, card ->
+                itemsIndexed(cards, key = { _, card -> "${card.packageName}\n${card.title}" }) { _, card ->
                     MediaCover(
                         card = card,
-                        focusRequester = if (index == 0) stageFocus else null,
                         onDown = onDown,
                         cardWidth = metrics.suggestedWidth,
                         cardHeight = metrics.suggestedHeight,
@@ -133,7 +136,6 @@ fun SuggestedStage(
 @Composable
 private fun MediaCover(
     card: MediaCard,
-    focusRequester: FocusRequester?,
     onDown: () -> Unit,
     cardWidth: Dp,
     cardHeight: Dp,
@@ -150,12 +152,10 @@ private fun MediaCover(
             CoverResolver.leanbackBanner(context, card.packageName)?.toBitmap(320, 180)?.asImageBitmap()
         }
     }
-    var cardModifier = Modifier
+    val cardModifier = Modifier
         .width(cardWidth)
         .scale(focusZoom(focused, 1.06f))
         .downTo(onDown)
-    if (focusRequester != null) cardModifier = cardModifier.focusRequester(focusRequester)
-    cardModifier = cardModifier
         .focusable(interactionSource = interaction)
         .tvMenuKeys(menu)
         .pointerInput(card.packageName, card.title) {

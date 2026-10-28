@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from buckler.adb import Adb
-from buckler.journal import Journal
+from buckler.journal import Journal, journaled_packages
 from buckler.paths import journals_dir
 from buckler.policy import OUR_LAUNCHER, verify_ai_stack
 
@@ -85,8 +85,15 @@ def disable_backdrop(adb: Adb) -> Journal:
             after_disabled=True,
             reason="replaced by buckler-home ClockDream",
         )
+    elif adb.package_present(BACKDROP) and BACKDROP not in journaled_packages():
+        journal.add(
+            BACKDROP,
+            before_disabled=False,
+            after_disabled=True,
+            reason="found disabled; recorded so restore re-enables it",
+        )
     journal.notes.append(f"screensaver={OUR_DREAM}")
-    journal.save(journals_dir() / "screensaver.json")
+    journal.save(journals_dir() / "screensaver.json", merge=True)
     return journal
 
 

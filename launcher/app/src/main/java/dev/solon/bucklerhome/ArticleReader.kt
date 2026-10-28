@@ -27,11 +27,13 @@ object ArticleReader {
         val visible = paragraphs(page)
         val structuredLen = structured.sumOf { it.length }
         val visibleLen = visible.sumOf { it.length }
-        return when {
+        val chosen = when {
             structuredLen >= 280 && structuredLen >= visibleLen / 2 -> structured
             visible.isNotEmpty() -> visible
             else -> structured
         }
+        // Page text and JSON-LD both carry entities (&quot;, &#x27;); some are double-escaped.
+        return chosen.map { decodeHtmlEntities(decodeHtmlEntities(it)) }
     }
 
     private fun load(url: String): String? {

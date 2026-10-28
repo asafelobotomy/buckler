@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from buckler.adb import Adb
+from buckler.adb import Adb, AdbError
 from buckler.journal import Journal, iter_journals
 from buckler.policy import (
     KNOWN_STOCK_LAUNCHERS,
@@ -14,7 +14,7 @@ from buckler.policy import (
     filter_allowed,
     verify_ai_stack,
 )
-from buckler.profiles import SETUP_PROFILES, list_profiles, load_profile
+from buckler.profiles import SETUP_PROFILES, Profile, list_profiles, load_profile
 
 
 @dataclass
@@ -113,6 +113,52 @@ def apply_profile(
 
     home_pkg = adb.home_package()
 
+    try:
+        _apply_packages(adb, allowed, home_pkg, profile, profile_name, dry_run, journal,
+                        blocked, skipped_missing, skipped_already, changed)
+    except AdbError:
+        # Keep a record of what was already disabled before the failure, so restore works.
+        if journal.entries and not dry_run:
+            journal.notes.append("apply stopped by an adb error; entries cover what changed")
+            journal.save()
+        raise
+
+    for pkg in blocked:
+        journal.notes.append(f"blocked by never list: {pkg}")
+
+    # Already-disabled profile pkgs can still leave sticky processes (GameStream/OSC).
+    if not dry_run:
+        for pkg in skipped_already:
+            adb.force_stop(pkg)
+
+    if not dry_run:
+        journal.save()
+    else:
+        journal.notes.append("dry-run: journal not written")
+
+    return ApplyResult(
+        journal=journal,
+        skipped_missing=skipped_missing,
+        skipped_already=skipped_already,
+        blocked=blocked,
+        changed=changed,
+        dry_run=dry_run,
+    )
+
+
+def _apply_packages(
+    adb: Adb,
+    allowed: list[str],
+    home_pkg: str,
+    profile: Profile,
+    profile_name: str,
+    dry_run: bool,
+    journal: Journal,
+    blocked: list[str],
+    skipped_missing: list[str],
+    skipped_already: list[str],
+    changed: list[str],
+) -> None:
     for pkg in allowed:
         if not adb.package_present(pkg):
             skipped_missing.append(pkg)
@@ -143,28 +189,6 @@ def apply_profile(
             changed.append(pkg)
             adb.force_stop(pkg)
 
-    for pkg in blocked:
-        journal.notes.append(f"blocked by never list: {pkg}")
-
-    # Already-disabled profile pkgs can still leave sticky processes (GameStream/OSC).
-    if not dry_run:
-        for pkg in skipped_already:
-            adb.force_stop(pkg)
-
-    if not dry_run:
-        journal.save()
-    else:
-        journal.notes.append("dry-run: journal not written")
-
-    return ApplyResult(
-        journal=journal,
-        skipped_missing=skipped_missing,
-        skipped_already=skipped_already,
-        blocked=blocked,
-        changed=changed,
-        dry_run=dry_run,
-    )
-
 
 def restore_journal(adb: Adb, path: Path) -> list[str]:
     adb.connect()
@@ -179,6 +203,7 @@ def restore_journal(adb: Adb, path: Path) -> list[str]:
             continue
         adb.enable(entry.package)
         restored.append(entry.package)
+    journal.mark_restored(restored)
     return restored
 
 
@@ -198,44 +223,66 @@ def check_drift(
     profile_name: str | None = None,
     fix: bool = False,
 ) -> tuple[list[str], list[str]]:
-    """Compare desired disabled set (from journals/profiles) to device.
+    """Compare the desired disabled set to the device.
 
-    Returns (drifted_should_be_disabled, ai_problems).
-    Default desired set is SETUP_PROFILES (same as ``buckler setup``).
+    Returns (drifted_should_be_disabled, ai_problems). Without ``profile_name`` the desired
+    set is what Buckler actually disabled: every journal entry, plus the full package list of
+    each setup profile that has a journal (so OTA re-enables of packages that were already off
+    still count). Packages whose latest journal event is a restore are left alone, and profiles
+    you skipped in setup are not added.
     """
     adb.connect()
-    desired: set[str] = set()
+    disables, restores, applied = _journal_events()
+    desired: set[str] = set(disables)
     if profile_name:
         desired.update(load_profile(profile_name).packages)
     else:
         for name in SETUP_PROFILES:
-            desired.update(load_profile(name).packages)
-
-    for path in iter_journals():
-        j = Journal.load(path)
-        for e in j.entries:
-            if e.action == "disable-user":
-                desired.add(e.package)
+            if name in applied:
+                desired.update(load_profile(name).packages)
+    desired = {p for p in desired if restores.get(p, "") <= disables.get(p, "")}
 
     allowed, _ = filter_allowed(sorted(desired))
+    ours_is_home = None
     drifted: list[str] = []
     for pkg in allowed:
         if not adb.package_present(pkg):
             continue
-        if not adb.package_disabled(pkg):
-            drifted.append(pkg)
-            if fix:
-                if pkg in KNOWN_STOCK_LAUNCHERS:
-                    ok, _reason = can_disable_home_owner(adb, pkg)
-                    if not ok:
-                        continue
-                    if adb.home_package() == pkg and not adb.package_present(OUR_LAUNCHER):
-                        continue
-                adb.disable_user(pkg)
-                adb.force_stop(pkg)
+        if adb.package_disabled(pkg):
+            continue
+        drifted.append(pkg)
+        if not fix:
+            continue
+        if pkg in KNOWN_STOCK_LAUNCHERS:
+            # Only with buckler-home enabled and resolved as HOME; otherwise the TV has none.
+            if ours_is_home is None:
+                ours_is_home = (
+                    adb.home_package() == OUR_LAUNCHER and not adb.package_disabled(OUR_LAUNCHER)
+                )
+            if not ours_is_home:
+                continue
+        adb.disable_user(pkg)
+        adb.force_stop(pkg)
 
     ai = verify_ai_stack(adb)
     return drifted, ai
+
+
+def _journal_events() -> tuple[dict[str, str], dict[str, str], set[str]]:
+    """Latest disable time and latest restore time per package, and profiles with a journal."""
+    disables: dict[str, str] = {}
+    restores: dict[str, str] = {}
+    applied: set[str] = set()
+    for path in iter_journals():
+        j = Journal.load(path)
+        applied.add(j.profile)
+        for e in j.entries:
+            if e.action != "disable-user":
+                continue
+            disables[e.package] = max(disables.get(e.package, ""), j.created_at or "0")
+            if e.restored_at:
+                restores[e.package] = max(restores.get(e.package, ""), e.restored_at)
+    return disables, restores, applied
 
 
 def format_probe(p: ProbeResult) -> str:

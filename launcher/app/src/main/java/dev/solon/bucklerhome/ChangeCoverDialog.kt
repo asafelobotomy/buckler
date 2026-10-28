@@ -59,13 +59,14 @@ fun ChangeCoverDialog(
             CuratedCovers.ensureCached(context)
             val local = CoverResolver.localCandidates(context, packageName, icon)
             val curated = CoverResolver.curatedCandidates(context, packageName)
+            // Network lookups: a timeout or dropped Wi-Fi shows fewer covers, not a Home crash.
             val sgdb = if (CoverAccounts.isLinked(context, CoverProvider.STEAMGRIDDB)) {
-                SteamGridDbClient.searchCovers(context, title, layout)
+                runCatching { SteamGridDbClient.searchCovers(context, title, layout) }.getOrDefault(emptyList())
             } else {
                 emptyList()
             }
             val igdb = if (CoverAccounts.isLinked(context, CoverProvider.IGDB)) {
-                IgdbClient.searchCovers(context, title)
+                runCatching { IgdbClient.searchCovers(context, title) }.getOrDefault(emptyList())
             } else {
                 emptyList()
             }

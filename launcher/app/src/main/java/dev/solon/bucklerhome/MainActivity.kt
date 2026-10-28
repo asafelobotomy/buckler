@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -19,8 +20,17 @@ private enum class RootScreen {
 }
 
 class MainActivity : ComponentActivity() {
+    /** Bumped when Settings asks for Edit Home; singleTask delivers that to [onNewIntent]. */
+    private val editRequests = mutableIntStateOf(0)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_EDIT_HOME, false)) editRequests.intValue++
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent.getBooleanExtra(EXTRA_EDIT_HOME, false)) editRequests.intValue++
         HomeLayout.importIfPresent(this)
         AppearanceStore.ensureLoaded(this)
         setContent {
@@ -29,6 +39,9 @@ class MainActivity : ComponentActivity() {
                 var resumeTick by remember { mutableIntStateOf(0) }
                 var layoutVersion by remember { mutableIntStateOf(0) }
                 var screen by remember { mutableStateOf(RootScreen.HOME) }
+                LaunchedEffect(editRequests.intValue) {
+                    if (editRequests.intValue > 0) screen = RootScreen.EDIT
+                }
 
                 DisposableEffect(this) {
                     val observer = LifecycleEventObserver { _, event ->
@@ -66,5 +79,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_EDIT_HOME = "dev.solon.bucklerhome.EDIT_HOME"
     }
 }

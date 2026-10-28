@@ -20,7 +20,7 @@ from buckler.ops import (
     restore_journal,
 )
 from buckler.policy import verify_ai_stack
-from buckler.profiles import SETUP_PROFILES, list_profiles
+from buckler.profiles import list_profiles
 
 
 @cli.command("probe")
@@ -143,9 +143,8 @@ def restore_cmd(ctx: click.Context, journal_path: Path | None, restore_all: bool
     "--profile",
     "profile_name",
     default=None,
-    help="Limit desired set to one profile (default: setup profiles "
-    + ", ".join(SETUP_PROFILES)
-    + ").",
+    help="Also want this profile disabled (default: what journals show Buckler disabled, "
+    "minus anything restored since).",
 )
 @click.option("--fix", "do_fix", is_flag=True, help="Re-disable drifted packages.")
 @click.pass_context

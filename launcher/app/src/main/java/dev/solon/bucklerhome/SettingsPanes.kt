@@ -31,9 +31,15 @@ import kotlinx.coroutines.withContext
 fun HomePane() {
     val context = LocalContext.current
     SectionTitle("Home")
-    SettingsRow("Edit Home is the pencil icon in the Home header; Settings is the gear.")
-    SettingsAction("Android TV Settings") {
-        safeLaunch(context, Intent(Settings.ACTION_SETTINGS), "Settings")
+    SettingsRow("Edit Home sets the layout, app size, shelves and pins. It is also the pencil in the Home header.")
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsAction("Edit Home") {
+            val intent = Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_EDIT_HOME, true)
+            safeLaunch(context, intent, "Edit Home")
+        }
+        SettingsAction("Android TV Settings") {
+            safeLaunch(context, Intent(Settings.ACTION_SETTINGS), "Settings")
+        }
     }
 }
 

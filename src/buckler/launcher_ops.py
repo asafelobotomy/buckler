@@ -8,8 +8,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from buckler.adb import Adb
-from buckler.journal import Journal
+from buckler.adb import Adb, AdbError
+from buckler.journal import Journal, journaled_packages
 from buckler.paths import journals_dir, launcher_dir
 from buckler.policy import (
     KNOWN_STOCK_LAUNCHERS,
@@ -176,23 +176,35 @@ def handover(adb: Adb, *, reboot: bool = False) -> HandoverResult:
     adb.set_home_activity(OUR_HOME_ACTIVITY)
 
     disabled_stocks: list[str] = []
-    for stock in sorted(KNOWN_STOCK_LAUNCHERS):
-        if not adb.package_present(stock):
-            continue
-        if adb.package_disabled(stock):
-            continue
-        ok, reason = can_disable_home_owner(adb, stock)
-        if not ok:
-            for pkg in disabled_stocks:
-                adb.enable(pkg)
-            return HandoverResult(
-                False,
-                home_before,
-                home_before,
-                f"refusing to disable {stock}: {reason}",
-            )
-        adb.disable_user(stock)
-        disabled_stocks.append(stock)
+    # Stock launchers already off but in no journal: only Buckler disables them, so record them
+    # (restore must be able to bring a HOME back) rather than treating them as untouched.
+    already_off: list[str] = []
+    known = journaled_packages()
+    try:
+        for stock in sorted(KNOWN_STOCK_LAUNCHERS):
+            if not adb.package_present(stock):
+                continue
+            if adb.package_disabled(stock):
+                if stock not in known:
+                    already_off.append(stock)
+                continue
+            ok, reason = can_disable_home_owner(adb, stock)
+            if not ok:
+                for pkg in disabled_stocks:
+                    adb.enable(pkg)
+                return HandoverResult(
+                    False,
+                    home_before,
+                    home_before,
+                    f"refusing to disable {stock}: {reason}",
+                )
+            adb.disable_user(stock)
+            disabled_stocks.append(stock)
+    except AdbError:
+        # A failure halfway must not leave one stock launcher off with no journal.
+        for pkg in disabled_stocks:
+            adb.enable(pkg)
+        raise
 
     home_after_pkg = adb.home_package()
     home_after = adb.resolve_home()
@@ -218,9 +230,16 @@ def handover(adb: Adb, *, reboot: bool = False) -> HandoverResult:
         )
     journal.notes.append(f"home_before={home_before}")
     journal.notes.append(f"home_after={home_after}")
+    for stock in already_off:
+        journal.add(
+            stock,
+            before_disabled=False,
+            after_disabled=True,
+            reason="found disabled at handover; recorded so restore re-enables it",
+        )
     if not disabled_stocks:
         journal.notes.append("no stock launchers needed disabling (already clean)")
-    path = journal.save(journals_dir() / "home-clean-handover.json")
+    path = journal.save(journals_dir() / "home-clean-handover.json", merge=True)
 
     if reboot:
         adb.reboot()

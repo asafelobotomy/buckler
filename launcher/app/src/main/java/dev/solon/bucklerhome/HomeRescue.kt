@@ -1,6 +1,7 @@
 package dev.solon.bucklerhome
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -82,6 +83,10 @@ fun HomeOptionsCard(
 /** True when Home must show [HomeOptionsCard]. */
 fun needsHomeOptions(config: DisplayConfig, shelves: List<ResolvedShelf>): Boolean =
     shelves.isEmpty() || !config.reachesSettings
+
+/** Requesters on a container: focus enters its first composed child. Empty: no group at all. */
+fun List<FocusRequester>.focusGroupTarget(): Modifier =
+    if (isEmpty()) Modifier else fold(Modifier as Modifier) { m, r -> m.focusRequester(r) }.focusGroup()
 
 private fun Modifier.upTo(up: FocusRequester?): Modifier =
     if (up != null) focusProperties { this.up = up } else this

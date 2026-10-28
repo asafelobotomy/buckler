@@ -12,6 +12,10 @@ class AdbError(RuntimeError):
     """Raised when an adb command fails."""
 
 
+# adb connect to an absent host can hang for a minute or more.
+CONNECT_TIMEOUT_S = 15.0
+
+
 @dataclass
 class Adb:
     host: str
@@ -24,7 +28,18 @@ class Adb:
             self.host = f"{self.host}:5555"
 
     def connect(self) -> str:
-        out = self._run([self.adb_bin, "connect", self.host], check=False)
+        """Connect, then confirm the device answers.
+
+        Reads use ``check=False``, so an offline device would otherwise look like one where every
+        package is missing, and restore would report "nothing to enable" with exit 0.
+        """
+        out = self._run([self.adb_bin, "connect", self.host], check=False, timeout=CONNECT_TIMEOUT_S)
+        state = self._run(
+            [self.adb_bin, "-s", self.host, "get-state"], check=False, timeout=CONNECT_TIMEOUT_S
+        )
+        if state.stdout.strip() != "device":
+            detail = (state.stderr or out.stdout or "").strip()
+            raise AdbError(f"{self.host} is not reachable over adb ({detail or 'no device'})")
         return out.stdout.strip()
 
     def serial(self) -> str:
@@ -51,8 +66,10 @@ class Adb:
         return self.pm_path(package) is not None
 
     def package_disabled(self, package: str) -> bool:
+        # `pm list packages -d X` filters by substring: match the whole line, so a disabled
+        # com.nvidia.factorybundling does not count as com.nvidia.factory.
         out = self.shell("pm", "list", "packages", "-d", package, check=False)
-        return package in out
+        return f"package:{package}" in (line.strip() for line in out.splitlines())
 
     def disable_user(self, package: str) -> str:
         return self.shell("pm", "disable-user", "--user", "0", package)
@@ -122,15 +139,20 @@ class Adb:
         cmd: list[str],
         *,
         check: bool,
+        timeout: float | None = None,
     ) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
-        result = subprocess.run(
-            cmd,
-            check=False,
-            capture_output=True,
-            text=True,
-            env=env,
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise AdbError(f"adb timed out after {timeout:.0f}s: {' '.join(cmd)}") from exc
         if check and result.returncode != 0:
             err = (result.stderr or result.stdout or "").strip()
             raise AdbError(f"adb failed ({result.returncode}): {' '.join(cmd)}\n{err}")

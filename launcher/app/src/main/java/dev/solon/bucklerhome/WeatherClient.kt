@@ -67,10 +67,12 @@ object WeatherClient {
 
     fun parseWeather(body: String): Weather? {
         val current = HttpJson.parseObject(body)?.optJSONObject("current") ?: return null
-        if (!current.has("temperature_2m") || !current.has("weather_code")) return null
+        // Open-Meteo sends null for a missing reading; has() is still true then.
+        val temperature = current.optDouble("temperature_2m")
+        if (temperature.isNaN() || current.isNull("weather_code")) return null
         return Weather(
-            temperatureC = current.getDouble("temperature_2m"),
-            code = current.getInt("weather_code"),
+            temperatureC = temperature,
+            code = current.optInt("weather_code"),
             isDay = current.optInt("is_day", 1) == 1,
         )
     }
@@ -102,10 +104,12 @@ object WeatherClient {
                 val whenAt = runCatching { LocalDateTime.parse(stamp) }.getOrNull() ?: continue
                 if (whenAt.isBefore(start)) continue
                 if (i >= temps.length() || i >= codes.length()) continue
+                val temperature = temps.optDouble(i)
+                if (temperature.isNaN()) continue
                 add(
                     ForecastSlot(
                         label = stamp.substringAfter('T', stamp).take(5),
-                        temperatureC = temps.optDouble(i),
+                        temperatureC = temperature,
                         code = codes.optInt(i),
                         isDay = day?.optInt(i, 1) != 0,
                     ),
@@ -123,11 +127,13 @@ object WeatherClient {
         return buildList {
             val n = minOf(count, times.length(), codes.length(), highs.length())
             for (i in 0 until n) {
+                val high = highs.optDouble(i)
+                if (high.isNaN()) continue
                 add(
                     ForecastSlot(
                         label = times.optString(i),
-                        temperatureC = highs.optDouble(i),
-                        lowC = lows?.optDouble(i),
+                        temperatureC = high,
+                        lowC = lows?.optDouble(i)?.takeUnless { it.isNaN() },
                         code = codes.optInt(i),
                         allDay = true,
                     ),
@@ -137,6 +143,7 @@ object WeatherClient {
     }
 
     fun formatTemperature(celsius: Double, fahrenheit: Boolean): String {
+        if (celsius.isNaN()) return "–°"
         val value = if (fahrenheit) celsius * 9 / 5 + 32 else celsius
         return "${value.roundToInt()}°${if (fahrenheit) "F" else "C"}"
     }

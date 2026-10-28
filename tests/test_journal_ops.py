@@ -81,14 +81,15 @@ def test_restore_all_journals(journals_dir: Path) -> None:
     assert adb.disabled == set()
 
 
-def test_check_drift_uses_setup_profiles(journals_dir: Path) -> None:
-    # Ensure SETUP_PROFILES is the default desired set by marking a speech pkg present+enabled
+def test_check_drift_uses_applied_setup_profiles(journals_dir: Path) -> None:
+    # A setup profile with a journal is wanted in full, even packages that run did not change.
     from buckler.profiles import load_profile
 
     speech_pkgs = load_profile("speech").packages
     assert speech_pkgs
     target = speech_pkgs[0]
-    assert SETUP_PROFILES  # default desired set includes speech
+    assert "speech" in SETUP_PROFILES
+    Journal(host="h", profile="speech").save(journals_dir / "20260101-speech.json")
     adb = FakeAdb(
         present={
             target,

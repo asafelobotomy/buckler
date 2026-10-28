@@ -1,5 +1,6 @@
 package dev.solon.bucklerhome
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -100,6 +101,10 @@ fun EditHomeScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Chip("Done", selected = true, onClick = onDone)
                 Chip("Reset layout", selected = false, onClick = ::resetFromFileOrDefault)
+                // Either header shortcut must reach both screens; the gear may be hidden.
+                Chip("Settings", selected = false) {
+                    safeLaunch(context, Intent(context, BucklerSettingsActivity::class.java), "Buckler Settings")
+                }
             }
         }
 

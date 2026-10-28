@@ -169,7 +169,18 @@ fun HomeColumn(
             items(shelves, key = { it.config.id }) { shelf ->
                 val id = shelf.config.id
                 val last = shelf == lastShelf
-                Box(if (last) Modifier.wrapFocus(FocusDirection.Down, focusManager, ::wrapToTop) else Modifier) {
+                val libraryBottom = last && shelf.config.type == ShelfType.LIBRARY && shelf.items.isNotEmpty()
+                // Stage-down and wrap targets go on the shelf container: a lazy row's first tile is
+                // disposed once scrolled, and a request to it would silently do nothing.
+                val targets = listOfNotNull(
+                    stageDown.takeIf { shelf == topShelf },
+                    bottom.takeIf { last && !libraryBottom },
+                )
+                Box(
+                    Modifier
+                        .then(if (last) Modifier.wrapFocus(FocusDirection.Down, focusManager, ::wrapToTop) else Modifier)
+                        .then(targets.focusGroupTarget()),
+                ) {
                     ShelfSection(
                         shelf = shelf,
                         coverLayout = layout.layout,
@@ -188,8 +199,7 @@ fun HomeColumn(
                             focusPackage = focusPkg,
                             moveFocus = moveFocus,
                             up = if (shelf == topShelf) stageFocus else null,
-                            fromStage = if (shelf == topShelf) stageDown else null,
-                            bottom = if (last) bottom else null,
+                            bottom = if (libraryBottom) bottom else null,
                         ),
                     )
                 }

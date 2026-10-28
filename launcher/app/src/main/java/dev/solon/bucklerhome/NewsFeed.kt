@@ -159,7 +159,6 @@ object NewsFeed {
     private val imgSrc = Regex("""<img\b[^>]*\bsrc=["']([^"']+)["']""", setOf(RegexOption.DOT_MATCHES_ALL))
     private val cdataRe = Regex("<!\\[CDATA\\[(.*?)]]>", setOf(RegexOption.DOT_MATCHES_ALL))
     private val tagRe = Regex("<[^>]+>")
-    private val entityRe = Regex("&(#x?[0-9a-fA-F]+|amp|lt|gt|quot|apos|nbsp);")
 
     /** Tolerant RSS 2.0 / Atom title extraction (no XML parser, so it is unit-testable on the JVM). */
     fun parseHeadlines(xml: String, limit: Int): List<String> =
@@ -291,25 +290,31 @@ object NewsFeed {
 
     private fun clean(raw: String): String {
         val unwrapped = cdataRe.replace(raw) { it.groupValues[1] }
-        return decodeEntities(tagRe.replace(unwrapped, "")).replace(Regex("\\s+"), " ").trim()
+        return decodeHtmlEntities(tagRe.replace(unwrapped, "")).replace(Regex("\\s+"), " ").trim()
     }
+}
 
-    private fun decodeEntities(text: String): String = entityRe.replace(text) { m ->
-        when (val e = m.groupValues[1]) {
-            "amp" -> "&"
-            "lt" -> "<"
-            "gt" -> ">"
-            "quot" -> "\""
-            "apos" -> "'"
-            "nbsp" -> " "
-            else -> {
-                val code = if (e.startsWith("#x") || e.startsWith("#X")) {
-                    e.drop(2).toIntOrNull(16)
-                } else {
-                    e.drop(1).toIntOrNull()
-                }
-                code?.let { String(Character.toChars(it)) } ?: m.value
+private val entityRe = Regex("&(#[xX][0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos|nbsp);")
+
+/**
+ * Named and numeric HTML entities. Out-of-range code points stay as written: one bad entity in a
+ * feed must not throw (Character.toChars does) and crash Home on every refresh.
+ */
+internal fun decodeHtmlEntities(text: String): String = entityRe.replace(text) { m ->
+    when (val e = m.groupValues[1]) {
+        "amp" -> "&"
+        "lt" -> "<"
+        "gt" -> ">"
+        "quot" -> "\""
+        "apos" -> "'"
+        "nbsp" -> " "
+        else -> {
+            val code = if (e.startsWith("#x") || e.startsWith("#X")) {
+                e.drop(2).toIntOrNull(16)
+            } else {
+                e.drop(1).toIntOrNull()
             }
+            code?.takeIf { Character.isValidCodePoint(it) }?.let { String(Character.toChars(it)) } ?: m.value
         }
     }
 }
