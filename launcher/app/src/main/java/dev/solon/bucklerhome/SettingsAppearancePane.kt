@@ -12,12 +12,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /**
- * Settings → Appearance: colour scheme and font, each shown as a picture, then a way into each part
- * of Home (Header, Main Stage, Shelves), whose pages hold that part's widgets and options.
+ * Settings → Appearance → Global: colour scheme and font, each shown as a picture. Each part of
+ * Home (Header, Main Stage, Shelves) has its own page in Appearance's sidebar.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AppearancePane(onOpen: (SettingsPane) -> Unit) {
+fun AppearancePane() {
     val context = LocalContext.current
     val appearance = AppearanceStore.config
     val flow = Arrangement.spacedBy(12.dp)
@@ -45,15 +45,6 @@ fun AppearancePane(onOpen: (SettingsPane) -> Unit) {
                     selected = font == appearance.font,
                     onClick = { AppearanceStore.update(context) { it.copy(font = font) } },
                 ) { FontMiniature(font) }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-        PickerTitle("Home, top to bottom")
-        SettingsRow("Each part has its own widgets and options. News and Weather can sync across parts or stand apart.")
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            SettingsPane.entries.filter { it.parent == SettingsPane.APPEARANCE }.forEach { part ->
-                SettingsAction(part.label) { onOpen(part) }
             }
         }
     }

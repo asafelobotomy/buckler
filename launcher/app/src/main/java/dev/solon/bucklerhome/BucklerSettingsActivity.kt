@@ -50,9 +50,10 @@ class BucklerSettingsActivity : ComponentActivity() {
 }
 
 /**
- * Appearance first, with a submenu for each part of Home top to bottom (Header, Main Stage,
- * Shelves), then Screensaver with a submenu for each screensaver ([saver]), then the rest, then
- * upkeep. [parent] puts an entry under another in the menu.
+ * Appearance first, with a page for each part of Home top to bottom (Header, Main Stage,
+ * Shelves), then Screensaver with a page for each screensaver ([saver]), then the rest, then
+ * upkeep. An entry with a [parent] is not in the main sidebar: choosing the parent opens a second
+ * sidebar beside it, with the parent's own page first as "Global" and then its children.
  */
 enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val saver: ScreensaverMode? = null) {
     APPEARANCE("Appearance"),
@@ -88,8 +89,11 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
     var accountTick by remember { mutableIntStateOf(0) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var availableRelease by remember { mutableStateOf<GitHubRelease?>(null) }
-    // Pressing Left inside a pane returns to the nav entry for that pane, not whichever is nearest.
+    // Pressing Left steps back one column to the entry for what is shown, not whichever is nearest.
     val navFocus = remember { SettingsPane.entries.associateWith { FocusRequester() } }
+    val subFocus = remember { SettingsPane.entries.associateWith { FocusRequester() } }
+    val section = pane.parent ?: pane
+    val children = SettingsPane.entries.filter { it.parent == section }
 
     Column(
         modifier = Modifier
@@ -119,29 +123,41 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                     .verticalScroll(rememberScrollState())
                     .trapVerticalFocus(),
             ) {
-                SettingsPane.entries.forEach { entry ->
-                    SettingsNav(entry.label, pane == entry, navFocus.getValue(entry), nested = entry.parent != null) {
-                        pane = entry
-                    }
+                SettingsPane.entries.filter { it.parent == null }.forEach { entry ->
+                    SettingsNav(entry.label, section == entry, navFocus.getValue(entry)) { pane = entry }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 SettingsAction("Close", onClick = onClose)
             }
+            if (children.isNotEmpty()) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .width(200.dp)
+                        .verticalScroll(rememberScrollState())
+                        .trapVerticalFocus(onLeft = { navFocus.getValue(section) }),
+                ) {
+                    SettingsNav("Global", pane == section, subFocus.getValue(section)) { pane = section }
+                    children.forEach { child ->
+                        SettingsNav(child.label, pane == child, subFocus.getValue(child)) { pane = child }
+                    }
+                }
+            }
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .trapVerticalFocus(onLeft = { navFocus.getValue(pane) }),
+                    .trapVerticalFocus(onLeft = { if (children.isNotEmpty()) subFocus.getValue(pane) else navFocus.getValue(pane) }),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 24.dp),
             ) {
                 item {
                     when (pane) {
-                        SettingsPane.APPEARANCE -> AppearancePane(onOpen = { pane = it })
+                        SettingsPane.APPEARANCE -> AppearancePane()
                         SettingsPane.HEADER -> HeaderPane()
                         SettingsPane.MAIN_STAGE -> MainStagePane()
                         SettingsPane.SHELVES -> ShelvesPane()
                         SettingsPane.ACCESSIBILITY -> AccessibilityPane()
-                        SettingsPane.SCREENSAVER -> ScreensaverPane(onOpen = { pane = it })
+                        SettingsPane.SCREENSAVER -> ScreensaverPane()
                         SettingsPane.SAVER_CLOCK, SettingsPane.SAVER_DVD, SettingsPane.SAVER_PHOTOS,
                         SettingsPane.SAVER_UPLOADED, SettingsPane.SAVER_NOW_PLAYING, SettingsPane.SAVER_MAZE,
                         SettingsPane.SAVER_PIPES, SettingsPane.SAVER_MYSTIFY, SettingsPane.SAVER_STARFIELD,
@@ -210,13 +226,11 @@ private fun SettingsNav(
     label: String,
     selected: Boolean,
     focusRequester: FocusRequester,
-    nested: Boolean = false,
     onClick: () -> Unit,
 ) {
     Surface(
         onClick = onClick,
-        // Submenus sit indented under their parent.
-        modifier = Modifier.padding(start = if (nested) 22.dp else 0.dp).fillMaxWidth().focusRequester(focusRequester),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) ColorBrand else ColorTile,
@@ -227,8 +241,8 @@ private fun SettingsNav(
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = if (nested) 6.dp else 8.dp),
-            fontSize = if (nested) 15.sp else 16.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            fontSize = 16.sp,
         )
     }
 }

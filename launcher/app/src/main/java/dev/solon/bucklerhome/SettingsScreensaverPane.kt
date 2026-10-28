@@ -20,12 +20,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /**
- * Settings → Screensaver: which screensaver is in use, a way into each one's own page (also in the
- * menu, under Screensaver), and the shared "Start after".
+ * Settings → Screensaver → Global: which screensaver is in use and the shared "Start after". Each
+ * screensaver has its own page in Screensaver's sidebar.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ScreensaverPane(onOpen: (SettingsPane) -> Unit) {
+fun ScreensaverPane() {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
     val cfg = remember(tick) { ScreensaverPrefs.load(context) }
@@ -33,13 +33,8 @@ fun ScreensaverPane(onOpen: (SettingsPane) -> Unit) {
     val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle("Screensaver")
-    SettingsRow("In use: ${cfg.mode.label}. Each screensaver has its own page with its own options.")
-    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        SettingsPane.entries.filter { it.saver != null }.forEach { page ->
-            SettingsAction(page.label, selected = page.saver == cfg.mode) { onOpen(page) }
-        }
-    }
-    Spacer(modifier = Modifier.height(18.dp))
+    SettingsRow("In use: ${cfg.mode.label}. Each screensaver has its own page with its own options, in the list beside this one.")
+    Spacer(modifier = Modifier.height(6.dp))
     StartAfterSection(tick = tick, onChanged = { tick++ }, onCustom = { customTimeout = true })
     Spacer(modifier = Modifier.height(12.dp))
     SettingsAction("System screensaver settings") {
