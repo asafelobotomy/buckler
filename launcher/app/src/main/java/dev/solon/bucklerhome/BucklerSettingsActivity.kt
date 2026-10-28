@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -99,22 +100,26 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(HomeBgBrush)
-            .padding(48.dp)
+            // Android TV's safe margins (5%): 48 dp at the sides, 27 dp top and bottom.
+            .padding(horizontal = 48.dp, vertical = 27.dp)
             // Re-focus after account changes rebuild the pane and drop the focused button.
             .autoFocus(accountTick),
     ) {
-        Text(
-            text = "Buckler Settings",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = ColorText,
-        )
-        Text(
-            text = "buckler-home ${BuildConfig.VERSION_NAME}",
-            fontSize = 14.sp,
-            color = ColorMuted,
-            modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
-        )
+        // One short line, so the sidebars and pages start near the top of the screen.
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 14.dp)) {
+            Text(
+                text = "Buckler Settings",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ColorText,
+            )
+            Text(
+                text = "buckler-home ${BuildConfig.VERSION_NAME}",
+                fontSize = 14.sp,
+                color = ColorMuted,
+                modifier = Modifier.padding(start = 14.dp, bottom = 3.dp),
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.weight(1f)) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
