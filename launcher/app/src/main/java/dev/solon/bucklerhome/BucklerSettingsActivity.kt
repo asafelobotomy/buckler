@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -136,11 +138,18 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                 Spacer(modifier = Modifier.height(6.dp))
                 SettingsAction("Close", onClick = onClose)
             }
-            if (children.isNotEmpty()) {
-                Column(
+            // One width for every section, kept even where a section has no sub-pages, so the page
+            // never shifts sideways when switching: the invisible labels size it to the longest.
+            Box(modifier = Modifier.width(IntrinsicSize.Max)) {
+                Column(modifier = Modifier.height(0.dp).alpha(0f)) {
+                    (listOf("Global") + SettingsPane.entries.filter { it.parent != null }.map { it.label }).forEach {
+                        Text(it, modifier = Modifier.padding(start = NavStart, end = NavEnd), fontSize = 16.sp, maxLines = 1)
+                    }
+                }
+                if (children.isNotEmpty()) Column(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier
-                        .width(IntrinsicSize.Max)
+                        .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .trapVerticalFocus(onLeft = { navFocus.getValue(section) }),
                 ) {
@@ -228,6 +237,9 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
+private val NavStart = 16.dp
+private val NavEnd = 28.dp
+
 @Composable
 private fun SettingsNav(
     label: String,
@@ -249,7 +261,7 @@ private fun SettingsNav(
         Text(
             text = label,
             // A little more room after the label than before it.
-            modifier = Modifier.padding(start = 16.dp, end = 28.dp, top = 8.dp, bottom = 8.dp),
+            modifier = Modifier.padding(start = NavStart, end = NavEnd, top = 8.dp, bottom = 8.dp),
             fontSize = 16.sp,
             maxLines = 1,
         )
