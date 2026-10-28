@@ -40,8 +40,6 @@ android {
             "CURATED_COVERS_URL",
             "\"https://raw.githubusercontent.com/$githubRepo/main/covers/index.json\"",
         )
-        // SHIELD and other Android TV boxes are ARM; ONNX Runtime (lyrics auto-sync) ships x86 too.
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     signingConfigs {
@@ -93,9 +91,6 @@ android {
         resources {
             excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1")
         }
-        // Compress native libraries in the APK (extracted on install): ONNX Runtime is ~56 MB
-        // stored, far less zipped, which keeps the OTA download small.
-        jniLibs { useLegacyPackaging = true }
     }
 }
 
@@ -114,8 +109,6 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("androidx.security:security-crypto:1.0.0")
     implementation("com.google.zxing:core:3.5.3")
-    // Silero voice detection for lyrics auto-sync (model downloaded on first use, SHA-256 pinned).
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")

@@ -1,0 +1,78 @@
+diff --git a/launcher/app/src/main/java/dev/solon/bucklerhome/LyricsSyncService.kt b/launcher/app/src/main/java/dev/solon/bucklerhome/LyricsSyncService.kt
+index a8362aa..c40152d 100644
+--- a/launcher/app/src/main/java/dev/solon/bucklerhome/LyricsSyncService.kt
++++ b/launcher/app/src/main/java/dev/solon/bucklerhome/LyricsSyncService.kt
+@@ -117,6 +117,7 @@ class LyricsSyncService : Service() {
+                 framesRead += n / 2
+                 watchForSilence(n)
+                 val chunkTime = chunkStartTime(chunkStart, n / 2)
++                if (AutoSync.track?.playing == true) dump?.chunk(chunkTime, raw, n)
+                 val m = downsampler.process(raw, n, mono)
+                 for (j in 0 until m) {
+                     frame[filled++] = mono[j]
+diff --git a/launcher/app/src/main/java/dev/solon/bucklerhome/SyncDump.kt b/launcher/app/src/main/java/dev/solon/bucklerhome/SyncDump.kt
+index 16f0be3..f0eddd3 100644
+--- a/launcher/app/src/main/java/dev/solon/bucklerhome/SyncDump.kt
++++ b/launcher/app/src/main/java/dev/solon/bucklerhome/SyncDump.kt
+@@ -7,15 +7,36 @@ import java.io.PrintWriter
+ /**
+  * Developer aid for tuning auto-sync off the TV: when the marker file `autosync-dump` exists in the
+  * app's external files folder (created over adb), each song's lyric lines, voice probabilities and
+- * estimates are written beside it as CSV. Without the marker nothing is written.
++ * estimates are written beside it as CSV. With a second marker, `autosync-audio`, the captured
++ * 48 kHz stereo goes to a matching .raw (16-bit little-endian, interleaved), each chunk logged as a
++ * `c` line with the time its first frame was mixed, for benchmarking on a PC (centre-channel
++ * features need the stereo). Without the markers nothing is written.
+  */
+-class SyncDump private constructor(private val out: PrintWriter) {
++class SyncDump private constructor(private val out: PrintWriter, private val raw: java.io.OutputStream?) {
++    private var bytes = ByteArray(0)
++
+     fun frame(at: Long, reported: Long, probability: Float) = out.println("f,$at,$reported,$probability")
+ 
++    /** One captured chunk of [n] interleaved stereo shorts, first frame mixed at [at] (elapsedRealtime ms). */
++    fun chunk(at: Long, samples: ShortArray, n: Int) {
++        val sink = raw ?: return
++        out.println("c,$at,${n / 2}")
++        if (bytes.size < n * 2) bytes = ByteArray(n * 2)
++        for (i in 0 until n) {
++            val v = samples[i].toInt()
++            bytes[2 * i] = v.toByte()
++            bytes[2 * i + 1] = (v shr 8).toByte()
++        }
++        sink.write(bytes, 0, n * 2)
++    }
++
+     fun estimate(at: Long, best: SyncEstimator.Estimate?, accepted: Boolean) =
+         out.println("e,$at,${best?.offsetMs},${best?.score},${best?.margin},${best?.prominence},$accepted")
+ 
+-    fun close() = out.close()
++    fun close() {
++        out.close()
++        raw?.close()
++    }
+ 
+     companion object {
+         fun open(context: Context, key: String, lines: List<LyricLine>): SyncDump? {
+@@ -25,8 +46,19 @@ class SyncDump private constructor(private val out: PrintWriter) {
+             val file = File(dir, "sync-$name-${System.currentTimeMillis()}.csv")
+             val out = runCatching { PrintWriter(java.io.FileWriter(file), true) }.getOrNull()
+                 ?: return null
+-            lines.forEach { line -> out.println("l,${line.atMs},${line.endMs ?: ""},${line.text.replace(',', ' ')}") }
+-            return SyncDump(out)
++            lines.forEachIndexed { i, line ->
++                out.println("l,${line.atMs},${line.endMs ?: ""},${line.text.replace(',', ' ')}")
++                line.tokens.forEach { t ->
++                    out.println("w,$i,${t.atMs},${t.endMs},${line.text.substring(t.range).replace(',', ' ')}")
++                }
++            }
++            val raw = if (File(dir, "autosync-audio").exists()) {
++                runCatching { java.io.BufferedOutputStream(java.io.FileOutputStream(File(file.path.removeSuffix(".csv") + ".raw"))) }
++                    .getOrNull()
++            } else {
++                null
++            }
++            return SyncDump(out, raw)
+         }
+     }
+ }

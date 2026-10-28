@@ -1,0 +1,372 @@
+{
+ "ancientlullabymatisyahu": {
+  "truth": -190.8908614218235,
+  "spread": 49.85071614384651,
+  "methods": {
+   "0 trust Spotify (no sync)": {
+    "published": 0,
+    "after_s": 0,
+    "full": 0
+   },
+   "A silero": {
+    "published": -312,
+    "after_s": 28.031,
+    "full": -408,
+    "full_score": 0.1645380399200287,
+    "full_margin": 0.08663826836999611
+   },
+   "B band mono": {
+    "published": -248,
+    "after_s": 28.031,
+    "full": -216,
+    "full_score": 0.4423450914995007,
+    "full_margin": 0.2512876948432076
+   },
+   "C centre": {
+    "published": -248,
+    "after_s": 28.031,
+    "full": -216,
+    "full_score": 0.44533968671840873,
+    "full_margin": 0.25740625453935173
+   },
+   "C2 L*R coherent": {
+    "published": -248,
+    "after_s": 28.031,
+    "full": -216,
+    "full_score": 0.4453021146571723,
+    "full_margin": 0.2559675325537808
+   },
+   "D voicing": {
+    "published": -344,
+    "after_s": 28.031,
+    "full": -312,
+    "full_score": 0.1324898966852117,
+    "full_margin": 0.10780004888873342
+   },
+   "V demucs vocals (ceiling)": {
+    "published": -216,
+    "after_s": 28.031,
+    "full": -152,
+    "full_score": 0.6141508299217463,
+    "full_margin": 0.368776803076597
+   },
+   "A+C": {
+    "published": -280,
+    "after_s": 28.031,
+    "full": -248,
+    "full_score": 0.2793192728532236,
+    "full_margin": 0.14563768369536634
+   },
+   "C+D": {
+    "published": -312,
+    "after_s": 28.031,
+    "full": -280,
+    "full_score": 0.24827966876509217,
+    "full_margin": 0.14330089814481733
+   },
+   "A+C+D": {
+    "published": -312,
+    "after_s": 28.031,
+    "full": -280,
+    "full_score": 0.25582986832885635,
+    "full_margin": 0.14429807371774425
+   }
+  }
+ },
+ "atlantisdonovan": {
+  "truth": -168.76139786839485,
+  "spread": 31.177947372198105,
+  "methods": {
+   "0 trust Spotify (no sync)": {
+    "published": 0,
+    "after_s": 0,
+    "full": 0
+   },
+   "A silero": {
+    "published": -312,
+    "after_s": 44.031,
+    "full": -248,
+    "full_score": 0.6483418495496364,
+    "full_margin": 0.41036859813806104
+   },
+   "B band mono": {
+    "published": -344,
+    "after_s": 44.031,
+    "full": -216,
+    "full_score": 0.40882699394350597,
+    "full_margin": 0.2923121621471466
+   },
+   "C centre": {
+    "published": -344,
+    "after_s": 44.031,
+    "full": -216,
+    "full_score": 0.40882690620180084,
+    "full_margin": 0.292312070519089
+   },
+   "C2 L*R coherent": {
+    "published": -344,
+    "after_s": 44.031,
+    "full": -216,
+    "full_score": 0.40861486280358106,
+    "full_margin": 0.29226793811955704
+   },
+   "D voicing": {
+    "published": -344,
+    "after_s": 76.031,
+    "full": -248,
+    "full_score": 0.03565852449272548,
+    "full_margin": 0.085832638076378
+   },
+   "V demucs vocals (ceiling)": {
+    "published": -248,
+    "after_s": 44.031,
+    "full": -152,
+    "full_score": 0.6099032732025278,
+    "full_margin": 0.49066497599956094
+   },
+   "A+C": {
+    "published": -344,
+    "after_s": 44.031,
+    "full": -216,
+    "full_score": 0.5763527028534647,
+    "full_margin": 0.376436494005438
+   },
+   "C+D": {
+    "published": -408,
+    "after_s": 44.031,
+    "full": -248,
+    "full_score": 0.25426745243208604,
+    "full_margin": 0.20827691921662042
+   },
+   "A+C+D": {
+    "published": -376,
+    "after_s": 44.031,
+    "full": -248,
+    "full_score": 0.42399666974102207,
+    "full_margin": 0.2794012480998643
+   }
+  }
+ },
+ "harlemshufflebobearl": {
+  "truth": -218.69669449329376,
+  "spread": 177.76086735725403,
+  "methods": {
+   "0 trust Spotify (no sync)": {
+    "published": 0,
+    "after_s": 0,
+    "full": 0
+   },
+   "A silero": {
+    "published": -344,
+    "after_s": 40.031,
+    "full": -248,
+    "full_score": 0.16390922629247884,
+    "full_margin": 0.09983428708410473
+   },
+   "B band mono": {
+    "published": 232,
+    "after_s": 40.031,
+    "full": 232,
+    "full_score": 0.23247184865956896,
+    "full_margin": 0.22461615056393933
+   },
+   "C centre": {
+    "published": 232,
+    "after_s": 40.031,
+    "full": 232,
+    "full_score": 0.23247681698737413,
+    "full_margin": 0.22458673778896018
+   },
+   "C2 L*R coherent": {
+    "published": 232,
+    "after_s": 40.031,
+    "full": 232,
+    "full_score": 0.2326215102272752,
+    "full_margin": 0.22457996393593765
+   },
+   "D voicing": {
+    "published": -24,
+    "after_s": 40.031,
+    "full": 232,
+    "full_score": 0.12970490587963102,
+    "full_margin": 0.06424202327328728
+   },
+   "V demucs vocals (ceiling)": {
+    "published": -280,
+    "after_s": 40.031,
+    "full": -56,
+    "full_score": 0.4119333392335425,
+    "full_margin": 0.34853109802880466
+   },
+   "A+C": {
+    "published": 232,
+    "after_s": 40.031,
+    "full": 232,
+    "full_score": 0.16611819258309318,
+    "full_margin": 0.03654045980644219
+   },
+   "C+D": {
+    "published": 8,
+    "after_s": 40.031,
+    "full": 232,
+    "full_score": 0.2175096178338925,
+    "full_margin": 0.11530801425416483
+   },
+   "A+C+D": {
+    "published": -56,
+    "after_s": 40.031,
+    "full": 232,
+    "full_score": 0.22058653648176982,
+    "full_margin": 0.04612714473283824
+   }
+  }
+ },
+ "swingsetjurassic5": {
+  "truth": -110.67052023112774,
+  "spread": 132.34516927599907,
+  "methods": {
+   "0 trust Spotify (no sync)": {
+    "published": 0,
+    "after_s": 0,
+    "full": 0
+   },
+   "A silero": {
+    "published": -280,
+    "after_s": 28.0,
+    "full": -280,
+    "full_score": 0.07429515067006803,
+    "full_margin": 0.011029662783105354
+   },
+   "B band mono": {
+    "published": 232,
+    "after_s": 28.0,
+    "full": 232,
+    "full_score": 0.22223024883557133,
+    "full_margin": 0.03157137900121068
+   },
+   "C centre": {
+    "published": 232,
+    "after_s": 28.0,
+    "full": 232,
+    "full_score": 0.22238231668897263,
+    "full_margin": 0.03203580564128933
+   },
+   "C2 L*R coherent": {
+    "published": 232,
+    "after_s": 28.0,
+    "full": 232,
+    "full_score": 0.2224463777034423,
+    "full_margin": 0.032028670608756526
+   },
+   "D voicing": {
+    "published": -600,
+    "after_s": 56.0,
+    "full": -568,
+    "full_score": -0.003858794235462988,
+    "full_margin": 0.0792184209205701
+   },
+   "V demucs vocals (ceiling)": {
+    "published": 24,
+    "after_s": 44.0,
+    "full": 8,
+    "full_score": 0.2854277947693199,
+    "full_margin": 0.16275074380500087
+   },
+   "A+C": {
+    "published": 232,
+    "after_s": 28.0,
+    "full": 232,
+    "full_score": 0.21649796809791666,
+    "full_margin": 0.044392559894830014
+   },
+   "C+D": {
+    "published": -600,
+    "after_s": 28.0,
+    "full": -216,
+    "full_score": 0.10620053508034516,
+    "full_margin": 0.10671012179708593
+   },
+   "A+C+D": {
+    "published": -280,
+    "after_s": 28.0,
+    "full": -248,
+    "full_score": 0.12494049117607055,
+    "full_margin": 0.09022782507340402
+   }
+  }
+ },
+ "youknowyourerightnirvana": {
+  "truth": -230.41704592108727,
+  "spread": 44.07943731546402,
+  "methods": {
+   "0 trust Spotify (no sync)": {
+    "published": 0,
+    "after_s": 0,
+    "full": 0
+   },
+   "A silero": {
+    "published": -536,
+    "after_s": 68.0,
+    "full": -536,
+    "full_score": 0.14644300486227757,
+    "full_margin": 0.07977527508553753
+   },
+   "B band mono": {
+    "published": -152,
+    "after_s": 32.0,
+    "full": -184,
+    "full_score": 0.04506538624601934,
+    "full_margin": 0.11235607355282316
+   },
+   "C centre": {
+    "published": -152,
+    "after_s": 32.0,
+    "full": -184,
+    "full_score": 0.044501686646497736,
+    "full_margin": 0.11352731153361462
+   },
+   "C2 L*R coherent": {
+    "published": -152,
+    "after_s": 32.0,
+    "full": -184,
+    "full_score": 0.0445000249510254,
+    "full_margin": 0.11353049722594807
+   },
+   "D voicing": {
+    "published": -456,
+    "after_s": 32.0,
+    "full": 232,
+    "full_score": 0.176318853912262,
+    "full_margin": 0.01637224240092755
+   },
+   "V demucs vocals (ceiling)": {
+    "published": -168,
+    "after_s": 32.0,
+    "full": -216,
+    "full_score": 0.3472161203589544,
+    "full_margin": 0.42663350192994376
+   },
+   "A+C": {
+    "published": -120,
+    "after_s": 32.0,
+    "full": -504,
+    "full_score": 0.08600597634991361,
+    "full_margin": 0.03633242539403193
+   },
+   "C+D": {
+    "published": -456,
+    "after_s": 32.0,
+    "full": -568,
+    "full_score": 0.19745928022354103,
+    "full_margin": 0.061596533698662026
+   },
+   "A+C+D": {
+    "published": -456,
+    "after_s": 32.0,
+    "full": -536,
+    "full_score": 0.2500264799619564,
+    "full_margin": 0.08660060589795623
+   }
+  }
+ }
+}
