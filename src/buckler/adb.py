@@ -149,6 +149,8 @@ class Adb:
                 capture_output=True,
                 text=True,
                 env=env,
+                # adb shell reads stdin; it would swallow answers meant for click prompts.
+                stdin=subprocess.DEVNULL,
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired as exc:
