@@ -76,7 +76,10 @@ enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val
     SAVER_STARFIELD(ScreensaverMode.STARFIELD.label, SCREENSAVER, ScreensaverMode.STARFIELD),
     ACCESSIBILITY("Accessibility"),
     REMOTE("Remote"),
-    APPS("Apps"),
+    CLEAN_UP("Clean up"),
+    APPS("Apps", CLEAN_UP),
+    CACHE("Cache", CLEAN_UP),
+    LARGEST_APPS("Largest apps", CLEAN_UP),
     COVERS("Covers"),
     UPDATES("Updates"),
     ABOUT("About"),
@@ -193,7 +196,10 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                             onAccountChanged = { accountTick++ },
                         )
                         SettingsPane.REMOTE -> RemotePane()
+                        SettingsPane.CLEAN_UP -> CleanUpPane()
                         SettingsPane.APPS -> AppsPane()
+                        SettingsPane.CACHE -> CachePane()
+                        SettingsPane.LARGEST_APPS -> LargestAppsPane()
                         SettingsPane.ABOUT -> AboutPane()
                     }
                 }

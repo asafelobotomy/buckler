@@ -11,9 +11,9 @@ class UnusedAppsTest {
 
     @Test
     fun noticeNamesUpToThreeApps() {
-        assertEquals("1 app unused for 30 days: Prime. See Settings → Apps.", UnusedApps.noticeMessage(listOf("Prime"), 30))
+        assertEquals("1 app unused for 30 days: Prime. See Settings → Clean up → Apps.", UnusedApps.noticeMessage(listOf("Prime"), 30))
         assertEquals(
-            "5 apps unused for 14 days: A, B, C and 2 more. See Settings → Apps.",
+            "5 apps unused for 14 days: A, B, C and 2 more. See Settings → Clean up → Apps.",
             UnusedApps.noticeMessage(listOf("A", "B", "C", "D", "E"), 14),
         )
     }

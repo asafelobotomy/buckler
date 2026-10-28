@@ -65,7 +65,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - `buckler dns status` prints mode + specifier
 - Open an app, press Home, then open the recents view (≡) and press Home: each goes back to a clean Home at once (no recents cards left over it, no dropped keys); `adb logcat | grep "Launch timeout"` stays quiet
 - Force-stop buckler-home on Home: the ticker shows the last headlines within a couple of seconds
-- Settings → Apps lists apps unopened for the chosen period (never Settings, Play Store, the update service or Files); Keep removes one; `buckler unused` prints the same list
+- Settings → Clean up → Apps lists apps unopened for the chosen period (never Settings, Play Store, the update service or Files); Keep removes one; `buckler unused` prints the same list
 - Settings → Remote: *Found* names the connected remote (2019: triangular); the drawing matches it; Netflix press / double / hold each run their choice (`adb logcat -s RemoteButtons`)
 - Force-stop buckler-home with remote buttons on: Home says they stopped; Settings → Remote → *Turn on again* brings them back (`dumpsys accessibility` shows it bound)
 

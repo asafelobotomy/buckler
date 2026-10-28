@@ -14,7 +14,7 @@
     -->
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
-    <!-- Settings → Apps: which apps go unused (granted once by `buckler launcher grant-settings`). -->
+    <!-- Settings → Clean up: which apps go unused and their sizes (granted once by `buckler launcher grant-settings`). -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
     <uses-feature

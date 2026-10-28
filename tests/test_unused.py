@@ -7,7 +7,7 @@ from fakes import FakeAdb
 from buckler.adb import AdbError
 from buckler.journal import iter_journals
 from buckler.ops import restore_all_journals
-from buckler.unused import disable_unused, parse_report, read_report
+from buckler.unused import clear_caches, disable_unused, parse_report, read_report
 
 REPORT = {
     "generated_at": "2026-10-28T16:19:53Z",
@@ -50,7 +50,7 @@ def test_report_reads_and_describes() -> None:
 def test_missing_list_explains_what_to_do() -> None:
     adb = make_adb()
     adb.report = "cat: No such file or directory"
-    with pytest.raises(AdbError, match="Settings → Apps"):
+    with pytest.raises(AdbError, match="Settings → Clean up → Apps"):
         read_report(adb)  # type: ignore[arg-type]
 
 
@@ -69,3 +69,22 @@ def test_apply_can_pick_a_subset(journals_dir: Path) -> None:
     adb = make_adb()
     result = disable_unused(adb, read_report(adb), ["com.google.android.tv", "not.listed"])  # type: ignore[arg-type]
     assert result.changed == ["com.google.android.tv"]
+
+
+class CacheAdb(FakeAdb):
+    """`df` reports 100 MB more free once `pm trim-caches` has run."""
+
+    trimmed: bool = False
+
+    def shell(self, *args: str, check: bool = True) -> str:
+        if args[:2] == ("pm", "trim-caches"):
+            self.trimmed = True
+            return ""
+        free = 2_000_000 + (102_400 if self.trimmed else 0)
+        return f"Filesystem 1K-blocks Used Available Use% Mounted on\n/dev/block/dm-2 11000000 9000000 {free} 82% /data"
+
+
+def test_clear_caches_reports_freed_space() -> None:
+    adb = CacheAdb()
+    assert clear_caches(adb) == 102_400
+    assert adb.trimmed

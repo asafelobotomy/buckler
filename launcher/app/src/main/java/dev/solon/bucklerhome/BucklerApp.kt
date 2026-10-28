@@ -2,6 +2,7 @@ package dev.solon.bucklerhome
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import android.content.Context
 import android.net.http.HttpResponseCache
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -23,7 +24,7 @@ class BucklerApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         // Feeds and weather send ETag / Last-Modified: unchanged ones then come back as a short 304.
-        runCatching { HttpResponseCache.install(File(cacheDir, "http"), HTTP_CACHE_BYTES) }
+        installHttpCache(this)
     }
 
     override fun onTrimMemory(level: Int) {
@@ -35,6 +36,11 @@ class BucklerApp : Application(), ImageLoaderFactory {
     private companion object {
         // About 19 MB on SHIELD: a screen of covers plus the stage picture.
         const val MEMORY_CACHE_SHARE = 0.10
-        const val HTTP_CACHE_BYTES = 8L * 1024 * 1024
     }
+}
+
+private const val HTTP_CACHE_BYTES = 8L * 1024 * 1024
+
+fun installHttpCache(context: Context) {
+    runCatching { HttpResponseCache.install(File(context.cacheDir, "http"), HTTP_CACHE_BYTES) }
 }

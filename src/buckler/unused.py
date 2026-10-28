@@ -1,4 +1,5 @@
-"""Apps Buckler's Settings → Apps found unused, read from the TV and optionally disabled."""
+"""Decluttering from a computer: apps Buckler's Settings → Clean up → Apps found unused (read from
+the TV and optionally disabled), and clearing every app's cache, which only adb is allowed to do."""
 
 from __future__ import annotations
 
@@ -59,12 +60,12 @@ def parse_report(text: str) -> UnusedReport:
 
 
 def read_report(adb: Adb) -> UnusedReport:
-    """The list Buckler last wrote (on returning Home, or opening Settings → Apps)."""
+    """The list Buckler last wrote (on returning Home, or opening Settings → Clean up → Apps)."""
     adb.connect()
     text = adb.shell("cat", EXPORT_PATH, check=False)
     if not text.lstrip().startswith("{"):
         raise AdbError(
-            "No unused-apps list on the TV yet: open Buckler Settings → Apps once "
+            "No unused-apps list on the TV yet: open Buckler Settings → Clean up → Apps once "
             "(after `buckler launcher grant-settings`)."
         )
     return parse_report(text)
@@ -81,3 +82,19 @@ def disable_unused(adb: Adb, report: UnusedReport, packages: list[str] | None = 
         packages=chosen,
     )
     return apply_packages(adb, profile, dry_run=dry_run)
+
+
+def free_kb(adb: Adb) -> int:
+    """Free space on /data in KiB (0 if `df` gives nothing readable)."""
+    lines = adb.shell("df", "-k", "/data", check=False).splitlines()
+    fields = lines[-1].split() if len(lines) > 1 else []
+    return int(fields[3]) if len(fields) > 3 and fields[3].isdigit() else 0
+
+
+def clear_caches(adb: Adb) -> int:
+    """Clear every app's cache (Android's own `pm trim-caches`); returns the KiB freed."""
+    adb.connect()
+    before = free_kb(adb)
+    # Asking for more than the disk holds makes Android clear all caches it can.
+    adb.shell("pm", "trim-caches", "999G")
+    return max(free_kb(adb) - before, 0)
