@@ -3,12 +3,15 @@ package dev.solon.bucklerhome
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +69,7 @@ fun IconPackSection() {
         }
     }
     if (chosen != null) {
+        Spacer(modifier = Modifier.height(14.dp))
         SettingsRow("Single-colour packs (Arcticons, Lawnicons) look best in the theme's text colour.")
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             SettingsAction("Theme colour", selected = tinted) {

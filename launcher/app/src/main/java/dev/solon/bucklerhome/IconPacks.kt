@@ -4,7 +4,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
+import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.InsetDrawable
 import android.util.DisplayMetrics
 import android.util.Xml
 import androidx.compose.ui.graphics.toArgb
@@ -29,6 +31,9 @@ object IconPacks {
     )
 
     private class Mapping(val version: Long, val byComponent: Map<String, String>, val byPackage: Map<String, String>)
+
+    /** Room around a flat pack icon (Arcticons), matching the margin layered icons have. */
+    private const val MARGIN = 0.16f
 
     @Volatile private var cache: Pair<String, Mapping>? = null
 
@@ -55,8 +60,13 @@ object IconPacks {
         val id = res.getIdentifier(name, "drawable", pack).takeIf { it != 0 } ?: return null
         val icon = runCatching { res.getDrawableForDensity(id, DisplayMetrics.DENSITY_XXHIGH, null) }.getOrNull()
             ?: return null
-        IconPackStore.tint(context)?.let { icon.mutate().setTint(it) }
-        return icon
+        val tint = IconPackStore.tint(context)
+        val adaptive = icon as? AdaptiveIconDrawable
+        if (tint == null) return PackIconDrawable(icon, if (adaptive != null) 0f else MARGIN, themed = false)
+        // A layered icon (Lawnicons) would tint to a solid square: paint only its symbol, which
+        // already sits inside the layer's margin, on the tile.
+        val symbol = (adaptive?.foreground ?: icon).mutate().apply { setTint(tint) }
+        return PackIconDrawable(symbol, if (adaptive != null) 0f else MARGIN, themed = true)
     }
 
     /** How many of [packages] the chosen [pack] has an icon for. */
@@ -107,6 +117,12 @@ object IconPacks {
         return if (ok && byComponent.isNotEmpty()) Mapping(version, byComponent, byPackage) else null
     }
 }
+
+/**
+ * An icon from a pack, with room around it. [themed] icons are drawn in the theme's text colour,
+ * which the tile swaps for the focus colour's text so a focused tile keeps its symbol visible.
+ */
+class PackIconDrawable(icon: Drawable, margin: Float, val themed: Boolean) : InsetDrawable(icon, margin)
 
 /** Which icon pack Home uses (none: each app's own icon) and whether its icons take the theme's text colour. */
 object IconPackStore {

@@ -33,6 +33,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -160,11 +161,18 @@ fun CoverTile(
                     val art = remember(item.id, item.banner, item.icon) {
                         (item.banner ?: item.icon)?.let(::DrawablePainter)
                     }
+                    // Icon-pack icons are whole symbols: fit them, and keep themed ones readable on focus.
+                    val pack = (item.icon as? PackIconDrawable)?.takeIf { item.banner == null }
                     if (art != null) {
                         Image(
                             painter = art,
                             contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
+                            contentScale = if (pack != null) ContentScale.Fit else ContentScale.Crop,
+                            colorFilter = if (pack?.themed == true) {
+                                ColorFilter.tint(if (focused || moving) ColorOnBrand else ColorText)
+                            } else {
+                                null
+                            },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
