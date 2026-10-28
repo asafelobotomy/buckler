@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -123,8 +124,9 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.weight(1f)) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
+                // As wide as the longest label (every pill matches it), not a fixed width.
                 modifier = Modifier
-                    .width(220.dp)
+                    .width(IntrinsicSize.Max)
                     .verticalScroll(rememberScrollState())
                     .trapVerticalFocus(),
             ) {
@@ -138,7 +140,7 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier
-                        .width(200.dp)
+                        .width(IntrinsicSize.Max)
                         .verticalScroll(rememberScrollState())
                         .trapVerticalFocus(onLeft = { navFocus.getValue(section) }),
                 ) {
@@ -246,8 +248,10 @@ private fun SettingsNav(
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            // A little more room after the label than before it.
+            modifier = Modifier.padding(start = 16.dp, end = 28.dp, top = 8.dp, bottom = 8.dp),
             fontSize = 16.sp,
+            maxLines = 1,
         )
     }
 }
