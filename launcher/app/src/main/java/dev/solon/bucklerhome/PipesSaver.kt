@@ -32,7 +32,9 @@ private val STEPS = arrayOf(
  * random with a ball joint, until the grid fills up and it starts over. Everything is drawn with
  * gradients (no bundled art) and sorted far-to-near each frame so closer pipes overlap farther ones.
  */
-class PipesScene(context: Context) : View(context) {
+/** At most [maxPipes] pipes per scene before it starts over; [speed] 1 = normal. */
+class PipesScene(context: Context, private val maxPipes: Int = MAX_PIPES, speed: Float = 1f) : View(context) {
+    private val stepSeconds = STEP_SECONDS / speed
     private class Piece(val depth: Float, val draw: (Canvas) -> Unit)
 
     private val random = Random(System.nanoTime())
@@ -68,8 +70,8 @@ class PipesScene(context: Context) : View(context) {
             if (hold <= 0f) reset()
         } else {
             acc += dt
-            while (acc >= STEP_SECONDS && hold <= 0f) {
-                acc -= STEP_SECONDS
+            while (acc >= stepSeconds && hold <= 0f) {
+                acc -= stepSeconds
                 step()
             }
         }
@@ -111,7 +113,7 @@ class PipesScene(context: Context) : View(context) {
     }
 
     private fun startPipe() {
-        if (pipes >= MAX_PIPES) {
+        if (pipes >= maxPipes) {
             hold = HOLD_SECONDS
             return
         }

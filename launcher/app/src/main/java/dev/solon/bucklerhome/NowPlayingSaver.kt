@@ -103,8 +103,11 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
             MediaKind.TWITCH -> showStream(info, chip("● LIVE", TWITCH_PURPLE))
             MediaKind.LIVE_TV -> showLiveTv(info)
         }
-        addView(clock, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END)
-            .apply { setMargins(0, dp(28), dp(40), 0) })
+        // The corner clock while something plays; with nothing playing the big clock always shows.
+        if (config.showClock) {
+            addView(clock, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END)
+                .apply { setMargins(0, dp(28), dp(40), 0) })
+        }
         artJob = scope.launch {
             val loaded = withContext(Dispatchers.IO) { loadArt(info) }
             val bitmap = loaded ?: withContext(Dispatchers.IO) { appArt(info.packageName) } ?: return@launch
@@ -115,7 +118,7 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
             }
             art.setImageBitmap(bitmap)
             art.visibility = View.VISIBLE
-            if (info.kind != MediaKind.LIVE_TV) {
+            if (info.kind != MediaKind.LIVE_TV && config.on(SaverOption.BLUR)) {
                 backdrop.setImageBitmap(softBlur(bitmap))
                 backdrop.animate().alpha(0.4f).setDuration(1_200).start()
             }

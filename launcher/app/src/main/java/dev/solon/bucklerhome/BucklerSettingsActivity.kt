@@ -51,14 +51,24 @@ class BucklerSettingsActivity : ComponentActivity() {
 
 /**
  * Appearance first, with a submenu for each part of Home top to bottom (Header, Main Stage,
- * Shelves), then the rest, then upkeep. [parent] puts an entry under another in the menu.
+ * Shelves), then Screensaver with a submenu for each screensaver ([saver]), then the rest, then
+ * upkeep. [parent] puts an entry under another in the menu.
  */
-enum class SettingsPane(val label: String, val parent: SettingsPane? = null) {
+enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val saver: ScreensaverMode? = null) {
     APPEARANCE("Appearance"),
     HEADER("Header", APPEARANCE),
     MAIN_STAGE("Main Stage", APPEARANCE),
     SHELVES("Shelves", APPEARANCE),
     SCREENSAVER("Screensaver"),
+    SAVER_CLOCK(ScreensaverMode.CLOCK.label, SCREENSAVER, ScreensaverMode.CLOCK),
+    SAVER_DVD(ScreensaverMode.DVD.label, SCREENSAVER, ScreensaverMode.DVD),
+    SAVER_PHOTOS(ScreensaverMode.PHOTOS.label, SCREENSAVER, ScreensaverMode.PHOTOS),
+    SAVER_UPLOADED(ScreensaverMode.UPLOADED.label, SCREENSAVER, ScreensaverMode.UPLOADED),
+    SAVER_NOW_PLAYING(ScreensaverMode.NOW_PLAYING.label, SCREENSAVER, ScreensaverMode.NOW_PLAYING),
+    SAVER_MAZE(ScreensaverMode.MAZE.label, SCREENSAVER, ScreensaverMode.MAZE),
+    SAVER_PIPES(ScreensaverMode.PIPES.label, SCREENSAVER, ScreensaverMode.PIPES),
+    SAVER_MYSTIFY(ScreensaverMode.MYSTIFY.label, SCREENSAVER, ScreensaverMode.MYSTIFY),
+    SAVER_STARFIELD(ScreensaverMode.STARFIELD.label, SCREENSAVER, ScreensaverMode.STARFIELD),
     ACCESSIBILITY("Accessibility"),
     REMOTE("Remote"),
     APPS("Apps"),
@@ -131,7 +141,11 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                         SettingsPane.MAIN_STAGE -> MainStagePane()
                         SettingsPane.SHELVES -> ShelvesPane()
                         SettingsPane.ACCESSIBILITY -> AccessibilityPane()
-                        SettingsPane.SCREENSAVER -> ScreensaverPane()
+                        SettingsPane.SCREENSAVER -> ScreensaverPane(onOpen = { pane = it })
+                        SettingsPane.SAVER_CLOCK, SettingsPane.SAVER_DVD, SettingsPane.SAVER_PHOTOS,
+                        SettingsPane.SAVER_UPLOADED, SettingsPane.SAVER_NOW_PLAYING, SettingsPane.SAVER_MAZE,
+                        SettingsPane.SAVER_PIPES, SettingsPane.SAVER_MYSTIFY, SettingsPane.SAVER_STARFIELD,
+                        -> ScreensaverModePane(pane.saver ?: ScreensaverMode.CLOCK)
                         SettingsPane.UPDATES -> UpdatesPane(
                             accountTick = accountTick,
                             updateResult = updateResult,

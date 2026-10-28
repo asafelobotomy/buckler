@@ -50,7 +50,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - Play music in any app: Now Playing shows title and prev / play-pause / next work (after media access is granted)
 - Network icon opens network settings; VPN icon opens the VPN app
 - Menu → Move: menu closes, ◀ ▶ slide the tile, OK places it (does not launch), Back cancels
-- Settings → Screensaver: Preview each style (clock, DVD, online photos, My photos)
+- Settings → Screensaver → each screensaver: change an option (speed, size, count…), Preview shows it, and the other screensavers keep their own
 - Settings → Screensaver → Start after: presets, Custom… (step buttons) and Off apply (after `buckler launcher grant-settings`)
 - Settings → Appearance: each colour scheme, font, layout and app size changes Home immediately
 - Settings → Accessibility: high contrast, strong focus outline, text size, reduce motion, speak focused item

@@ -52,13 +52,24 @@ data class ScreensaverConfig(
     val mode: ScreensaverMode = ScreensaverMode.CLOCK,
     /** Online photo categories; slides take turns between them. Never empty. */
     val categories: Set<PhotoCategory> = setOf(PhotoCategory.NATURE),
-    val intervalSeconds: Int = 20,
-    val showClock: Boolean = true,
+    /** Every screensaver's own option values (see [ScreensaverMode.options]); missing ones use defaults. */
+    val options: Map<ScreensaverMode, Map<SaverOption, Int>> = emptyMap(),
     val use24h: Boolean = true,
+    val dateStyle: DateStyle = DateStyle.SHORT,
     val font: FontChoice = FontChoice.SYSTEM,
     val theme: AppTheme = AppTheme.BUCKLER,
     val reduceMotion: Boolean = false,
-)
+) {
+    /** [option]'s value for the screensaver being shown. */
+    fun value(option: SaverOption): Int = options[mode]?.get(option) ?: option.default
+
+    fun on(option: SaverOption): Boolean = value(option) != 0
+
+    /** [SaverOption.SPEED] as a multiplier (1 = normal). */
+    val speed: Float get() = value(SaverOption.SPEED) / 100f
+    val intervalSeconds: Int get() = value(SaverOption.INTERVAL)
+    val showClock: Boolean get() = on(SaverOption.CLOCK)
+}
 
 object ScreensaverPrefs {
     private const val PREFS = "bucklerhome"
@@ -67,19 +78,21 @@ object ScreensaverPrefs {
     private const val KEY_CATEGORIES = "saver_categories"
     private const val KEY_INTERVAL = "saver_interval"
     private const val KEY_CLOCK = "saver_clock"
-    val INTERVALS = listOf(10, 20, 30, 60, 120)
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun load(context: Context): ScreensaverConfig {
         val p = prefs(context)
         val appearance = AppearancePrefs.load(context)
+        val display = DisplayPrefs.load(context)
         return ScreensaverConfig(
             mode = ScreensaverMode.fromName(p.getString(KEY_MODE, null)),
             categories = readCategories(p),
-            intervalSeconds = p.getInt(KEY_INTERVAL, 20),
-            showClock = p.getBoolean(KEY_CLOCK, true),
-            use24h = DisplayPrefs.load(context).use24h,
+            options = ScreensaverMode.entries.associateWith { mode ->
+                mode.options.associateWith { option -> readOption(p, mode, option) }
+            },
+            use24h = display.use24h,
+            dateStyle = display.dateStyle,
             font = appearance.font,
             theme = appearance.theme,
             reduceMotion = appearance.reduceMotion,
@@ -104,11 +117,22 @@ object ScreensaverPrefs {
         return true
     }
 
-    fun setShowClock(context: Context, value: Boolean) =
-        prefs(context).edit().putBoolean(KEY_CLOCK, value).apply()
+    private fun optionKey(mode: ScreensaverMode, option: SaverOption) = "saver_${mode.name.lowercase()}_${option.name.lowercase()}"
 
-    fun cycleInterval(context: Context, current: Int) {
-        val next = INTERVALS.getOrElse(INTERVALS.indexOf(current) + 1) { INTERVALS.first() }
-        prefs(context).edit().putInt(KEY_INTERVAL, next).apply()
+    /**
+     * A screensaver's own value. Before each had its own, one clock-overlay switch and one photo
+     * interval were shared; those carry over as every screensaver's starting value.
+     */
+    private fun readOption(p: android.content.SharedPreferences, mode: ScreensaverMode, option: SaverOption): Int {
+        val key = optionKey(mode, option)
+        if (p.contains(key)) return p.getInt(key, option.default)
+        return when (option) {
+            SaverOption.CLOCK -> if (p.getBoolean(KEY_CLOCK, true)) 1 else 0
+            SaverOption.INTERVAL -> p.getInt(KEY_INTERVAL, option.default).takeIf { v -> option.choices.any { it.first == v } } ?: option.default
+            else -> option.default
+        }
     }
+
+    fun setOption(context: Context, mode: ScreensaverMode, option: SaverOption, value: Int) =
+        prefs(context).edit().putInt(optionKey(mode, option), value).apply()
 }

@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.compose.ui.graphics.toArgb
 import java.io.File
+import java.time.LocalDate
 import java.time.LocalTime
 import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
@@ -38,7 +39,7 @@ private val DVD_COLORS = intArrayOf(
 class ScreensaverView(context: Context, private val config: ScreensaverConfig) : FrameLayout(context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val density = resources.displayMetrics.density
-    private val clock = textView(sizeSp = 64f, light = true)
+    private val clock = textView(sizeSp = config.value(SaverOption.CLOCK_SIZE).toFloat(), light = true)
     private var driftX: ObjectAnimator? = null
     private var driftY: ObjectAnimator? = null
     private var frameCallback: Choreographer.FrameCallback? = null
@@ -56,10 +57,12 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
     }
 
     fun start() {
+        // The drifting clock can carry the date on a second line.
+        val withDate = config.mode == ScreensaverMode.CLOCK && config.on(SaverOption.DATE)
         scope.launch {
             while (true) {
                 val now = DisplayFormat.time(LocalTime.now(), config.use24h)
-                clock.text = now
+                clock.text = if (withDate) "$now\n${DisplayFormat.date(LocalDate.now(), config.dateStyle)}" else now
                 overlayClock.text = now
                 delay(15_000)
             }
@@ -69,10 +72,16 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
             ScreensaverMode.DVD -> startDvd()
             ScreensaverMode.PHOTOS, ScreensaverMode.UPLOADED -> startSlideshow()
             ScreensaverMode.NOW_PLAYING -> startNowPlaying()
-            ScreensaverMode.MAZE -> startScene(MazeScene(context))
-            ScreensaverMode.PIPES -> startScene(PipesScene(context))
-            ScreensaverMode.MYSTIFY -> startScene(MystifyScene(context))
-            ScreensaverMode.STARFIELD -> startScene(StarfieldScene(context))
+            ScreensaverMode.MAZE -> startScene(
+                MazeScene(context, config.value(SaverOption.MAZE_SIZE), config.value(SaverOption.WALLS), config.speed),
+            )
+            ScreensaverMode.PIPES -> startScene(PipesScene(context, config.value(SaverOption.PIPES), config.speed))
+            ScreensaverMode.MYSTIFY -> startScene(
+                MystifyScene(context, config.value(SaverOption.SHAPES), config.value(SaverOption.TRAIL), config.speed),
+            )
+            ScreensaverMode.STARFIELD -> startScene(
+                StarfieldScene(context, config.value(SaverOption.STARS), config.on(SaverOption.STAR_COLOUR), config.speed),
+            )
         }
     }
 
@@ -90,10 +99,11 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
 
     private fun startDriftingClock() {
         addView(clock, centered())
+        val every = config.value(SaverOption.DRIFT).takeIf { config.mode == ScreensaverMode.CLOCK } ?: SaverOption.DRIFT.default
         scope.launch {
             while (true) {
                 drift()
-                delay(45_000)
+                delay(every * 1_000L)
             }
         }
     }
@@ -140,12 +150,15 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
 
     private fun startDvd() {
         val mark = ImageView(context).apply { setImageResource(config.theme.markRes) }
+        val logo = config.value(SaverOption.LOGO_SIZE)
         val block = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            addView(mark, LinearLayout.LayoutParams(dp(110), dp(110)))
-            clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44f)
-            addView(clock, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+            addView(mark, LinearLayout.LayoutParams(dp(logo), dp(logo)))
+            if (config.showClock) {
+                clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 44f * logo / SaverOption.LOGO_SIZE.default)
+                addView(clock, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+            }
         }
         addView(block, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
         var colorIndex = 0
@@ -155,8 +168,9 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
             clock.setTextColor(DVD_COLORS[colorIndex])
         }
         recolor()
+        val recolourOnEdge = config.on(SaverOption.RECOLOUR)
 
-        val speed = 150f * density
+        val speed = 150f * density * config.speed
         val physics = DvdBounce(x = 0f, y = 0f, vx = speed, vy = speed * 0.72f)
         var lastNanos = 0L
         val callback = object : Choreographer.FrameCallback {
@@ -164,7 +178,7 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
                 if (lastNanos != 0L && block.width > 0) {
                     val dt = ((frameTimeNanos - lastNanos) / 1e9f).coerceAtMost(0.1f)
                     val hit = physics.step(dt, (width - block.width).toFloat(), (height - block.height).toFloat())
-                    if (hit.any) recolor()
+                    if (hit.any && recolourOnEdge) recolor()
                     block.translationX = physics.x
                     block.translationY = physics.y
                 }
@@ -186,8 +200,10 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
     private fun startSlideshow() {
         addView(imageA, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(imageB, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        addView(credit, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.START)
-            .apply { setMargins(dp(40), 0, 0, dp(28)) })
+        if (config.mode != ScreensaverMode.PHOTOS || config.on(SaverOption.CREDITS)) {
+            addView(credit, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.START)
+                .apply { setMargins(dp(40), 0, 0, dp(28)) })
+        }
         if (config.showClock) {
             addView(overlayClock, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.END)
                 .apply { setMargins(0, 0, dp(40), dp(24)) })
@@ -225,7 +241,13 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
     }
 
     private fun loadSlides(): List<Slide> = when (config.mode) {
-        ScreensaverMode.UPLOADED -> ScreensaverImages.uploaded(context).shuffled().map { Slide.Local(it) }
+        ScreensaverMode.UPLOADED -> ScreensaverImages.uploaded(context).let { files ->
+            when (config.value(SaverOption.ORDER)) {
+                1 -> files.sortedBy { it.lastModified() }
+                2 -> files.sortedByDescending { it.lastModified() }
+                else -> files.shuffled()
+            }
+        }.map { Slide.Local(it) }
         ScreensaverMode.PHOTOS ->
             ScreensaverImages.takeTurns(
                 PhotoCategory.entries.filter { it in config.categories }
@@ -248,14 +270,17 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
         val outgoing = if (frontIsA) imageA else imageB
         frontIsA = !frontIsA
         incoming.setImageBitmap(bitmap)
-        incoming.alpha = 0f
         incoming.scaleX = 1f
         incoming.scaleY = 1f
-        incoming.animate().alpha(1f).setDuration(FADE_MS).start()
-        outgoing.animate().alpha(0f).setDuration(FADE_MS)
+        // Transition: 0 fade with a slow zoom, 1 fade, 2 cut.
+        val transition = config.value(SaverOption.TRANSITION)
+        val fade = if (transition == 2) 0L else FADE_MS
+        incoming.alpha = if (fade == 0L) 1f else 0f
+        incoming.animate().alpha(1f).setDuration(fade).start()
+        outgoing.animate().alpha(0f).setDuration(fade)
             .withEndAction { outgoing.setImageDrawable(null) }.start()
         // Slow Ken Burns zoom keeps a still photo from feeling frozen (skipped with reduced motion).
-        if (!config.reduceMotion) {
+        if (transition == 0 && !config.reduceMotion) {
             ObjectAnimator.ofFloat(incoming, View.SCALE_X, 1f, 1.08f).setDuration(config.intervalSeconds * 1_000L + FADE_MS).start()
             ObjectAnimator.ofFloat(incoming, View.SCALE_Y, 1f, 1.08f).setDuration(config.intervalSeconds * 1_000L + FADE_MS).start()
         }

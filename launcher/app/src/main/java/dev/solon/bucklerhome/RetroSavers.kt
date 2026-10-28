@@ -20,8 +20,16 @@ private class FrameClock {
     }
 }
 
-/** After Windows "Mystify": two bouncing quadrilaterals with fading trails, slowly changing colour. */
-class MystifyScene(context: Context) : View(context) {
+/**
+ * After Windows "Mystify": bouncing quadrilaterals ([shapeCount], two by default) with fading
+ * trails [trail] outlines long, slowly changing colour; [speed] 1 = normal.
+ */
+class MystifyScene(
+    context: Context,
+    shapeCount: Int = 2,
+    private val trail: Int = TRAIL,
+    private val speed: Float = 1f,
+) : View(context) {
     private class Shape(var hue: Float) {
         val points = FloatArray(8)
         val velocity = FloatArray(8)
@@ -30,7 +38,8 @@ class MystifyScene(context: Context) : View(context) {
 
     private val random = Random(System.nanoTime())
     private val clock = FrameClock()
-    private val shapes = listOf(Shape(0f), Shape(180f))
+    // Hues spread evenly around the wheel so each shape starts in its own colour.
+    private val shapes = List(shapeCount.coerceIn(1, 4)) { Shape(it * 360f / shapeCount.coerceIn(1, 4)) }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2.5f * resources.displayMetrics.density
@@ -39,7 +48,7 @@ class MystifyScene(context: Context) : View(context) {
     private var sinceTrail = 0f
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        val speed = 180f * resources.displayMetrics.density
+        val speed = 180f * resources.displayMetrics.density * speed
         for (shape in shapes) {
             for (i in 0 until 4) {
                 shape.points[i * 2] = random.nextFloat() * w
@@ -62,12 +71,12 @@ class MystifyScene(context: Context) : View(context) {
             shape.hue = (shape.hue + dt * 12f) % 360f
             if (snapshot) {
                 shape.trail.addFirst(shape.points.copyOf())
-                while (shape.trail.size > TRAIL) shape.trail.removeLast()
+                while (shape.trail.size > trail) shape.trail.removeLast()
             }
             val rgb = Color.HSVToColor(floatArrayOf(shape.hue, 0.85f, 1f))
             shape.trail.forEachIndexed { i, pts ->
                 paint.color = rgb
-                paint.alpha = (255 * (1f - i / TRAIL.toFloat())).toInt()
+                paint.alpha = (255 * (1f - i / trail.toFloat())).toInt()
                 polygon(canvas, pts)
             }
         }
@@ -100,18 +109,27 @@ class MystifyScene(context: Context) : View(context) {
     }
 }
 
-/** After Windows "Starfield": flying forward through a field of stars. */
-class StarfieldScene(context: Context) : View(context) {
+/** After Windows "Starfield": flying forward through [stars] stars, white or [tinted]; [speed] 1 = normal. */
+class StarfieldScene(
+    context: Context,
+    private val stars: Int = STARS,
+    tinted: Boolean = false,
+    private val speed: Float = 1f,
+) : View(context) {
     private val random = Random(System.nanoTime())
     private val clock = FrameClock()
-    private val xs = FloatArray(STARS)
-    private val ys = FloatArray(STARS)
-    private val zs = FloatArray(STARS) { random.nextFloat() }
+    private val xs = FloatArray(stars)
+    private val ys = FloatArray(stars)
+    private val zs = FloatArray(stars) { random.nextFloat() }
+    // Tinted: each star keeps a pale colour of its own.
+    private val colours = IntArray(stars) {
+        if (tinted) Color.HSVToColor(floatArrayOf(random.nextFloat() * 360f, 0.35f, 1f)) else Color.WHITE
+    }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     private val density = resources.displayMetrics.density
 
     init {
-        for (i in 0 until STARS) respawn(i, z = random.nextFloat())
+        for (i in 0 until stars) respawn(i, z = random.nextFloat())
     }
 
     private fun respawn(i: Int, z: Float = 1f) {
@@ -125,8 +143,8 @@ class StarfieldScene(context: Context) : View(context) {
         canvas.drawColor(Color.BLACK)
         val cx = width / 2f
         val cy = height / 2f
-        for (i in 0 until STARS) {
-            zs[i] -= dt * SPEED
+        for (i in 0 until stars) {
+            zs[i] -= dt * SPEED * speed
             if (zs[i] <= 0.02f) respawn(i)
             val x = cx + xs[i] / zs[i] * cx
             val y = cy + ys[i] / zs[i] * cx
@@ -135,6 +153,7 @@ class StarfieldScene(context: Context) : View(context) {
                 continue
             }
             val near = 1f - zs[i]
+            paint.color = colours[i]
             paint.alpha = (60 + 195 * near).toInt().coerceIn(0, 255)
             canvas.drawCircle(x, y, (0.6f + near * near * 3.2f) * density, paint)
         }

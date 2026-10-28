@@ -22,13 +22,19 @@ private const val MAZE_CELLS = 9
  * raycaster draws into a 320×180 frame that is scaled up without filtering for the period look.
  * Wall textures are generated here, so no third-party artwork is bundled.
  */
-class MazeScene(context: Context) : View(context) {
+/** [cells] across, [walls] 0 = a different texture per maze, 1 brick, 2 stone, 3 wood; [speed] 1 = normal. */
+class MazeScene(
+    context: Context,
+    private val cells: Int = MAZE_CELLS,
+    private val walls: Int = 0,
+    private val speed: Float = 1f,
+) : View(context) {
     private val random = Random(System.nanoTime())
     private val frame = Bitmap.createBitmap(RENDER_W, RENDER_H, Bitmap.Config.ARGB_8888)
     private val pixels = IntArray(RENDER_W * RENDER_H)
     private val textures = listOf(MazeTextures.brick(random), MazeTextures.stone(random), MazeTextures.wood(random))
-    private var texture = textures[0]
-    private var maze = MazeGrid.generate(MAZE_CELLS, random)
+    private var texture = pickTexture()
+    private var maze = MazeGrid.generate(cells, random)
     private var walker = MazeWalker(maze)
     private val ceiling = IntArray(RENDER_H) { shade(0xFF2B3A55.toInt(), 0.35f + 0.65f * (1f - it / (RENDER_H / 2f)).coerceIn(0f, 1f)) }
     private val floorRows = IntArray(RENDER_H) { shade(0xFF6B6355.toInt(), (((it - RENDER_H / 2f) / (RENDER_H / 2f)) * 1.1f).coerceIn(0.12f, 1f)) }
@@ -36,15 +42,17 @@ class MazeScene(context: Context) : View(context) {
     private val dst = Rect()
     private var lastNanos = 0L
 
+    private fun pickTexture(): IntArray = if (walls in 1..textures.size) textures[walls - 1] else textures[random.nextInt(textures.size)]
+
     override fun onDraw(canvas: Canvas) {
         val now = System.nanoTime()
         val dt = if (lastNanos == 0L) 0f else ((now - lastNanos) / 1e9f).coerceAtMost(0.1f)
         lastNanos = now
-        walker.update(dt)
+        walker.update(dt * speed)
         if (walker.finished) {
-            maze = MazeGrid.generate(MAZE_CELLS, random)
+            maze = MazeGrid.generate(cells, random)
             walker = MazeWalker(maze)
-            texture = textures[random.nextInt(textures.size)]
+            texture = pickTexture()
         }
         render()
         frame.setPixels(pixels, 0, RENDER_W, 0, 0, RENDER_W, RENDER_H)
