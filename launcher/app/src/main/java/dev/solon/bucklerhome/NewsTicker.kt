@@ -12,19 +12,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -32,6 +37,12 @@ import kotlinx.coroutines.delay
 /**
  * One dim line under the header. Each story is preceded by its source mark. Scrolls at the chosen
  * speed, or steps story by story when reduced motion is on.
+ *
+ * The scroll runs only while Home is resumed, and restarts after the marquee's initial pause. Home
+ * redraws the whole screen for every scroll step and SHIELD takes just over a frame to do it, so a
+ * scroll that never stops leaves the main thread no idle moment: Android then never sees Home
+ * finish launching, the app it replaced (or the recents view) is not stopped and stays drawn
+ * over Home, and key presses are dropped while the "app switch" is overdue.
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTvMaterial3Api::class)
 @Composable
@@ -41,20 +52,42 @@ fun NewsTicker(headlines: List<Headline>, metrics: HeaderMetrics, speed: TickerS
         SteppingTicker(headlines, metrics, speed)
         return
     }
+    val scrolling = rememberResumed()
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .basicMarquee(
-                iterations = Int.MAX_VALUE,
-                spacing = MarqueeSpacing(64.dp),
-                velocity = speed.velocityDp.dp,
+            .then(
+                if (scrolling) {
+                    Modifier.basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        spacing = MarqueeSpacing(64.dp),
+                        velocity = speed.velocityDp.dp,
+                    )
+                } else {
+                    Modifier
+                },
             ),
     ) {
         headlines.forEach { headline ->
             Story(headline, metrics)
         }
     }
+}
+
+/** True while the screen's activity is resumed (in front, taking keys). */
+@Composable
+private fun rememberResumed(): Boolean {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var resumed by remember(lifecycle) { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) }
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, _ ->
+            resumed = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    return resumed
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
