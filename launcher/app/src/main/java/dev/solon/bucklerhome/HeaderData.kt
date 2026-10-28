@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.Dispatchers
@@ -23,54 +24,76 @@ private object HeaderCache {
     var forecast: Pair<Place, Forecast>? = null
     /** By query key: the ticker and the News stage can follow different sources. */
     val news = HashMap<String, List<Headline>>()
+    /** When each feed (by [poll] key) last succeeded. */
+    val fetchedAt = HashMap<String, Long>()
+}
+
+/**
+ * Fetches every [everyMs] (or [REFRESH_RETRY_MS] after a failure) while [visible], i.e. Home is on
+ * screen. Hidden behind an app or the screensaver it stops; back on screen it fetches at once only
+ * if the last success is older than [everyMs], otherwise when that runs out.
+ */
+private suspend fun <T : Any> poll(key: String, visible: Boolean, everyMs: Long, fetch: () -> T?, onFresh: suspend (T) -> Unit) {
+    if (!visible) return
+    val age = System.currentTimeMillis() - (HeaderCache.fetchedAt[key] ?: 0L)
+    if (age < everyMs) delay(everyMs - age)
+    while (true) {
+        val fresh = withContext(Dispatchers.IO) { fetch() }
+        if (fresh != null) {
+            HeaderCache.fetchedAt[key] = System.currentTimeMillis()
+            onFresh(fresh)
+        }
+        delay(if (fresh != null) everyMs else REFRESH_RETRY_MS)
+    }
 }
 
 @Composable
-fun rememberWeather(place: Place?): State<Weather?> =
-    produceState<Weather?>(
+fun rememberWeather(place: Place?): State<Weather?> {
+    val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
+    return produceState(
         initialValue = HeaderCache.weather?.takeIf { it.first == place }?.second,
         place,
+        visible,
     ) {
         if (place == null) {
             value = null
             return@produceState
         }
-        while (true) {
-            val fresh = withContext(Dispatchers.IO) { WeatherClient.fetch(place) }
-            if (fresh != null) {
-                HeaderCache.weather = place to fresh
-                value = fresh
-            }
-            delay(if (fresh != null) REFRESH_OK_MS else REFRESH_RETRY_MS)
+        poll("weather:$place", visible, REFRESH_OK_MS, { WeatherClient.fetch(place) }) { fresh ->
+            HeaderCache.weather = place to fresh
+            value = fresh
         }
     }
+}
 
 @Composable
-fun rememberForecast(place: Place?): State<Forecast?> =
-    produceState<Forecast?>(
+fun rememberForecast(place: Place?): State<Forecast?> {
+    val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
+    return produceState(
         initialValue = HeaderCache.forecast?.takeIf { it.first == place }?.second,
         place,
+        visible,
     ) {
         if (place == null) {
             value = null
             return@produceState
         }
-        while (true) {
-            val fresh = withContext(Dispatchers.IO) { WeatherClient.fetchForecast(place) }
-            if (fresh != null && (fresh.hours.isNotEmpty() || fresh.days.isNotEmpty())) {
-                HeaderCache.forecast = place to fresh
-                value = fresh
-            }
-            delay(if (fresh != null) REFRESH_OK_MS else REFRESH_RETRY_MS)
+        val fetch = { WeatherClient.fetchForecast(place)?.takeIf { it.hours.isNotEmpty() || it.days.isNotEmpty() } }
+        poll("forecast:$place", visible, REFRESH_OK_MS, fetch) { fresh ->
+            HeaderCache.forecast = place to fresh
+            value = fresh
         }
     }
+}
 
 @Composable
 fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> {
     val context = LocalContext.current
+    val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
     return produceState(
         initialValue = query?.cacheKey?.let { HeaderCache.news[it] }.orEmpty(),
         query?.cacheKey,
+        visible,
     ) {
         val key = query?.cacheKey
         if (query == null || key == null) {
@@ -78,14 +101,10 @@ fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> {
             return@produceState
         }
         if (value.isEmpty()) value = withContext(Dispatchers.IO) { HeadlineStore.load(context, key) }
-        while (true) {
-            val fresh = withContext(Dispatchers.IO) { NewsFeed.load(query) }
-            if (fresh.isNotEmpty()) {
-                HeaderCache.news[key] = fresh
-                value = fresh
-                withContext(Dispatchers.IO) { HeadlineStore.save(context, key, fresh) }
-            }
-            delay(if (fresh.isNotEmpty()) REFRESH_NEWS_MS else REFRESH_RETRY_MS)
+        poll("news:$key", visible, REFRESH_NEWS_MS, { NewsFeed.load(query).ifEmpty { null } }) { fresh ->
+            HeaderCache.news[key] = fresh
+            value = fresh
+            withContext(Dispatchers.IO) { HeadlineStore.save(context, key, fresh) }
         }
     }
 }

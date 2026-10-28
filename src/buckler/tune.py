@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from buckler.adb import Adb
@@ -43,7 +44,13 @@ def compile_launcher_speed(adb: Adb) -> str:
     return adb.shell("cmd", "package", "compile", "-m", "speed", "-f", OUR_LAUNCHER)
 
 
+_HOSTNAME = re.compile(r"^(?=.{1,253}$)([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$")
+
+
 def set_private_dns(adb: Adb, hostname: str) -> None:
+    """Point Private DNS at [hostname]; refuses anything that is not a plain DNS name."""
+    if not _HOSTNAME.match(hostname):
+        raise ValueError(f"Not a DNS hostname: {hostname!r}")
     adb.connect()
     adb.shell("settings", "put", "global", "private_dns_mode", "hostname")
     adb.shell("settings", "put", "global", "private_dns_specifier", hostname)

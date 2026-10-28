@@ -110,12 +110,24 @@ object HttpJson {
     private fun read(conn: HttpURLConnection): Response {
         val code = conn.responseCode
         val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+        // Feeds, pages and API replies are far smaller; a huge or endless body must not run the
+        // launcher out of memory, so stop reading at the cap.
         val text = stream?.use { inp ->
-            BufferedReader(InputStreamReader(inp, StandardCharsets.UTF_8)).readText()
+            val reader = BufferedReader(InputStreamReader(inp, StandardCharsets.UTF_8))
+            val out = StringBuilder()
+            val buffer = CharArray(8_192)
+            while (out.length < MAX_BODY_CHARS) {
+                val n = reader.read(buffer, 0, minOf(buffer.size, MAX_BODY_CHARS - out.length))
+                if (n < 0) break
+                out.appendRange(buffer, 0, n)
+            }
+            out.toString()
         }.orEmpty()
         conn.disconnect()
         return Response(code, text)
     }
+
+    private const val MAX_BODY_CHARS = 2_000_000
 
     private fun encode(value: String): String =
         URLEncoder.encode(value, StandardCharsets.UTF_8.name())

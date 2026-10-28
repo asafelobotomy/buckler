@@ -50,6 +50,7 @@ object UnusedApps {
     private const val KEY_KEPT = "kept"
     private const val KEY_NOTICED_AT = "noticed_at"
     private const val KEY_NOTICED_LIST = "noticed_list"
+    private const val KEY_EXPORTED_AT = "exported_at"
     const val EXPORT_FILE = "unused-apps.json"
     /** Never flagged: Buckler and the CLI's never list (profiles/never.yaml; a test keeps them equal). */
     private val ALWAYS_KEEP = setOf(
@@ -208,8 +209,19 @@ object UnusedApps {
         return bytes
     }
 
+    /**
+     * Whether returning Home should scan at all: a scan walks months of usage records, so it runs
+     * only when the weekly notice could show, or once a day to refresh the list for the CLI.
+     */
+    fun scanDue(context: Context, now: Long = System.currentTimeMillis()): Boolean {
+        val p = prefs(context)
+        val noticeDue = noticeOn(context) && now - p.getLong(KEY_NOTICED_AT, 0L) >= 7 * DAY_MS
+        return noticeDue || now - p.getLong(KEY_EXPORTED_AT, 0L) >= DAY_MS
+    }
+
     /** Writes the list where `buckler unused` reads it over adb. */
     fun export(context: Context, apps: List<AppUsage>, days: Int) {
+        prefs(context).edit().putLong(KEY_EXPORTED_AT, System.currentTimeMillis()).apply()
         val dir = context.getExternalFilesDir(null) ?: return
         val json = JSONObject()
             .put("generated_at", Instant.now().toString())

@@ -284,8 +284,11 @@ object NewsFeed {
         return path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".png") || path.endsWith(".webp")
     }
 
+    // One compiled pattern per attribute name: parsing a refresh looks up attributes thousands of times.
+    private val attrRes = java.util.concurrent.ConcurrentHashMap<String, Regex>()
+
     private fun attr(tag: String, name: String): String? =
-        Regex("""\b$name=["']([^"']+)["']""").find(tag)?.groupValues?.get(1)
+        attrRes.getOrPut(name) { Regex("""\b$name=["']([^"']+)["']""") }.find(tag)?.groupValues?.get(1)
 
     private fun clip(text: String): String {
         if (text.length <= 180) return text
@@ -296,10 +299,11 @@ object NewsFeed {
 
     private fun clean(raw: String): String {
         val unwrapped = cdataRe.replace(raw) { it.groupValues[1] }
-        return decodeHtmlEntities(tagRe.replace(unwrapped, "")).replace(Regex("\\s+"), " ").trim()
+        return decodeHtmlEntities(tagRe.replace(unwrapped, "")).replace(spaceRe, " ").trim()
     }
 }
 
+private val spaceRe = Regex("\\s+")
 private val entityRe = Regex("&(#[xX][0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos|nbsp);")
 
 /**

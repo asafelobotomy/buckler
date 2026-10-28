@@ -220,25 +220,52 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
 
     // --- artwork --------------------------------------------------------------------------
 
+    /**
+     * The playing app's artwork. Any app with a media session chooses this URI, so only https and
+     * content / resource URIs are read (no file paths), at most [ART_MAX_BYTES], and decoded scaled
+     * down to the screen rather than at whatever size the app offers.
+     */
     private fun loadArt(info: NowPlayingInfo): Bitmap? {
         info.art?.let { return it }
         val raw = info.artUri ?: return null
         val uri = Uri.parse(raw)
         return runCatching {
-            when (uri.scheme) {
-                "http", "https" -> {
+            val bytes = when (uri.scheme) {
+                "https" -> {
                     val conn = URL(raw).openConnection() as HttpURLConnection
                     conn.connectTimeout = 8_000
                     conn.readTimeout = 8_000
                     try {
-                        conn.inputStream.use { BitmapFactory.decodeStream(it) }
+                        conn.inputStream.use { readCapped(it) }
                     } finally {
                         conn.disconnect()
                     }
                 }
-                else -> context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-            }
+                "content", "android.resource" -> context.contentResolver.openInputStream(uri)?.use { readCapped(it) }
+                else -> null
+            } ?: return@runCatching null
+            decodeScaled(bytes)
         }.getOrNull()
+    }
+
+    private fun readCapped(input: java.io.InputStream): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(16_384)
+        while (true) {
+            val n = input.read(buffer)
+            if (n < 0) return out.toByteArray()
+            out.write(buffer, 0, n)
+            if (out.size() > ART_MAX_BYTES) return null
+        }
+    }
+
+    private fun decodeScaled(bytes: ByteArray): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0) return null
+        var sample = 1
+        while (bounds.outWidth / sample > ART_MAX_DIM || bounds.outHeight / sample > ART_MAX_DIM) sample *= 2
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
     }
 
     /** Down to 12 px wide and back up in two filtered steps: a soft blur that works on Android 11. */
@@ -304,3 +331,6 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
 
     private fun dp(value: Int): Int = (value * density).toInt()
 }
+
+private const val ART_MAX_BYTES = 8 * 1024 * 1024
+private const val ART_MAX_DIM = 1080

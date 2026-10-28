@@ -30,12 +30,20 @@ import androidx.core.app.NotificationManagerCompat
  */
 class NowPlayingListener : NotificationListenerService() {
     private var model: NowPlayingModel? = null
+    private var rememberedTrack: String? = null
 
     override fun onListenerConnected() {
         model = NowPlayingModel(this).also { m ->
             m.onChange = {
                 RecentMedia.remember(m.info)
-                m.info?.let { info -> MediaCards.remember(this, info) }
+                // Players report position and buffering often; the card only changes with the track.
+                m.info?.let { info ->
+                    val track = "${info.packageName}|${info.title}|${info.subtitle}|${info.artUri}"
+                    if (track != rememberedTrack) {
+                        rememberedTrack = track
+                        MediaCards.remember(this, info)
+                    }
+                }
             }
             m.start()
         }

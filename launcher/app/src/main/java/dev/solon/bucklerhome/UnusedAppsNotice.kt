@@ -10,7 +10,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * On returning Home, names apps that have gone unused (at most weekly, and only when the list
- * changed; see [UnusedApps.noticeText]). Waits a moment first so Home settles before it scans.
+ * changed; see [UnusedApps.noticeText]). Scans only when [UnusedApps.scanDue], after a moment so
+ * Home settles first.
  */
 @Composable
 fun UnusedAppsNotice(resumeTick: Int) {
@@ -18,7 +19,7 @@ fun UnusedAppsNotice(resumeTick: Int) {
     LaunchedEffect(resumeTick) {
         delay(SETTLE_MS)
         val text = withContext(Dispatchers.IO) {
-            if (!UnusedApps.noticeOn(context) || !UnusedApps.hasAccess(context)) return@withContext null
+            if (!UnusedApps.hasAccess(context) || !UnusedApps.scanDue(context)) return@withContext null
             val days = UnusedApps.days(context)
             val apps = UnusedApps.scan(context, days)
             UnusedApps.export(context, apps, days)

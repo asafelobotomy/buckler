@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
 import java.util.concurrent.Executors
 import kotlinx.coroutines.delay
 
@@ -142,9 +143,13 @@ object AudioRoute {
     }.getOrNull()
 }
 
-/** The route and delay, re-checked every 2 s and whenever an output connects or drops. */
+/**
+ * The route and delay, re-checked whenever an output connects or drops, and every 2 s while
+ * [active] and the screen is in front (each check briefly opens a silent audio track, so it must
+ * not run behind a film or the screensaver).
+ */
 @Composable
-fun rememberAudioRoute(): AudioRoute.Snapshot {
+fun rememberAudioRoute(active: Boolean = true): AudioRoute.Snapshot {
     val context = LocalContext.current
     var snapshot by remember { mutableStateOf(AudioRoute.cached()) }
     DisposableEffect(context) {
@@ -161,7 +166,9 @@ fun rememberAudioRoute(): AudioRoute.Snapshot {
         am?.registerAudioDeviceCallback(callback, null)
         onDispose { am?.unregisterAudioDeviceCallback(callback) }
     }
-    LaunchedEffect(context) {
+    val resumed = rememberLifecycleAtLeast(Lifecycle.State.RESUMED)
+    LaunchedEffect(context, active && resumed) {
+        if (!(active && resumed)) return@LaunchedEffect
         while (true) {
             AudioRoute.refresh(context) { snapshot = it }
             delay(2_000)

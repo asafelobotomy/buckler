@@ -232,7 +232,7 @@ def dns_set(ctx: click.Context, hostname: str) -> None:
     """Enable Private DNS hostname mode."""
     try:
         set_private_dns(make_adb(ctx.obj["host"]), hostname)
-    except AdbError as exc:
+    except (AdbError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo(f"private_dns_mode=hostname specifier={hostname}")
 

@@ -6,18 +6,24 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
 import java.security.SecureRandom
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
 /**
  * Tiny LAN-only HTTP server so a phone can send photos to the screensaver folder.
  *
- * It only runs while the upload dialog is open, and every URL carries a random token, so
- * nothing else on the network can write to the TV.
+ * It only runs while the upload dialog is open, listens only on the address in the QR link, and
+ * every URL carries a random token, so nothing else on the network can write to the TV. A few
+ * connections are served at once, and each session takes at most [MAX_FILES] files and [MAX_TOTAL] bytes.
  */
 class UploadServer(private val context: Context) {
     val token: String = randomToken()
@@ -31,10 +37,15 @@ class UploadServer(private val context: Context) {
         private set
 
     private var server: ServerSocket? = null
+    private val workers = Executors.newFixedThreadPool(WORKERS) { r -> Thread(r, "buckler-upload-conn").apply { isDaemon = true } }
+    private val clients = ConcurrentHashMap.newKeySet<Socket>()
+    private val files = AtomicInteger()
+    private val bytes = AtomicLong()
 
     fun start(): Boolean {
+        val address = localIpv4()?.let { runCatching { InetAddress.getByName(it) }.getOrNull() } ?: return false
         for (candidate in 8080..8099) {
-            val socket = runCatching { ServerSocket(candidate) }.getOrNull() ?: continue
+            val socket = runCatching { ServerSocket(candidate, BACKLOG, address) }.getOrNull() ?: continue
             server = socket
             port = candidate
             thread(name = "buckler-upload", isDaemon = true) { acceptLoop(socket) }
@@ -43,9 +54,12 @@ class UploadServer(private val context: Context) {
         return false
     }
 
+    /** Stops listening and drops uploads still in progress. */
     fun stop() {
         runCatching { server?.close() }
         server = null
+        clients.forEach { runCatching { it.close() } }
+        workers.shutdownNow()
     }
 
     fun url(): String? = localIpv4()?.let { "http://$it:$port/$token/" }
@@ -53,9 +67,17 @@ class UploadServer(private val context: Context) {
     private fun acceptLoop(socket: ServerSocket) {
         while (!socket.isClosed) {
             val client = runCatching { socket.accept() }.getOrNull() ?: return
-            thread(name = "buckler-upload-conn", isDaemon = true) {
-                runCatching { client.soTimeout = 30_000; handle(client) }
+            clients += client
+            val queued = runCatching {
+                workers.execute {
+                    runCatching { client.soTimeout = 30_000; handle(client) }
+                    runCatching { client.close() }
+                    clients -= client
+                }
+            }
+            if (queued.isFailure) {
                 runCatching { client.close() }
+                clients -= client
             }
         }
     }
@@ -95,6 +117,8 @@ class UploadServer(private val context: Context) {
         when {
             !ScreensaverImages.isImageName(name) -> respond(out, 415, "text/plain", "Only jpg, png or webp")
             length <= 0 || length > MAX_BYTES -> respond(out, 413, "text/plain", "File too large")
+            files.incrementAndGet() > MAX_FILES || bytes.addAndGet(length) > MAX_TOTAL ->
+                respond(out, 413, "text/plain", "That's enough for one go; close and reopen to send more")
             else -> {
                 val dir = ScreensaverImages.uploadDir(context)
                 val dest = uniqueFile(dir, name)
@@ -109,11 +133,13 @@ class UploadServer(private val context: Context) {
                         remaining -= n
                     }
                 }
+                // dest is the empty placeholder uniqueFile created; the finished upload replaces it.
                 if (remaining == 0L && tmp.renameTo(dest)) {
                     received++
                     respond(out, 200, "text/plain", "ok")
                 } else {
                     tmp.delete()
+                    dest.delete()
                     respond(out, 400, "text/plain", "Incomplete upload")
                 }
             }
@@ -139,6 +165,10 @@ class UploadServer(private val context: Context) {
 
     companion object {
         private const val MAX_BYTES = 60L * 1024 * 1024
+        private const val MAX_FILES = 200
+        private const val MAX_TOTAL = 1024L * 1024 * 1024
+        private const val WORKERS = 4
+        private const val BACKLOG = 8
         private const val PAGE = "<!doctype html><meta name=viewport content=\"width=device-width,initial-scale=1\">" +
             "<title>Buckler photos</title><body style=\"font-family:sans-serif;background:#0b0e14;color:#e8ecf2;" +
             "padding:24px\"><h2>Send photos to your TV</h2><p>Choose images, then tap Upload.</p>" +
@@ -161,12 +191,13 @@ class UploadServer(private val context: Context) {
                 .trimStart('.')
                 .take(80)
 
+        /** Claims a free name by creating it (atomic), so two uploads of one name cannot collide. */
         fun uniqueFile(dir: File, name: String): File {
             var candidate = File(dir, name)
             var n = 1
             val stem = name.substringBeforeLast('.')
             val ext = name.substringAfterLast('.', "")
-            while (candidate.exists()) {
+            while (!candidate.createNewFile()) {
                 candidate = File(dir, "$stem-$n.$ext")
                 n++
             }

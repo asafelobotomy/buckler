@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -90,7 +91,7 @@ fun LyricsStage(
         }
     }
     // Player lag, route delay (measured) and the route's fine-tune, plus this song's nudge (◀ ▶).
-    val route = rememberAudioRoute()
+    val route = rememberAudioRoute(active = music?.playing == true)
     val routeTune = remember(route.kind) { LyricsPrefs.offset(context, route.kind) }
     val songKey = music?.let { LyricsPrefs.songKey(it.title, it.artist) }
     // Right after a track change the previous song's lyrics are still held for a frame; never show
@@ -102,8 +103,11 @@ fun LyricsStage(
     // Updated every frame while playing, and read only in derivedStateOf and draw lambdas, so the
     // card recomposes when the line or word changes and the dot just redraws.
     val position = remember { mutableLongStateOf(0L) }
-    LaunchedEffect(music, shift) {
+    // Only while Home is in front: a frame loop under a dialog or an app switch keeps Home from idling.
+    val resumed = rememberLifecycleAtLeast(Lifecycle.State.RESUMED)
+    LaunchedEffect(music, shift, resumed) {
         val track = music ?: return@LaunchedEffect
+        if (!resumed) return@LaunchedEffect
         position.longValue = track.positionNow() + shift
         while (track.playing) {
             withFrameMillis { position.longValue = track.positionNow() + shift }

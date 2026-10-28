@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -30,10 +31,31 @@ object ApkInstaller {
         return dest
     }
 
+    /**
+     * True when [apk] is an update to this app: same package, signed with the same key. Android's
+     * own same-key rule only covers our package, so without this a release carrying some other APK
+     * (a mistake, or a compromised account) would be offered for install as "Buckler update".
+     */
+    fun isOwnUpdate(context: Context, apk: File): Boolean = runCatching {
+        val pm = context.packageManager
+        val archive = pm.getPackageArchiveInfo(apk.path, PackageManager.GET_SIGNING_CERTIFICATES) ?: return false
+        if (archive.packageName != context.packageName) return false
+        val installed = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+        val theirs = archive.signingInfo?.apkContentsSigners?.map { it.toCharsString() }?.toSet().orEmpty()
+        val ours = installed.signingInfo?.apkContentsSigners?.map { it.toCharsString() }?.toSet().orEmpty()
+        theirs.isNotEmpty() && theirs == ours
+    }.getOrDefault(false)
+
     fun install(context: Context, apk: File): Boolean {
+        if (!isOwnUpdate(context, apk)) {
+            Log.w(TAG, "Refusing ${apk.name}: not this app, or not signed with its key")
+            apk.delete()
+            return false
+        }
         return runCatching {
             val installer = context.packageManager.packageInstaller
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+            params.setAppPackageName(context.packageName)
             if (Build.VERSION.SDK_INT >= 31) {
                 params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
