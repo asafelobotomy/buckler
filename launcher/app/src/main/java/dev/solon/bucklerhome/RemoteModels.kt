@@ -4,8 +4,8 @@ import android.content.Context
 import android.hardware.input.InputManager
 import android.view.InputDevice
 
-/** A button's place on a model's drawing: dp from the body's top-left. */
-data class Placed(val button: RemoteButton, val x: Int, val y: Int)
+/** A button's place on a model's drawing: dp from the body's top-left; [more] for a second key (volume). */
+data class Placed(val button: RemoteButton, val x: Int, val y: Int, val more: List<Pair<Int, Int>> = emptyList())
 
 /**
  * The SHIELD remotes, told apart by NVIDIA's USB/Bluetooth product id (the same ids name its key
@@ -24,17 +24,18 @@ enum class RemoteModel(
     SHIELD_2019(
         "SHIELD remote (2019, triangular)", "2019 (triangular)", 0x7217, true, 120, 360,
         listOf(
-            Placed(RemoteButton.POWER, 60, 22),
-            Placed(RemoteButton.ASSIST, 60, 58),
-            Placed(RemoteButton.DPAD, 60, 118),
-            Placed(RemoteButton.BACK, 30, 186),
-            Placed(RemoteButton.HOME, 90, 186),
-            Placed(RemoteButton.REWIND, 24, 232),
-            Placed(RemoteButton.PLAY_PAUSE, 60, 232),
-            Placed(RemoteButton.FAST_FORWARD, 96, 232),
-            Placed(RemoteButton.VOLUME, 60, 278),
-            Placed(RemoteButton.MENU, 30, 326),
-            Placed(RemoteButton.NETFLIX, 90, 326),
+            // As on the remote: Power and ≡ on top, the D-pad, then two columns of four, Netflix last.
+            Placed(RemoteButton.POWER, 38, 28),
+            Placed(RemoteButton.MENU, 82, 28),
+            Placed(RemoteButton.DPAD, 60, 92),
+            Placed(RemoteButton.BACK, 38, 160),
+            Placed(RemoteButton.HOME, 82, 160),
+            Placed(RemoteButton.FAST_FORWARD, 38, 200),
+            Placed(RemoteButton.ASSIST, 82, 200),
+            Placed(RemoteButton.PLAY_PAUSE, 38, 240),
+            Placed(RemoteButton.VOLUME, 82, 240, more = listOf(82 to 280)),
+            Placed(RemoteButton.REWIND, 38, 280),
+            Placed(RemoteButton.NETFLIX, 60, 326),
         ),
     ),
     SHIELD_2017(

@@ -72,7 +72,7 @@ fun RemoteMapper(
             Canvas(modifier = Modifier.size(LABEL_X, model.bodyHeight.dp)) {
                 val bodyX = BODY_X.toPx()
                 val bodySize = Size(model.bodyWidth.dp.toPx(), model.bodyHeight.dp.toPx())
-                val corner = CornerRadius(model.bodyWidth.dp.toPx() * if (model.triangular) 0.46f else 0.3f)
+                val corner = CornerRadius(model.bodyWidth.dp.toPx() * if (model.triangular) 0.22f else 0.3f)
                 drawRoundRect(tile, Offset(bodyX, 0f), bodySize, corner)
                 drawRoundRect(border, Offset(bodyX, 0f), bodySize, corner, style = Stroke(2f))
                 drawSideView(model, Offset(bodyX + bodySize.width + 22.dp.toPx(), 10.dp.toPx()), muted)
@@ -94,6 +94,18 @@ fun RemoteMapper(
                             val ring = DPAD_RING.dp.toPx() * model.bodyWidth / 120f
                             drawCircle(colour, ring, center, style = Stroke(if (lit) 4f else 2f))
                             drawCircle(colour, 14.dp.toPx(), center, style = Stroke(2f))
+                        }
+                        RemoteButton.NETFLIX -> drawRoundRect(
+                            colour, Offset(center.x - 30.dp.toPx(), center.y - DOT.dp.toPx()),
+                            Size(60.dp.toPx(), DOT.dp.toPx() * 2), CornerRadius(DOT.dp.toPx()),
+                            style = if (lit || remapped(button)) androidx.compose.ui.graphics.drawscope.Fill else Stroke(2f),
+                        )
+                        RemoteButton.VOLUME if placed.more.isNotEmpty() -> {
+                            // Separate up and down keys (2019 remote).
+                            (listOf(placed.x to placed.y) + placed.more).forEach { (x, y) ->
+                                val spot = Offset(bodyX + x.dp.toPx(), y.dp.toPx())
+                                if (lit) drawCircle(colour, DOT.dp.toPx(), spot) else drawCircle(colour, DOT.dp.toPx(), spot, style = Stroke(2f))
+                            }
                         }
                         RemoteButton.VOLUME -> {
                             // The 2015 remote's volume is a touch slider down the middle.
