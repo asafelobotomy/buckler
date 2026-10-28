@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -18,8 +17,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /**
- * Settings → Main Stage: which stage, how tall, then only the chosen stage's own options (story
- * pace for News, city and span for Weather, media access for Now Playing and Lyrics).
+ * Settings → Appearance → Main Stage: which widget, how tall, then only that widget's own options
+ * (sources and pace for News, city and span for Weather, timing for Lyrics, media access for those
+ * that follow what is playing). News and Weather can sync with the header or stand apart.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -36,7 +36,7 @@ fun MainStagePane() {
     }
 
     SectionTitle("Main Stage")
-    SettingsRow("The band under the header. On Home, hold OK on it to switch.")
+    SettingsRow("The band under the header. On Home, hold OK on it to switch widget.")
     MainStagePicker(layout.mainStage, title = "Shows") { persist(layout.copy(mainStage = it)) }
     Spacer(modifier = Modifier.height(18.dp))
     StageSizePicker(layout.stageSize, title = "Size") { persist(layout.copy(stageSize = it)) }
@@ -44,10 +44,8 @@ fun MainStagePane() {
 
     when (layout.mainStage) {
         MainStage.NEWS -> {
-            PickerTitle("News")
-            if (cfg.newsSources.isEmpty()) {
-                SettingsRow("No sources chosen yet. Pick some in Settings → News.")
-            } else {
+            SectionTitle("News")
+            if (cfg.stageNews.isNotEmpty()) {
                 SettingsRow("◀ ▶ on the stage step through stories. Otherwise it changes every:")
                 FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
                     NewsPace.entries.forEach { pace ->
@@ -57,10 +55,12 @@ fun MainStagePane() {
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(14.dp))
             }
+            NewsSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
         }
         MainStage.WEATHER -> {
-            PickerTitle("Weather")
+            SectionTitle("Weather")
             FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
                 WeatherSpan.entries.forEach { span ->
                     SettingsAction(span.label, selected = span == cfg.weatherSpan) {
@@ -69,16 +69,16 @@ fun MainStagePane() {
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            WeatherPlaceSection(cfg, onChanged = { tick++ })
+            Spacer(modifier = Modifier.height(14.dp))
+            WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
         }
         MainStage.NOW_PLAYING -> {
-            PickerTitle("Now Playing")
-            SettingsRow("The playing app with its controls. The header's mini player hides while this is on.")
+            SectionTitle("Now Playing")
+            SettingsRow("The playing app with its controls. The header's Side Stage hides while this is on.")
             MediaAccessSection()
         }
         MainStage.LYRICS -> {
-            PickerTitle("Lyrics")
+            SectionTitle("Lyrics")
             SettingsRow(
                 "Lyrics for the song in the header's Now Playing, filled as they are sung with a bouncing dot. " +
                     "Word timing comes from NetEase when it has the song, otherwise LRCLIB lines with estimated words.",
@@ -120,43 +120,10 @@ fun MainStagePane() {
             MediaAccessSection()
         }
         MainStage.SUGGESTED -> {
-            PickerTitle("Suggested")
+            SectionTitle("Suggested")
             SettingsRow("Cards for what you played recently. Hold OK on a card to pin or unpin it.")
             MediaAccessSection()
         }
-    }
-}
-
-/** City and units for weather, shared by the header and the Weather stage. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun WeatherPlaceSection(cfg: DisplayConfig, onChanged: () -> Unit) {
-    val context = LocalContext.current
-    var pickCity by remember { mutableStateOf(false) }
-    val flow = Arrangement.spacedBy(12.dp)
-    SettingsRow("City: ${cfg.place?.name ?: "not set — weather needs one"} (Open-Meteo)")
-    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        SettingsAction(if (cfg.place == null) "Set city" else "Change city") { pickCity = true }
-        if (cfg.place != null) {
-            SettingsAction("Clear city") {
-                DisplayPrefs.setPlace(context, null)
-                onChanged()
-            }
-            SettingsAction("Units: ${if (cfg.fahrenheit) "°F" else "°C"}") {
-                DisplayPrefs.setFahrenheit(context, !cfg.fahrenheit)
-                onChanged()
-            }
-        }
-    }
-    if (pickCity) {
-        WeatherLocationDialog(
-            onDismiss = { pickCity = false },
-            onPicked = { place ->
-                DisplayPrefs.setPlace(context, place)
-                pickCity = false
-                onChanged()
-            },
-        )
     }
 }
 

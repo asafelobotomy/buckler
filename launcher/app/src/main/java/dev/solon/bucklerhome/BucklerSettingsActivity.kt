@@ -49,14 +49,16 @@ class BucklerSettingsActivity : ComponentActivity() {
     }
 }
 
-/** Home first, then what is on screen top to bottom, then upkeep. */
-private enum class SettingsPane(val label: String) {
-    HOME("Home"),
-    MAIN_STAGE("Main Stage"),
-    DISPLAY("Header"),
-    NEWS("News"),
-    SCREENSAVER("Screensaver"),
+/**
+ * Appearance first, with a submenu for each part of Home top to bottom (Header, Main Stage,
+ * Shelves), then the rest, then upkeep. [parent] puts an entry under another in the menu.
+ */
+enum class SettingsPane(val label: String, val parent: SettingsPane? = null) {
     APPEARANCE("Appearance"),
+    HEADER("Header", APPEARANCE),
+    MAIN_STAGE("Main Stage", APPEARANCE),
+    SHELVES("Shelves", APPEARANCE),
+    SCREENSAVER("Screensaver"),
     ACCESSIBILITY("Accessibility"),
     REMOTE("Remote"),
     APPS("Apps"),
@@ -69,7 +71,7 @@ private enum class SettingsPane(val label: String) {
 @Composable
 fun BucklerSettingsScreen(onClose: () -> Unit) {
     val context = LocalContext.current
-    var pane by remember { mutableStateOf(SettingsPane.HOME) }
+    var pane by remember { mutableStateOf(SettingsPane.APPEARANCE) }
     var connectIgdb by remember { mutableStateOf(false) }
     var connectSgdb by remember { mutableStateOf(false) }
     var connectGithub by remember { mutableStateOf(false) }
@@ -108,7 +110,9 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                     .trapVerticalFocus(),
             ) {
                 SettingsPane.entries.forEach { entry ->
-                    SettingsNav(entry.label, pane == entry, navFocus.getValue(entry)) { pane = entry }
+                    SettingsNav(entry.label, pane == entry, navFocus.getValue(entry), nested = entry.parent != null) {
+                        pane = entry
+                    }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 SettingsAction("Close", onClick = onClose)
@@ -122,11 +126,10 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
             ) {
                 item {
                     when (pane) {
-                        SettingsPane.HOME -> HomePane()
+                        SettingsPane.APPEARANCE -> AppearancePane(onOpen = { pane = it })
+                        SettingsPane.HEADER -> HeaderPane()
                         SettingsPane.MAIN_STAGE -> MainStagePane()
-                        SettingsPane.DISPLAY -> DisplayPane()
-                        SettingsPane.NEWS -> NewsPane()
-                        SettingsPane.APPEARANCE -> AppearancePane()
+                        SettingsPane.SHELVES -> ShelvesPane()
                         SettingsPane.ACCESSIBILITY -> AccessibilityPane()
                         SettingsPane.SCREENSAVER -> ScreensaverPane()
                         SettingsPane.UPDATES -> UpdatesPane(
@@ -193,11 +196,13 @@ private fun SettingsNav(
     label: String,
     selected: Boolean,
     focusRequester: FocusRequester,
+    nested: Boolean = false,
     onClick: () -> Unit,
 ) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+        // Submenus sit indented under their parent.
+        modifier = Modifier.padding(start = if (nested) 22.dp else 0.dp).fillMaxWidth().focusRequester(focusRequester),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) ColorBrand else ColorTile,
@@ -208,8 +213,8 @@ private fun SettingsNav(
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            fontSize = 16.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = if (nested) 6.dp else 8.dp),
+            fontSize = if (nested) 15.sp else 16.sp,
         )
     }
 }

@@ -3,6 +3,7 @@ package dev.solon.bucklerhome
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -20,7 +21,8 @@ private const val REFRESH_RETRY_MS = 2 * 60_000L
 private object HeaderCache {
     var weather: Pair<Place, Weather>? = null
     var forecast: Pair<Place, Forecast>? = null
-    var news: Pair<String, List<Headline>>? = null
+    /** By query key: the ticker and the News stage can follow different sources. */
+    val news = HashMap<String, List<Headline>>()
 }
 
 @Composable
@@ -67,7 +69,7 @@ fun rememberForecast(place: Place?): State<Forecast?> =
 fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> {
     val context = LocalContext.current
     return produceState(
-        initialValue = HeaderCache.news?.takeIf { it.first == query?.cacheKey }?.second.orEmpty(),
+        initialValue = query?.cacheKey?.let { HeaderCache.news[it] }.orEmpty(),
         query?.cacheKey,
     ) {
         val key = query?.cacheKey
@@ -79,13 +81,27 @@ fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> {
         while (true) {
             val fresh = withContext(Dispatchers.IO) { NewsFeed.load(query) }
             if (fresh.isNotEmpty()) {
-                HeaderCache.news = key to fresh
+                HeaderCache.news[key] = fresh
                 value = fresh
                 withContext(Dispatchers.IO) { HeadlineStore.save(context, key, fresh) }
             }
             delay(if (fresh.isNotEmpty()) REFRESH_NEWS_MS else REFRESH_RETRY_MS)
         }
     }
+}
+
+/**
+ * Headlines for the header ticker and for the News stage. While News is synced (or both follow the
+ * same sources) they are one fetch; otherwise the stage fetches its own.
+ */
+@Composable
+fun rememberHomeHeadlines(config: DisplayConfig, stage: MainStage): Pair<List<Headline>, List<Headline>> {
+    val headerQuery = config.newsQuery()
+    val stageQuery = stageNewsQuery(config, stage)
+    val shared = stageQuery == null || stageQuery.cacheKey == headerQuery?.cacheKey
+    val header by rememberHeadlines(if (shared) headerQuery ?: stageQuery else headerQuery)
+    val own by rememberHeadlines(if (shared) null else stageQuery)
+    return header to if (shared) header else own
 }
 
 /** Clock and date strings for the header, refreshed every 15 seconds. */

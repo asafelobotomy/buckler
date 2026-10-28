@@ -18,21 +18,23 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 /**
- * Settings → Header. What the top bar shows, then a section for each thing that is on: size,
- * date style, weather city, ticker speed, media access. Hidden pieces take their options with them.
+ * Settings → Appearance → Header: the row at the top of Home. What it shows, its size and clock,
+ * then a section for each widget in it that is on: Weather, the News ticker, and the Side Stage
+ * (the mini stage in the middle, where Now Playing appears). Hidden pieces take their options with them.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DisplayPane() {
+fun HeaderPane() {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
     val cfg = remember(tick) { DisplayPrefs.load(context) }
+    val stage = remember(tick) { HomeLayout.load(context).mainStage }
     val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle("Header")
     SettingsRow(
         if (cfg.headerVisible) {
-            "The row above the Main Stage. ● = shown."
+            "The row at the top of Home. ● = shown."
         } else {
             "Header off: Home shows the Main Stage and shelves, with a Home options card at the end for Settings."
         },
@@ -59,15 +61,11 @@ fun DisplayPane() {
                     tick++
                 }
             }
-            SettingsAction("Now Playing", selected = cfg.nowPlaying) {
-                DisplayPrefs.setNowPlaying(context, !cfg.nowPlaying)
-                tick++
-            }
         }
 
         Spacer(modifier = Modifier.height(18.dp))
         PickerTitle("Size")
-        SettingsRow("Logo, clock, icons and Now Playing scale together.")
+        SettingsRow("Logo, clock, icons and the Side Stage scale together.")
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             HeaderSize.entries.forEach { size ->
                 SettingsAction(size.label, selected = size == cfg.headerSize) {
@@ -101,17 +99,18 @@ fun DisplayPane() {
             }
         }
     }
+    if (!cfg.headerVisible) return
 
     if (cfg.shows(HeaderElement.WEATHER)) {
-        Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("Weather")
-        WeatherPlaceSection(cfg, onChanged = { tick++ })
+        Spacer(modifier = Modifier.height(24.dp))
+        SectionTitle("Weather")
+        WeatherSection(HomeSection.HEADER, cfg, onChanged = { tick++ })
     }
 
+    Spacer(modifier = Modifier.height(24.dp))
+    SectionTitle("News ticker")
+    SettingsRow("A dim line of headlines under the header. No sources turns it off.")
     if (cfg.showsNews) {
-        Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("News ticker")
-        SettingsRow("Sources are in Settings → News.")
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             TickerSpeed.entries.forEach { speed ->
                 SettingsAction(speed.label, selected = speed == cfg.tickerSpeed) {
@@ -120,65 +119,24 @@ fun DisplayPane() {
                 }
             }
         }
+        Spacer(modifier = Modifier.height(14.dp))
     }
+    NewsSection(HomeSection.HEADER, cfg, onChanged = { tick++ })
 
-    if (cfg.showsNowPlaying) {
-        Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("Now Playing")
-        MediaAccessSection()
-    }
-}
-
-/** Settings → News: feeds for the header ticker and the News stage. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun NewsPane() {
-    val context = LocalContext.current
-    var tick by remember { mutableIntStateOf(0) }
-    val cfg = remember(tick) { DisplayPrefs.load(context) }
-    val flow = Arrangement.spacedBy(12.dp)
-    val summary = when {
-        cfg.newsSources.isEmpty() -> "off"
-        cfg.newsSources.size <= 3 -> cfg.newsSources.joinToString(", ") { it.label }
-        else -> "${cfg.newsSources.size} sources, one story from each in turn"
-    }
-
-    SectionTitle("News")
-    SettingsRow("For the header ticker and the News stage. Now: $summary.")
-    PickerTitle("Region")
-    SettingsRow("Swaps the world headlines for that region and keeps gaming, business and tech.")
+    Spacer(modifier = Modifier.height(24.dp))
+    SectionTitle("Side Stage")
+    SettingsRow(
+        "The mini stage in the middle of the header. It shows what is playing, with previous, play/pause and " +
+            "next, while something plays.",
+    )
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        NewsRegion.entries.forEach { region ->
-            SettingsAction(region.label, selected = region == cfg.newsRegion) {
-                DisplayPrefs.setNewsRegion(context, region)
-                tick++
-            }
-        }
-    }
-    NewsCategory.entries.forEach { category ->
-        Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle(category.label)
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            NewsSource.entries.filter { source ->
-                source.category == category && (
-                    category != NewsCategory.WORLD ||
-                        cfg.newsRegion in source.regions ||
-                        source in cfg.newsSources
-                    )
-            }.forEach { source ->
-                SettingsAction(source.label, selected = source in cfg.newsSources) {
-                    val next = if (source in cfg.newsSources) cfg.newsSources - source else cfg.newsSources + source
-                    DisplayPrefs.setNewsSources(context, NewsSource.entries.filter { it in next })
-                    tick++
-                }
-            }
-        }
-    }
-    if (cfg.newsSources.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(18.dp))
-        SettingsAction("Turn all news off") {
-            DisplayPrefs.setNewsSources(context, emptyList())
+        SettingsAction("Now Playing", selected = cfg.nowPlaying) {
+            DisplayPrefs.setNowPlaying(context, !cfg.nowPlaying)
             tick++
         }
     }
+    if (stage == MainStage.NOW_PLAYING && cfg.nowPlaying) {
+        SettingsRow("Hidden while the Main Stage shows Now Playing, so it is not on screen twice.")
+    }
+    if (cfg.nowPlaying) MediaAccessSection()
 }

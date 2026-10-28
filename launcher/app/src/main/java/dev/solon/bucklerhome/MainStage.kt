@@ -53,12 +53,9 @@ enum class MainStage(val label: String) {
     }
 }
 
-/** Ticker query, and the same feeds for the News stage even when the header is hidden. */
-fun stageNewsQuery(config: DisplayConfig, stage: MainStage): NewsQuery? = when {
-    config.newsSources.isEmpty() -> null
-    stage == MainStage.NEWS || config.showsNews -> NewsQuery(config.newsSources)
-    else -> null
-}
+/** The News stage's feeds (the ticker's while News is synced), fetched even when the header is hidden. */
+fun stageNewsQuery(config: DisplayConfig, stage: MainStage): NewsQuery? =
+    if (stage == MainStage.NEWS && config.stageNews.isNotEmpty()) NewsQuery(config.stageNews) else null
 
 @Composable
 fun MainStage(

@@ -11,10 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/** Settings → Appearance: colour scheme and font, each shown as a picture; tile layout is in Edit Home. */
+/**
+ * Settings → Appearance: colour scheme and font, each shown as a picture, then a way into each part
+ * of Home (Header, Main Stage, Shelves), whose pages hold that part's widgets and options.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AppearancePane() {
+fun AppearancePane(onOpen: (SettingsPane) -> Unit) {
     val context = LocalContext.current
     val appearance = AppearanceStore.config
     val flow = Arrangement.spacedBy(12.dp)
@@ -45,10 +48,13 @@ fun AppearancePane() {
             }
         }
 
-        // Tile layout, app size and names live in Edit Home; the stage has its own pane.
         Spacer(modifier = Modifier.height(20.dp))
-        PickerTitle("Home layout")
-        SettingsRow("Icon, poster or banner tiles, app size and names are in Edit Home.")
-        SettingsAction("Edit Home") { openEditHome(context) }
+        PickerTitle("Home, top to bottom")
+        SettingsRow("Each part has its own widgets and options. News and Weather can sync across parts or stand apart.")
+        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+            SettingsPane.entries.filter { it.parent == SettingsPane.APPEARANCE }.forEach { part ->
+                SettingsAction(part.label) { onOpen(part) }
+            }
+        }
     }
 }

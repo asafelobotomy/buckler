@@ -177,7 +177,7 @@ fun EditHomeScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ShelfEditRow(
+internal fun ShelfEditRow(
     shelf: ShelfConfig,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
@@ -211,7 +211,7 @@ private fun ShelfEditRow(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun PinRow(label: String, pinned: Boolean, onClick: () -> Unit) {
+internal fun PinRow(label: String, pinned: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         colors = rowColors(selected = pinned),

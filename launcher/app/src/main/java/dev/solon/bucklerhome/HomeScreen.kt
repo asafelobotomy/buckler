@@ -64,8 +64,8 @@ fun HomeScreen(
     val stage = homeLayout?.mainStage ?: MainStage.NEWS
     val trackPlayback = stage == MainStage.NOW_PLAYING || stage == MainStage.SUGGESTED || stage == MainStage.LYRICS
     val weather by rememberWeather(config.weatherPlace)
-    val headlines by rememberHeadlines(stageNewsQuery(config, stage))
-    val forecast by rememberForecast(if (stage == MainStage.WEATHER) config.place else null)
+    val (headlines, stageHeadlines) = rememberHomeHeadlines(config, stage)
+    val forecast by rememberForecast(if (stage == MainStage.WEATHER) config.stageWeatherPlace else null)
     val net by rememberNetState()
     val clockText by rememberClockText(config)
     val (clock, date) = clockText
@@ -280,6 +280,7 @@ fun HomeScreen(
             date = date,
             weather = weather,
             headlines = headlines,
+            stageHeadlines = stageHeadlines,
             forecast = forecast,
             net = net,
             nowPlaying = nowPlaying,

@@ -11,10 +11,10 @@ import java.io.File
  * while; until then the ticker would be blank.
  */
 object HeadlineStore {
-    private const val FILE = "headlines.json"
+    private fun file(context: Context, key: String) = File(context.cacheDir, "headlines-${key.hashCode().toUInt()}.json")
 
     fun load(context: Context, key: String): List<Headline> = runCatching {
-        val json = JSONObject(File(context.cacheDir, FILE).readText())
+        val json = JSONObject(file(context, key).readText())
         if (json.optString("key") != key) return emptyList()
         val items = json.getJSONArray("items")
         (0 until items.length()).mapNotNull { i -> items.getJSONObject(i).toHeadline() }
@@ -22,7 +22,7 @@ object HeadlineStore {
 
     fun save(context: Context, key: String, headlines: List<Headline>) {
         val items = JSONArray(headlines.map { it.toJson() })
-        runCatching { File(context.cacheDir, FILE).writeText(JSONObject().put("key", key).put("items", items).toString()) }
+        runCatching { file(context, key).writeText(JSONObject().put("key", key).put("items", items).toString()) }
     }
 
     private fun Headline.toJson() = JSONObject()
