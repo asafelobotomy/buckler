@@ -55,7 +55,7 @@ class BucklerSettingsActivity : ComponentActivity() {
 
 /**
  * Appearance first, with a page for each part of Home top to bottom (Header, Main Stage,
- * Shelves), then Screensaver with a page for each screensaver ([saver]), then the rest, then
+ * Shelves) and App Thumbnails, then Screensaver with a page for each screensaver ([saver]), then the rest, then
  * upkeep. An entry with a [parent] is not in the main sidebar: choosing the parent opens a second
  * sidebar beside it, with the parent's own page first as "Global" and then its children.
  */
@@ -64,6 +64,7 @@ enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val
     HEADER("Header", APPEARANCE),
     MAIN_STAGE("Main Stage", APPEARANCE),
     SHELVES("Shelves", APPEARANCE),
+    COVERS("App Thumbnails", APPEARANCE),
     SCREENSAVER("Screensaver"),
     SAVER_CLOCK(ScreensaverMode.CLOCK.label, SCREENSAVER, ScreensaverMode.CLOCK),
     SAVER_DVD(ScreensaverMode.DVD.label, SCREENSAVER, ScreensaverMode.DVD),
@@ -80,7 +81,6 @@ enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val
     APPS("Apps", CLEAN_UP),
     CACHE("Cache", CLEAN_UP),
     LARGEST_APPS("Largest apps", CLEAN_UP),
-    COVERS("Covers"),
     UPDATES("Updates"),
     ABOUT("About"),
 }

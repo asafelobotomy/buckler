@@ -111,7 +111,7 @@ fun CoversPane(
     val scope = rememberCoroutineScope()
     var confirmClearCovers by remember { mutableStateOf(false) }
     key(accountTick) {
-        SectionTitle("Covers")
+        SectionTitle("App Thumbnails")
         SettingsRow(
             "SteamGridDB: ${CoverAccounts.statusLabel(context, CoverProvider.STEAMGRIDDB)}",
         )
@@ -152,9 +152,9 @@ fun CoversPane(
                     Toast.makeText(
                         context,
                         if (ok) {
-                            "Curated covers updated"
+                            "Curated thumbnails updated"
                         } else {
-                            "Refresh failed — keeping current covers"
+                            "Refresh failed — keeping current thumbnails"
                         },
                         Toast.LENGTH_SHORT,
                     ).show()
@@ -164,13 +164,13 @@ fun CoversPane(
             var customCount by remember { mutableIntStateOf(CoverStore.all(context).size) }
             if (customCount > 0) {
                 SettingsAction(
-                    if (confirmClearCovers) "Press again to clear $customCount" else "Clear custom covers",
+                    if (confirmClearCovers) "Press again to clear $customCount" else "Clear custom thumbnails",
                 ) {
                     if (confirmClearCovers) {
                         CoverStore.clearAll(context)
                         confirmClearCovers = false
                         customCount = 0
-                        Toast.makeText(context, "Custom covers cleared", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Custom thumbnails cleared", Toast.LENGTH_SHORT).show()
                     } else {
                         confirmClearCovers = true
                     }
