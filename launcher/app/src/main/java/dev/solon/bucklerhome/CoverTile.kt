@@ -27,7 +27,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -40,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.drawable.toBitmap
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
@@ -86,12 +84,6 @@ fun CoverTile(
     up: FocusRequester? = null,
 ) {
     val size = coverSize(layout, tileSize, showLabels)
-    val bmp = remember(item.id, item.icon) {
-        item.icon?.toBitmap(256, 256)?.asImageBitmap()
-    }
-    val bannerBmp = remember(item.id, item.banner) {
-        item.banner?.toBitmap(480, 270)?.asImageBitmap()
-    }
     val menu = rememberTvMenuInteraction(onOpen = onLaunch, onMenu = onLongPress)
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
@@ -163,20 +155,19 @@ fun CoverTile(
                             }
                         },
                     )
-                } else if (bannerBmp != null) {
-                    Image(
-                        bitmap = bannerBmp,
-                        contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else if (bmp != null) {
-                    Image(
-                        bitmap = bmp,
-                        contentDescription = item.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                } else {
+                    // The app's own banner, else its icon, drawn without a bitmap copy.
+                    val art = remember(item.id, item.banner, item.icon) {
+                        (item.banner ?: item.icon)?.let(::DrawablePainter)
+                    }
+                    if (art != null) {
+                        Image(
+                            painter = art,
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
             }
             if (showLabels) {

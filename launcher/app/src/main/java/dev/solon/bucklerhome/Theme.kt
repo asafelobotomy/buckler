@@ -1,5 +1,8 @@
 package dev.solon.bucklerhome
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
@@ -43,7 +46,7 @@ val ColorFooter: Color
 val ColorRing: Color
     @Composable @ReadOnlyComposable get() = LocalPalette.current.ring
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun BucklerHomeTheme(content: @Composable () -> Unit) {
     val appearance = AppearanceStore.config
@@ -71,11 +74,33 @@ fun BucklerHomeTheme(content: @Composable () -> Unit) {
             border = palette.border,
         )
     }
-    CompositionLocalProvider(LocalPalette provides palette, LocalDensity provides density) {
+    CompositionLocalProvider(
+        LocalPalette provides palette,
+        LocalDensity provides density,
+        LocalBringIntoViewSpec provides ScrollOnlyAsNeeded,
+    ) {
         MaterialTheme(colorScheme = scheme) {
             ProvideTextStyle(TextStyle(fontFamily = family)) {
                 content()
             }
+        }
+    }
+}
+
+/**
+ * Scroll a list only as far as it takes to show the focused item, as Compose did before 1.7.
+ * On TV devices Compose now moves the focused item toward a fixed pivot, which slid Home's
+ * shelves up under the stage and hid the heading of the shelf above.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+private object ScrollOnlyAsNeeded : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        val trailing = offset + size
+        return when {
+            offset >= 0 && trailing <= containerSize -> 0f // already fully shown
+            offset < 0 && trailing > containerSize -> 0f // larger than the list: leave it
+            kotlin.math.abs(offset) < kotlin.math.abs(trailing - containerSize) -> offset
+            else -> trailing - containerSize
         }
     }
 }

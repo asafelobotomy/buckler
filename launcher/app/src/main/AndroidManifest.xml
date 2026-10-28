@@ -44,6 +44,7 @@
     </queries>
 
     <application
+        android:name=".BucklerApp"
         android:allowBackup="false"
         android:banner="@drawable/banner_buckler"
         android:icon="@drawable/ic_mark_buckler"
