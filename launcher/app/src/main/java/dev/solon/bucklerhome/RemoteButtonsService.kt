@@ -6,6 +6,7 @@ import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 
@@ -24,6 +25,7 @@ class RemoteButtonsService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val button = RemoteButton.forKey(event.keyCode) ?: return false
         if (!RemoteMap.remapped(this, button)) return false
+        Log.d(TAG, "${button.name} action=${event.action} repeat=${event.repeatCount} t=${event.eventTime}")
         val hold = RemoteMap.action(this, button, PressKind.HOLD)
         val double = RemoteMap.action(this, button, PressKind.DOUBLE)
         when (event.action) {
@@ -66,6 +68,7 @@ class RemoteButtonsService : AccessibilityService() {
     }
 
     private fun run(button: RemoteButton, action: RemoteAction) {
+        Log.d(TAG, "${button.name} -> ${action.code}")
         when (action) {
             RemoteAction.Default -> runDefault(button)
             RemoteAction.DoNothing -> Unit
@@ -106,5 +109,6 @@ class RemoteButtonsService : AccessibilityService() {
         const val HOLD_MS = 500L
         const val DOUBLE_MS = 300L
         const val NETFLIX = "com.netflix.ninja"
+        const val TAG = "RemoteButtons"
     }
 }
