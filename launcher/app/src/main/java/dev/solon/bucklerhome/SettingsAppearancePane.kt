@@ -7,27 +7,17 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/** Settings → Appearance: colour scheme, font, Home layout and app size, each shown as a picture. */
+/** Settings → Appearance: colour scheme and font, each shown as a picture; tile layout is in Edit Home. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AppearancePane() {
     val context = LocalContext.current
     val appearance = AppearanceStore.config
-    var layout by remember { mutableStateOf(HomeLayout.load(context)) }
     val flow = Arrangement.spacedBy(12.dp)
-
-    fun persist(next: HomeLayout) {
-        layout = next
-        HomeLayout.save(context, next)
-    }
 
     Column {
         SectionTitle("Appearance")
@@ -55,18 +45,10 @@ fun AppearancePane() {
             }
         }
 
+        // Tile layout, app size and names live in Edit Home; the stage has its own pane.
         Spacer(modifier = Modifier.height(20.dp))
-        LayoutAndSizePickers(
-            style = layout.layout,
-            tileSize = layout.tileSize,
-            showLabels = layout.showLabels,
-            mainStage = layout.mainStage,
-            stageSize = layout.stageSize,
-            onStyle = { persist(layout.copy(layout = it)) },
-            onSize = { persist(layout.copy(tileSize = it)) },
-            onLabels = { persist(layout.copy(showLabels = it)) },
-            onStage = { persist(layout.copy(mainStage = it)) },
-            onStageSize = { persist(layout.copy(stageSize = it)) },
-        )
+        PickerTitle("Home layout")
+        SettingsRow("Icon, poster or banner tiles, app size and names are in Edit Home.")
+        SettingsAction("Edit Home") { openEditHome(context) }
     }
 }

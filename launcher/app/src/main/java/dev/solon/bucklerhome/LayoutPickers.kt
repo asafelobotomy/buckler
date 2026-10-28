@@ -95,18 +95,18 @@ fun LayoutAndSizePickers(
             onClick = { onLabels(!showLabels) },
         )
         Spacer(modifier = Modifier.height(18.dp))
-        MainStagePicker(mainStage, onStage)
+        MainStagePicker(mainStage, onMode = onStage)
         Spacer(modifier = Modifier.height(18.dp))
-        StageSizePicker(stageSize, onStageSize)
+        StageSizePicker(stageSize, onSize = onStageSize)
     }
 }
 
 /** News, Now Playing, weather or suggested media in the band under the header. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MainStagePicker(mode: MainStage, onMode: (MainStage) -> Unit) {
+fun MainStagePicker(mode: MainStage, title: String = "Main stage", onMode: (MainStage) -> Unit) {
     Column {
-        PickerTitle("Main stage")
+        PickerTitle(title)
         FlowRow(horizontalArrangement = CardGap, verticalArrangement = CardGap) {
             MainStage.entries.forEach { option ->
                 SettingsAction(option.label, selected = option == mode) { onMode(option) }
@@ -118,9 +118,9 @@ fun MainStagePicker(mode: MainStage, onMode: (MainStage) -> Unit) {
 /** Small, Medium, or Large band under the header. The picture shows how much shelf room is left. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun StageSizePicker(size: StageSize, onSize: (StageSize) -> Unit) {
+fun StageSizePicker(size: StageSize, title: String = "Main stage size", onSize: (StageSize) -> Unit) {
     Column {
-        PickerTitle("Main stage size")
+        PickerTitle(title)
         FlowRow(horizontalArrangement = CardGap, verticalArrangement = CardGap) {
             StageSize.entries.forEach { option ->
                 PreviewCard(

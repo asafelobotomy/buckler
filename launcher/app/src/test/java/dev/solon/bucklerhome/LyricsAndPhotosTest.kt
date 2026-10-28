@@ -1,5 +1,6 @@
 package dev.solon.bucklerhome
 
+import androidx.compose.ui.unit.dp
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -55,6 +56,13 @@ class LyricsAndPhotosTest {
         assertEquals(5, plainLineAt(10, 50_000, 100_000))
         assertEquals(9, plainLineAt(10, 200_000, 100_000))
         assertEquals(0, plainLineAt(10, 5_000, 0))
+    }
+
+    @Test
+    fun lyricWindowGrowsWithTheCard() {
+        assertEquals(0 to 1, lyricWindow(100.dp))
+        assertEquals(1 to 1, lyricWindow(140.dp))
+        assertEquals(1 to 2, lyricWindow(190.dp))
     }
 
     @Test

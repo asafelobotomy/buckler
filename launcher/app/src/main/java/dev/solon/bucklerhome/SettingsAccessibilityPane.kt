@@ -45,7 +45,7 @@ fun AccessibilityPane() {
     Column {
         SectionTitle("Accessibility")
 
-        SettingsRow("Vision")
+        PickerTitle("Vision")
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             SettingsAction("High contrast", selected = a11y.highContrast) {
                 update { it.copy(highContrast = !it.highContrast) }
@@ -60,9 +60,12 @@ fun AccessibilityPane() {
                 if (a11y.spokenFocus) SpokenFocus.stop()
                 update { it.copy(spokenFocus = !it.spokenFocus) }
             }
+            SettingsAction("Screen reader (TalkBack)") {
+                openSystem(Settings.ACTION_ACCESSIBILITY_SETTINGS, "accessibility settings")
+            }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        SettingsRow("Text size")
+        Spacer(modifier = Modifier.height(18.dp))
+        PickerTitle("Text size")
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             TextSize.entries.forEach { size ->
                 SettingsAction(size.label, selected = size == a11y.textSize) {
@@ -70,16 +73,11 @@ fun AccessibilityPane() {
                 }
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        SettingsAction("Screen reader (TalkBack)") {
-            openSystem(Settings.ACTION_ACCESSIBILITY_SETTINGS, "accessibility settings")
+        Spacer(modifier = Modifier.height(18.dp))
+        PickerTitle("Hearing")
+        if (!SystemSettings.canWriteSystem(context)) {
+            SettingsRow("Mono audio needs a one-time permission: ${SystemSettings.GRANT_COMMAND}")
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        SettingsRow(
-            "Hearing" + if (SystemSettings.canWriteSystem(context)) "" else
-                "  (mono audio needs a one-time permission: ${SystemSettings.GRANT_COMMAND})",
-        )
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             SettingsAction("Mono audio", selected = mono) {
                 if (SystemSettings.setMonoAudio(context, !mono)) {

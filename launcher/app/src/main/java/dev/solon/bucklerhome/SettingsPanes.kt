@@ -31,16 +31,23 @@ import kotlinx.coroutines.withContext
 fun HomePane() {
     val context = LocalContext.current
     SectionTitle("Home")
-    SettingsRow("Edit Home sets the layout, app size, shelves and pins. It is also the pencil in the Home header.")
+    SettingsRow("Tile layout, app size and names, shelves and pins. Also the pencil in the Home header.")
+    SettingsAction("Edit Home") { openEditHome(context) }
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("Android TV")
+    SettingsRow("Shortcuts to the system's own screens.")
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        SettingsAction("Edit Home") {
-            val intent = Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_EDIT_HOME, true)
-            safeLaunch(context, intent, "Edit Home")
-        }
-        SettingsAction("Android TV Settings") {
-            safeLaunch(context, Intent(Settings.ACTION_SETTINGS), "Settings")
-        }
+        SettingsAction("Network") { openSettingsAction(context, Settings.ACTION_WIFI_SETTINGS) }
+        SettingsAction("Apps") { openSettingsAction(context, Settings.ACTION_APPLICATION_SETTINGS) }
+        SettingsAction("Display") { openSettingsAction(context, Settings.ACTION_DISPLAY_SETTINGS) }
+        SettingsAction("About this TV") { openSettingsAction(context, Settings.ACTION_DEVICE_INFO_SETTINGS) }
+        SettingsAction("All settings") { safeLaunch(context, Intent(Settings.ACTION_SETTINGS), "Settings") }
     }
+}
+
+fun openEditHome(context: android.content.Context) {
+    val intent = Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_EDIT_HOME, true)
+    safeLaunch(context, intent, "Edit Home")
 }
 
 @Composable
@@ -86,9 +93,14 @@ fun UpdatesPane(
                 }
             }
         }
-        SettingsAction("Clear snooze") {
-            UpdatePrefs.clearSnooze(context)
-            Toast.makeText(context, "Snooze cleared", Toast.LENGTH_SHORT).show()
+        // Only while an update prompt is snoozed; otherwise there is nothing to clear.
+        var snoozed by remember { mutableStateOf(UpdatePrefs.snoozeUntil(context) > System.currentTimeMillis()) }
+        if (snoozed) {
+            SettingsAction("Clear snooze") {
+                UpdatePrefs.clearSnooze(context)
+                snoozed = false
+                Toast.makeText(context, "Snooze cleared", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
@@ -120,8 +132,14 @@ fun CoversPane(
         SettingsRow(
             "SteamGridDB: ${CoverAccounts.statusLabel(context, CoverProvider.STEAMGRIDDB)}",
         )
+        val igdbLinked = CoverAccounts.isLinked(context, CoverProvider.IGDB)
+        val igdbAvailable = igdbLinked || TwitchDeviceAuth.clientIdConfigured()
         SettingsRow(
-            "IGDB: ${CoverAccounts.statusLabel(context, CoverProvider.IGDB)}",
+            "IGDB: " + if (igdbAvailable) {
+                CoverAccounts.statusLabel(context, CoverProvider.IGDB)
+            } else {
+                "not available in this build (no Twitch client ID)"
+            },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (CoverAccounts.isLinked(context, CoverProvider.STEAMGRIDDB)) {
@@ -132,19 +150,13 @@ fun CoversPane(
             } else {
                 SettingsAction("Connect SteamGridDB") { onConnectSgdb() }
             }
-            if (CoverAccounts.isLinked(context, CoverProvider.IGDB)) {
+            if (igdbLinked) {
                 SettingsAction("Disconnect IGDB") {
                     CoverAccounts.disconnect(context, CoverProvider.IGDB)
                     onAccountChanged()
                 }
-            } else {
-                SettingsAction(
-                    if (TwitchDeviceAuth.clientIdConfigured()) {
-                        "Connect IGDB"
-                    } else {
-                        "Connect IGDB (set TWITCH_CLIENT_ID)"
-                    },
-                ) { onConnectIgdb() }
+            } else if (igdbAvailable) {
+                SettingsAction("Connect IGDB") { onConnectIgdb() }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -165,39 +177,23 @@ fun CoversPane(
                     ).show()
                 }
             }
-            SettingsAction(
-                if (confirmClearCovers) "Press again to confirm" else "Clear custom covers",
-            ) {
-                if (confirmClearCovers) {
-                    CoverStore.clearAll(context)
-                    confirmClearCovers = false
-                    Toast.makeText(context, "Custom covers cleared", Toast.LENGTH_SHORT).show()
-                } else {
-                    confirmClearCovers = true
+            // Only when there are custom covers to clear.
+            var customCount by remember { mutableStateOf(CoverStore.all(context).size) }
+            if (customCount > 0) {
+                SettingsAction(
+                    if (confirmClearCovers) "Press again to clear $customCount" else "Clear custom covers",
+                ) {
+                    if (confirmClearCovers) {
+                        CoverStore.clearAll(context)
+                        confirmClearCovers = false
+                        customCount = 0
+                        Toast.makeText(context, "Custom covers cleared", Toast.LENGTH_SHORT).show()
+                    } else {
+                        confirmClearCovers = true
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun DevicePane() {
-    val context = LocalContext.current
-    SectionTitle("Device")
-    SettingsAction("Network") {
-        openSettingsAction(context, Settings.ACTION_WIFI_SETTINGS)
-    }
-    SettingsAction("Apps") {
-        openSettingsAction(context, Settings.ACTION_APPLICATION_SETTINGS)
-    }
-    SettingsAction("Display") {
-        openSettingsAction(context, Settings.ACTION_DISPLAY_SETTINGS)
-    }
-    SettingsAction("Device / About phone") {
-        openSettingsAction(context, Settings.ACTION_DEVICE_INFO_SETTINGS)
-    }
-    SettingsAction("Android TV Settings") {
-        safeLaunch(context, Intent(Settings.ACTION_SETTINGS), "Settings")
     }
 }
 

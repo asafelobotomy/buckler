@@ -48,15 +48,17 @@ class BucklerSettingsActivity : ComponentActivity() {
     }
 }
 
+/** Home first, then what is on screen top to bottom, then upkeep. */
 private enum class SettingsPane(val label: String) {
     HOME("Home"),
+    MAIN_STAGE("Main Stage"),
     DISPLAY("Header"),
+    NEWS("News"),
+    SCREENSAVER("Screensaver"),
     APPEARANCE("Appearance"),
     ACCESSIBILITY("Accessibility"),
-    SCREENSAVER("Screensaver"),
-    UPDATES("Updates"),
     COVERS("Covers"),
-    DEVICE("Device"),
+    UPDATES("Updates"),
     ABOUT("About"),
 }
 
@@ -118,7 +120,9 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                 item {
                     when (pane) {
                         SettingsPane.HOME -> HomePane()
+                        SettingsPane.MAIN_STAGE -> MainStagePane()
                         SettingsPane.DISPLAY -> DisplayPane()
+                        SettingsPane.NEWS -> NewsPane()
                         SettingsPane.APPEARANCE -> AppearancePane()
                         SettingsPane.ACCESSIBILITY -> AccessibilityPane()
                         SettingsPane.SCREENSAVER -> ScreensaverPane()
@@ -136,7 +140,6 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                             onConnectIgdb = { connectIgdb = true },
                             onAccountChanged = { accountTick++ },
                         )
-                        SettingsPane.DEVICE -> DevicePane()
                         SettingsPane.ABOUT -> AboutPane()
                     }
                 }
