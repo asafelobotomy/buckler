@@ -1,0 +1,21 @@
+# Icon packs for Settings → Appearance → App Thumbnails, installed with
+# `buckler launcher iconpack install ID`. Phone icon packs are not in the TV's Play Store.
+# Each maps apps to icons by package name; Buckler reads any installed pack, these are just the open ones.
+entries:
+  - id: lawnicons
+    label: Lawnicons
+    package: app.lawnchair.lawnicons
+    version: "2.19.0"
+    url: https://github.com/LawnchairLauncher/lawnicons/releases/download/v2.19.0/Lawnicons.2.19.0.apk
+    sha256: 5ed67a0338c207bd0f8c44392dedbae8d0449fef5c8d773a202451d42bbd8cdd
+    license: Apache-2.0
+    why: Single-colour outline icons (about 23,000 app mappings), 19 MB.
+
+  - id: arcticons
+    label: Arcticons
+    package: com.donnnno.arcticons
+    version: "15.3.2"
+    url: https://f-droid.org/repo/com.donnnno.arcticons_1570.apk
+    sha256: 653ea050715c4d40c15da7e6cefad17e389afcd6a518636f6115de2ae1310fc1
+    license: CC BY-SA 4.0 icons, GPL-3.0 app
+    why: White line icons (about 49,000 app mappings), 71 MB.

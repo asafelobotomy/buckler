@@ -43,6 +43,19 @@
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
+        <!-- Icon packs (Settings → Appearance → App Thumbnails). -->
+        <intent>
+            <action android:name="org.adw.launcher.THEMES" />
+        </intent>
+        <intent>
+            <action android:name="com.novalauncher.THEME" />
+        </intent>
+        <intent>
+            <action android:name="com.teslacoilsw.launcher.THEME" />
+        </intent>
+        <intent>
+            <action android:name="org.adw.launcher.icons.ACTION_PICK_ICON" />
+        </intent>
     </queries>
 
     <application

@@ -8,6 +8,7 @@ from pathlib import Path
 import click
 
 from buckler.adb import AdbError
+from buckler.app_catalog import CatalogError
 from buckler.cli_common import cli, make_adb
 from buckler.home_layout import (
     HomeLayoutError,
@@ -17,6 +18,7 @@ from buckler.home_layout import (
     validate_home_layout,
     write_home_layout,
 )
+from buckler.iconpacks import install_iconpack, load_iconpacks, require
 from buckler.launcher_ops import (
     build_launcher,
     grant_media_access,
@@ -55,6 +57,31 @@ def launcher_install(ctx: click.Context) -> None:
         raise click.ClickException(str(exc)) from exc
     click.echo(out)
     click.echo(f"installed={verify_launcher_installed(make_adb(ctx.obj['host']))}")
+
+
+@launcher_group.group("iconpack")
+def iconpack_group() -> None:
+    """Open icon packs for Settings → Appearance → App Thumbnails."""
+
+
+@iconpack_group.command("list")
+def iconpack_list() -> None:
+    """Show the icon packs Buckler can install."""
+    for pack in load_iconpacks():
+        click.echo(f"  {pack.id}: {pack.label} {pack.version} ({pack.license}). {pack.why}")
+
+
+@iconpack_group.command("install")
+@click.argument("pack_id")
+@click.pass_context
+def iconpack_install(ctx: click.Context, pack_id: str) -> None:
+    """Download PACK_ID (checked against its pinned sha256) and install it on the TV."""
+    try:
+        pack = require(load_iconpacks(), pack_id)
+        install_iconpack(make_adb(ctx.obj["host"]), pack)
+    except (AdbError, CatalogError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"installed {pack.label}; choose it in Settings → Appearance → App Thumbnails")
 
 
 @launcher_group.command("photos")

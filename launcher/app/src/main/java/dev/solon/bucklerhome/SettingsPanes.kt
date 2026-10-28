@@ -112,6 +112,9 @@ fun CoversPane(
     var confirmClearCovers by remember { mutableStateOf(false) }
     key(accountTick) {
         SectionTitle("App Thumbnails")
+        IconPackSection()
+        Spacer(modifier = Modifier.height(18.dp))
+        PickerTitle("Online artwork")
         SettingsRow(
             "SteamGridDB: ${CoverAccounts.statusLabel(context, CoverProvider.STEAMGRIDDB)}",
         )

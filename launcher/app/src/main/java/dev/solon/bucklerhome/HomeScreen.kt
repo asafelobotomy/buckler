@@ -81,7 +81,7 @@ fun HomeScreen(
     RemoteButtonsNotice(resumeTick)
     LaunchedEffect(resumeTick) {
         config = DisplayPrefs.load(context)
-        apps = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }
+        apps = withContext(Dispatchers.IO) { loadLaunchableApps(context) }
     }
 
     val layout = homeLayout

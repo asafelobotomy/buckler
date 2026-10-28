@@ -48,7 +48,9 @@ val USER_FACING_SYSTEM: Set<String> = setOf(
     "com.disney.disneyplus",
 )
 
-fun loadLaunchableApps(pm: PackageManager): List<LaunchableApp> {
+/** Every app with a TV or phone launcher entry, with the chosen icon pack's icon where it has one. */
+fun loadLaunchableApps(context: Context): List<LaunchableApp> {
+    val pm = context.packageManager
     val leanback = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
     val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
 
@@ -77,7 +79,8 @@ fun loadLaunchableApps(pm: PackageManager): List<LaunchableApp> {
                 label = label,
                 packageName = pkg,
                 launchIntent = intent,
-                icon = runCatching { info.loadIcon(pm) }.getOrNull(),
+                icon = intent.component?.let { IconPacks.iconFor(context, it) }
+                    ?: runCatching { info.loadIcon(pm) }.getOrNull(),
                 isSystem = isSystem,
             )
         }
@@ -107,7 +110,7 @@ fun launchPackage(context: Context, packageName: String, label: String) {
 
 /** Opens the installed weather app: an app named Weather, otherwise the first whose name says so. */
 fun launchWeatherApp(context: Context) {
-    val match = loadLaunchableApps(context.packageManager)
+    val match = loadLaunchableApps(context)
         .filter { app ->
             val label = app.label.lowercase()
             "weather" in label || "weather" in app.packageName.lowercase()

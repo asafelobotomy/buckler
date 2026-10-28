@@ -1,0 +1,133 @@
+package dev.solon.bucklerhome
+
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.res.Resources
+import android.graphics.drawable.Drawable
+import android.util.DisplayMetrics
+import android.util.Xml
+import androidx.compose.ui.graphics.toArgb
+import org.xmlpull.v1.XmlPullParser
+
+/** An installed icon pack: an app that ships icons for other apps, mapped by package and activity. */
+data class IconPack(val packageName: String, val label: String)
+
+/**
+ * Icon packs in the common launcher format (ADW / Nova): the pack's `appfilter.xml` maps
+ * `ComponentInfo{package/activity}` to one of its drawables. Any such pack works, e.g. Lawnicons
+ * or Arcticons (`buckler launcher iconpack install arcticons`). Apps the pack does not cover keep
+ * their own icon. [IconPackStore] holds which pack is chosen and whether it takes the theme colour.
+ */
+object IconPacks {
+    /** The intents icon packs announce themselves with; one is enough. */
+    private val ACTIONS = listOf(
+        "org.adw.launcher.THEMES",
+        "com.novalauncher.THEME",
+        "com.teslacoilsw.launcher.THEME",
+        "org.adw.launcher.icons.ACTION_PICK_ICON",
+    )
+
+    private class Mapping(val version: Long, val byComponent: Map<String, String>, val byPackage: Map<String, String>)
+
+    @Volatile private var cache: Pair<String, Mapping>? = null
+
+    fun installed(context: Context): List<IconPack> {
+        val pm = context.packageManager
+        return ACTIONS.flatMap { action -> pm.queryIntentActivities(Intent(action), 0) }
+            .map { it.activityInfo.applicationInfo }
+            .distinctBy { it.packageName }
+            .map { IconPack(it.packageName, it.loadLabel(pm).toString()) }
+            .sortedBy { it.label.lowercase() }
+    }
+
+    /**
+     * The chosen pack's icon for an app, sized for a TV, or null to keep the app's own: no pack
+     * chosen, the pack is gone, or it has nothing for this app.
+     */
+    fun iconFor(context: Context, component: ComponentName): Drawable? {
+        val pack = IconPackStore.pack(context) ?: return null
+        val mapping = mapping(context, pack) ?: return null
+        val name = mapping.byComponent[component.flattenToString()] ?: mapping.byPackage[component.packageName]
+            ?: return null
+        val res = resources(context, pack) ?: return null
+        @Suppress("DiscouragedApi") // Icon packs are addressed by drawable name; there is no R class to use.
+        val id = res.getIdentifier(name, "drawable", pack).takeIf { it != 0 } ?: return null
+        val icon = runCatching { res.getDrawableForDensity(id, DisplayMetrics.DENSITY_XXHIGH, null) }.getOrNull()
+            ?: return null
+        IconPackStore.tint(context)?.let { icon.mutate().setTint(it) }
+        return icon
+    }
+
+    /** How many of [packages] the chosen [pack] has an icon for. */
+    fun coverage(context: Context, pack: String, packages: Collection<String>): Int {
+        val mapping = mapping(context, pack) ?: return 0
+        return packages.count { it in mapping.byPackage }
+    }
+
+    private fun resources(context: Context, pack: String): Resources? =
+        runCatching { context.packageManager.getResourcesForApplication(pack) }.getOrNull()
+
+    /** Read once per pack version; packs hold tens of thousands of entries. */
+    private fun mapping(context: Context, pack: String): Mapping? {
+        val version = runCatching { context.packageManager.getPackageInfo(pack, 0).lastUpdateTime }.getOrNull()
+            ?: return null
+        cache?.let { (cached, m) -> if (cached == pack && m.version == version) return m }
+        val parsed = parse(context, pack, version) ?: return null
+        cache = pack to parsed
+        return parsed
+    }
+
+    private fun parse(context: Context, pack: String, version: Long): Mapping? {
+        val res = resources(context, pack) ?: return null
+        val byComponent = HashMap<String, String>()
+        val byPackage = HashMap<String, String>()
+        fun read(parser: XmlPullParser) {
+            while (parser.next() != XmlPullParser.END_DOCUMENT) {
+                if (parser.eventType != XmlPullParser.START_TAG || parser.name != "item") continue
+                val raw = parser.getAttributeValue(null, "component") ?: continue
+                val drawable = parser.getAttributeValue(null, "drawable")?.takeIf { it.isNotBlank() } ?: continue
+                val component = raw.removePrefix("ComponentInfo{").removeSuffix("}")
+                val name = ComponentName.unflattenFromString(component) ?: continue
+                byComponent.putIfAbsent(name.flattenToString(), drawable)
+                byPackage.putIfAbsent(name.packageName, drawable)
+            }
+        }
+        @Suppress("DiscouragedApi")
+        val xmlId = res.getIdentifier("appfilter", "xml", pack)
+        val ok = runCatching {
+            if (xmlId != 0) {
+                res.getXml(xmlId).use { read(it) }
+            } else {
+                res.assets.open("appfilter.xml").use { input ->
+                    read(Xml.newPullParser().apply { setInput(input, null) })
+                }
+            }
+        }.isSuccess
+        return if (ok && byComponent.isNotEmpty()) Mapping(version, byComponent, byPackage) else null
+    }
+}
+
+/** Which icon pack Home uses (none: each app's own icon) and whether its icons take the theme's text colour. */
+object IconPackStore {
+    private const val PREFS = "icon_pack"
+    private const val KEY_PACK = "pack"
+    private const val KEY_TINT = "tint"
+
+    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    fun pack(context: Context): String? = prefs(context).getString(KEY_PACK, null)?.takeIf { it.isNotBlank() }
+
+    fun setPack(context: Context, pack: String?) = prefs(context).edit().putString(KEY_PACK, pack.orEmpty()).apply()
+
+    fun tinted(context: Context): Boolean = prefs(context).getBoolean(KEY_TINT, false)
+
+    fun setTinted(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY_TINT, on).apply()
+
+    /** The colour to paint pack icons, or null to keep the pack's own colours. */
+    fun tint(context: Context): Int? {
+        if (!tinted(context)) return null
+        AppearanceStore.ensureLoaded(context)
+        return Palettes.resolve(AppearanceStore.config).text.toArgb()
+    }
+}

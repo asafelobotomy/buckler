@@ -46,7 +46,7 @@ fun EditHomeScreen(
     val context = LocalContext.current
     var layout by remember { mutableStateOf(HomeLayout.load(context)) }
     val apps by produceState(emptyList<LaunchableApp>()) {
-        value = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }
+        value = withContext(Dispatchers.IO) { loadLaunchableApps(context) }
     }
 
     BackHandler(onBack = onDone)

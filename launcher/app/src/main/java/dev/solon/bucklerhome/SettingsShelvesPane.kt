@@ -30,7 +30,7 @@ fun ShelvesPane() {
     val layout = remember(tick) { HomeLayout.load(context) }
     var sourcesFor by remember { mutableStateOf<ShelfConfig?>(null) }
     val apps by produceState(emptyList<LaunchableApp>()) {
-        value = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }
+        value = withContext(Dispatchers.IO) { loadLaunchableApps(context) }
     }
 
     fun persist(next: HomeLayout) {
