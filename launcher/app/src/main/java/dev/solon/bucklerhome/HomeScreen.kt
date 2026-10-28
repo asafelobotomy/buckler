@@ -77,6 +77,7 @@ fun HomeScreen(
     LaunchedEffect(resumeTick, layoutVersion) {
         homeLayout = withContext(Dispatchers.IO) { HomeLayout.load(context) }
     }
+    UnusedAppsNotice(resumeTick)
     LaunchedEffect(resumeTick) {
         config = DisplayPrefs.load(context)
         apps = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }

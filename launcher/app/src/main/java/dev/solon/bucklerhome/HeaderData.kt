@@ -64,8 +64,9 @@ fun rememberForecast(place: Place?): State<Forecast?> =
     }
 
 @Composable
-fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> =
-    produceState(
+fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> {
+    val context = LocalContext.current
+    return produceState(
         initialValue = HeaderCache.news?.takeIf { it.first == query?.cacheKey }?.second.orEmpty(),
         query?.cacheKey,
     ) {
@@ -74,15 +75,18 @@ fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> =
             value = emptyList()
             return@produceState
         }
+        if (value.isEmpty()) value = withContext(Dispatchers.IO) { HeadlineStore.load(context, key) }
         while (true) {
             val fresh = withContext(Dispatchers.IO) { NewsFeed.load(query) }
             if (fresh.isNotEmpty()) {
                 HeaderCache.news = key to fresh
                 value = fresh
+                withContext(Dispatchers.IO) { HeadlineStore.save(context, key, fresh) }
             }
             delay(if (fresh.isNotEmpty()) REFRESH_NEWS_MS else REFRESH_RETRY_MS)
         }
     }
+}
 
 /** Clock and date strings for the header, refreshed every 15 seconds. */
 @Composable

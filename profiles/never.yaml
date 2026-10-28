@@ -32,3 +32,6 @@ packages:
   - com.android.bluetooth
   # Setup leftovers that are not safe HOME candidates to yank blindly
   - com.google.android.tungsten.setupwraith
+  # System updates, and the file picker apps use to open and save files
+  - com.nvidia.ota
+  - com.android.documentsui

@@ -102,9 +102,13 @@ def apply_profile(
         raise ValueError("Use `buckler launcher handover` for home-clean")
     if profile_name == "never":
         raise ValueError("The never profile cannot be applied")
+    return apply_packages(adb, load_profile(profile_name), dry_run=dry_run)
 
+
+def apply_packages(adb: Adb, profile: Profile, *, dry_run: bool = False) -> ApplyResult:
+    """Disable a profile's packages (from YAML, or built in code), journaled for restore."""
+    profile_name = profile.name
     adb.connect()
-    profile = load_profile(profile_name)
     allowed, blocked = filter_allowed(profile.packages)
     journal = Journal(host=adb.host, profile=profile_name)
     skipped_missing: list[str] = []

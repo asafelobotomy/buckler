@@ -39,3 +39,14 @@ def test_curated_covers_are_bundled_assets() -> None:
                 continue
             assert url.startswith(prefix), f"{pkg}.{kind} must not use a remote URL: {url}"
             assert (assets / url.removeprefix(prefix)).is_file(), f"{pkg}.{kind} missing asset"
+
+
+def test_unused_apps_never_flags_the_never_list() -> None:
+    import yaml
+
+    never = yaml.safe_load((ROOT / "profiles" / "never.yaml").read_text(encoding="utf-8"))["packages"]
+    text = (KOTLIN / "UnusedApps.kt").read_text(encoding="utf-8")
+    block = re.search(r"ALWAYS_KEEP = setOf\((.*?)\)", text, re.DOTALL)
+    assert block, "ALWAYS_KEEP not found"
+    kotlin = set(re.findall(r'"([^"]+)"', block.group(1)))
+    assert kotlin == {"dev.solon.bucklerhome", *never}
