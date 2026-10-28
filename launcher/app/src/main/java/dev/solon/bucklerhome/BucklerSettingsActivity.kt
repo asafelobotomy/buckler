@@ -58,6 +58,7 @@ private enum class SettingsPane(val label: String) {
     SCREENSAVER("Screensaver"),
     APPEARANCE("Appearance"),
     ACCESSIBILITY("Accessibility"),
+    REMOTE("Remote"),
     APPS("Apps"),
     COVERS("Covers"),
     UPDATES("Updates"),
@@ -142,6 +143,7 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                             onConnectIgdb = { connectIgdb = true },
                             onAccountChanged = { accountTick++ },
                         )
+                        SettingsPane.REMOTE -> RemotePane()
                         SettingsPane.APPS -> AppsPane()
                         SettingsPane.ABOUT -> AboutPane()
                     }

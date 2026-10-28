@@ -78,6 +78,7 @@ fun HomeScreen(
         homeLayout = withContext(Dispatchers.IO) { HomeLayout.load(context) }
     }
     UnusedAppsNotice(resumeTick)
+    RemoteButtonsNotice(resumeTick)
     LaunchedEffect(resumeTick) {
         config = DisplayPrefs.load(context)
         apps = withContext(Dispatchers.IO) { loadLaunchableApps(context.packageManager) }

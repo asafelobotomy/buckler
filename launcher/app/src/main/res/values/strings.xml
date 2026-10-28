@@ -2,5 +2,7 @@
 <resources>
     <string name="app_name">buckler-home</string>
     <string name="settings_activity_label">Buckler Settings</string>
+    <string name="remote_buttons_label">Buckler remote buttons</string>
+    <string name="remote_buttons_description">Lets the remote\'s buttons do what you choose in Buckler Settings → Remote. Only the buttons you remap are changed; nothing you type or watch is read.</string>
     <string name="file_provider_authority">dev.solon.bucklerhome.fileprovider</string>
 </resources>
