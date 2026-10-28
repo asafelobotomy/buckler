@@ -15,6 +15,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -39,6 +40,7 @@ fun HomeScreen(
     val availableUpdate by rememberAvailableUpdate(resumeTick)
     var shelvesLoaded by remember { mutableStateOf(false) }
     var initialFocusDone by remember { mutableStateOf(false) }
+    var homeFocused by remember { mutableStateOf(false) }
     val firstFocus = remember { FocusRequester() }
     val stageFocus = remember { FocusRequester() }
     val stageDown = remember { FocusRequester() }
@@ -59,7 +61,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     val stage = homeLayout?.mainStage ?: MainStage.NEWS
-    val trackPlayback = stage == MainStage.NOW_PLAYING || stage == MainStage.SUGGESTED
+    val trackPlayback = stage == MainStage.NOW_PLAYING || stage == MainStage.SUGGESTED || stage == MainStage.LYRICS
     val weather by rememberWeather(config.weatherPlace)
     val headlines by rememberHeadlines(stageNewsQuery(config, stage))
     val forecast by rememberForecast(if (stage == MainStage.WEATHER) config.place else null)
@@ -92,17 +94,29 @@ fun HomeScreen(
         shelvesLoaded = true
     }
 
-    // Focus the first tile once; later reloads (cover/pin edits) must not steal focus.
-    // With no tiles at all, start on the stage so the remote always has somewhere to begin.
+    // Nothing on Home focused: the first tile, else the stage. Retried because the first tile
+    // is laid out a frame or more after the shelves load, and a single early request silently
+    // failed, leaving a cold start with no focus. Only acts while Home holds no focus at all.
+    suspend fun focusHome(preferStage: Boolean = false) {
+        repeat(FOCUS_TRIES) { attempt ->
+            if (homeFocused) return
+            val tiles = shelves.any { it.items.isNotEmpty() } && !preferStage && attempt < FOCUS_TRIES / 2
+            runCatching { (if (tiles) firstFocus else stageFocus).requestFocus() }
+            delay(FOCUS_RETRY_MS)
+        }
+    }
+
+    // First tile once on start; later reloads (cover/pin edits) must not steal focus.
     LaunchedEffect(shelves, shelvesLoaded) {
         if (initialFocusDone || !shelvesLoaded) return@LaunchedEffect
         initialFocusDone = true
-        if (shelves.any { it.items.isNotEmpty() }) {
-            runCatching { firstFocus.requestFocus() }
-        } else {
-            delay(60)
-            runCatching { stageFocus.requestFocus() }
-        }
+        focusHome()
+    }
+    // Back to Home from an app or Settings, or a stage swap that disposed the focused card.
+    LaunchedEffect(resumeTick, homeLayout?.mainStage) {
+        if (!initialFocusDone) return@LaunchedEffect
+        delay(FOCUS_RETRY_MS * 3)
+        focusHome(preferStage = true)
     }
 
     fun stepMove(delta: Int) {
@@ -255,42 +269,44 @@ fun HomeScreen(
         config = config.copy(weatherSpan = span)
     }
 
-    HomeColumn(
-        config = config,
-        layout = layout,
-        clock = clock,
-        date = date,
-        weather = weather,
-        headlines = headlines,
-        forecast = forecast,
-        net = net,
-        nowPlaying = nowPlaying,
-        actions = actions,
-        shelves = shelves,
-        listState = listState,
-        scope = scope,
-        move = move,
-        shelfMove = shelfMove,
-        stageFocus = stageFocus,
-        firstFocus = firstFocus,
-        stageDown = stageDown,
-        shelfRequester = shelfRequester,
-        moveFocus = moveFocus,
-        focusShelfId = focusShelfId,
-        focusPkg = focusPkg,
-        onLaunch = { launch(it) },
-        onEdit = { editTarget = it },
-        onShelfMenu = { shelfMenu = it },
-        onOpenStory = { reading = it },
-        onHoldStage = { pickingStage = true },
-        onPickStage = ::pickStage,
-        onPickSpan = ::pickSpan,
-        onResetHome = ::resetHome,
-        onStepMove = ::stepMove,
-        onPlaceMove = ::placeMove,
-        onStepShelf = ::stepShelf,
-        onPlaceShelf = ::placeShelf,
-    )
+    Box(Modifier.fillMaxSize().onFocusChanged { homeFocused = it.hasFocus }) {
+        HomeColumn(
+            config = config,
+            layout = layout,
+            clock = clock,
+            date = date,
+            weather = weather,
+            headlines = headlines,
+            forecast = forecast,
+            net = net,
+            nowPlaying = nowPlaying,
+            actions = actions,
+            shelves = shelves,
+            listState = listState,
+            scope = scope,
+            move = move,
+            shelfMove = shelfMove,
+            stageFocus = stageFocus,
+            firstFocus = firstFocus,
+            stageDown = stageDown,
+            shelfRequester = shelfRequester,
+            moveFocus = moveFocus,
+            focusShelfId = focusShelfId,
+            focusPkg = focusPkg,
+            onLaunch = { launch(it) },
+            onEdit = { editTarget = it },
+            onShelfMenu = { shelfMenu = it },
+            onOpenStory = { reading = it },
+            onHoldStage = { pickingStage = true },
+            onPickStage = ::pickStage,
+            onPickSpan = ::pickSpan,
+            onResetHome = ::resetHome,
+            onStepMove = ::stepMove,
+            onPlaceMove = ::placeMove,
+            onStepShelf = ::stepShelf,
+            onPlaceShelf = ::placeShelf,
+        )
+    }
 
     if (pickingStage) {
         StageSwitchDialog(
@@ -374,3 +390,6 @@ fun HomeScreen(
         )
     }
 }
+
+private const val FOCUS_TRIES = 30
+private const val FOCUS_RETRY_MS = 100L

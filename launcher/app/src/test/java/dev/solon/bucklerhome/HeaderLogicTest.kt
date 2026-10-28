@@ -226,13 +226,17 @@ class HeaderLogicTest {
     }
 
     @Test
-    fun stagePoolKeepsStoriesThatHaveAPicture() {
+    fun stagePoolKeepsEverySourceAndPutsPicturesFirst() {
         val stories = listOf(
-            Headline(NewsSource.BBC_WORLD, "no art"),
-            Headline(NewsSource.NPR, "with art", imageUrl = "https://example.com/a.jpg"),
-            Headline(NewsSource.GUARDIAN, "also", imageUrl = "https://example.com/b.jpg"),
+            Headline(NewsSource.AL_JAZEERA, "aj text"),
+            Headline(NewsSource.BBC_WORLD, "bbc text"),
+            Headline(NewsSource.BBC_WORLD, "bbc art", imageUrl = "https://example.com/a.jpg"),
+            Headline(NewsSource.AL_JAZEERA, "aj text 2"),
         )
-        assertEquals(listOf("with art", "also"), NewsFeed.stagePool(stories).map { it.title })
+        assertEquals(
+            listOf("aj text", "bbc art", "aj text 2", "bbc text"),
+            NewsFeed.stagePool(stories).map { it.title },
+        )
         assertEquals(NewsPace.S60, NewsPace.fromName(null))
         assertEquals(30_000L, NewsPace.S30.millis)
         assertEquals(90_000L, NewsPace.S90.millis)

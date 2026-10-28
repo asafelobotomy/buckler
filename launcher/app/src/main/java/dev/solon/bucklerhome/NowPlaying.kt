@@ -75,7 +75,21 @@ data class NowPlayingInfo(
     val kind: MediaKind = MediaKind.VIDEO,
     /** Remote or content artwork when the session sends a link instead of a bitmap. */
     val artUri: String? = null,
-)
+    /** Raw track fields for lookups such as lyrics; [subtitle] is the display form. */
+    val artist: String = "",
+    val album: String = "",
+    val durationMs: Long = 0,
+    /** Playback position when it was last reported, at [positionAt] (elapsedRealtime). */
+    val positionMs: Long = 0,
+    val positionAt: Long = 0,
+    val speed: Float = 1f,
+) {
+    /** Where playback is now, extrapolated from the last report while playing. */
+    fun positionNow(nowElapsed: Long = SystemClock.elapsedRealtime()): Long {
+        if (!playing) return positionMs
+        return positionMs + ((nowElapsed - positionAt) * speed).toLong()
+    }
+}
 
 fun nowPlayingAccessGranted(context: Context): Boolean =
     context.packageName in NotificationManagerCompat.getEnabledListenerPackages(context)
@@ -164,6 +178,7 @@ class NowPlayingModel(private val context: Context) {
             MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI,
         ).firstNotNullOfOrNull { key -> meta.getString(key)?.takeIf { it.isNotBlank() } }
             ?: meta.description?.iconUri?.toString()
+        val state = controller.playbackState
         return NowPlayingInfo(
             title = title,
             subtitle = subtitle,
@@ -173,6 +188,12 @@ class NowPlayingModel(private val context: Context) {
             packageName = controller.packageName,
             kind = kind,
             artUri = artUri,
+            artist = artist.orEmpty(),
+            album = album.orEmpty(),
+            durationMs = meta.getLong(MediaMetadata.METADATA_KEY_DURATION).coerceAtLeast(0),
+            positionMs = state?.position?.coerceAtLeast(0) ?: 0,
+            positionAt = state?.lastPositionUpdateTime ?: SystemClock.elapsedRealtime(),
+            speed = state?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
         )
     }
 

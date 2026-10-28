@@ -19,6 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +40,7 @@ import kotlinx.coroutines.delay
 enum class MainStage(val label: String) {
     NEWS("News"),
     NOW_PLAYING("Now Playing"),
+    LYRICS("Lyrics"),
     WEATHER("Weather"),
     SUGGESTED("Suggested"),
     ;
@@ -77,6 +83,7 @@ fun MainStage(
     when (mode) {
         MainStage.NEWS -> NewsStage(headlines, newsSources, newsPace, stageFocus, onDown, onOpenStory, onHold, metrics)
         MainStage.NOW_PLAYING -> NowPlayingStage(nowPlaying, stageFocus, onDown, onHold, metrics)
+        MainStage.LYRICS -> LyricsStage(nowPlaying, stageFocus, onDown, onHold, metrics)
         MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h, stageFocus, onDown, weatherSpan, onHold)
         MainStage.SUGGESTED -> SuggestedStage(
             nowPlaying, stageFocus, onDown, onPickStage, weatherSpan, onPickSpan, metrics,
@@ -117,7 +124,9 @@ private fun NewsStage(
 ) {
     val pool = remember(headlines) { NewsFeed.stagePool(headlines) }
     var index by remember(pool) { mutableIntStateOf(0) }
-    LaunchedEffect(pool, pace) {
+    // Bumped by ◀ ▶ so the rotation timer restarts and a picked story stays its full time.
+    var stepped by remember { mutableIntStateOf(0) }
+    LaunchedEffect(pool, pace, stepped) {
         if (pool.size < 2) return@LaunchedEffect
         while (true) {
             delay(pace.millis)
@@ -129,6 +138,18 @@ private fun NewsStage(
         StageHeading("News")
         Row(
             modifier = Modifier
+                .onPreviewKeyEvent { event ->
+                    val step = when (event.key) {
+                        Key.DirectionLeft -> -1
+                        Key.DirectionRight -> 1
+                        else -> return@onPreviewKeyEvent false
+                    }
+                    if (event.type == KeyEventType.KeyDown && pool.size > 1) {
+                        index = (index + step).mod(pool.size)
+                        stepped++
+                    }
+                    true
+                }
                 .stageTarget(
                     focus = stageFocus,
                     onDown = onDown,
@@ -161,7 +182,11 @@ private fun NewsStage(
                     )
                 } else {
                     Text(
-                        text = story.source.mark,
+                        text = if (pool.size > 1) {
+                            "${story.source.mark}  ·  ${index % pool.size + 1} of ${pool.size}  ◀ ▶"
+                        } else {
+                            story.source.mark
+                        },
                         color = ColorSection,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,

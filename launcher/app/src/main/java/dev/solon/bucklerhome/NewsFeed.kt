@@ -120,10 +120,16 @@ object NewsFeed {
     /** Lead story for the Main Stage: the first one with a picture, otherwise the first story. */
     fun featured(headlines: List<Headline>): Headline? = stagePool(headlines).firstOrNull()
 
-    /** Stories the Main Stage cycles. Ones with a picture come first; the rest are used only if none do. */
+    /**
+     * Stories the Main Stage cycles: every source takes turns, and within a source the stories with
+     * a picture go first. Sources whose feeds carry no images (CBS, DW, Al Jazeera…) still appear,
+     * on the text-only card.
+     */
     fun stagePool(headlines: List<Headline>): List<Headline> {
-        val pictured = headlines.filter { !it.imageUrl.isNullOrBlank() }
-        return pictured.ifEmpty { headlines }
+        val bySource = headlines.groupBy { it.source }.values.map { stories ->
+            stories.sortedBy { it.imageUrl.isNullOrBlank() }
+        }
+        return interleaveHeadlines(bySource)
     }
 
     /**

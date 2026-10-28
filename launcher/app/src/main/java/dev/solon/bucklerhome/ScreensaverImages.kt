@@ -3,6 +3,8 @@ package dev.solon.bucklerhome
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -42,7 +44,8 @@ object ScreensaverImages {
 
     /** Featured pictures for [category], cached for a few days so the screensaver starts instantly. */
     fun onlineIndex(context: Context, category: PhotoCategory): List<CommonsImage> {
-        val cache = File(cacheDir(context), "index-${category.name.lowercase()}.json")
+        // Keyed by the query too, so changing a category's search words drops the old list.
+        val cache = File(cacheDir(context), "index-${category.name.lowercase()}-${sha1(category.query).take(8)}.json")
         if (cache.isFile && System.currentTimeMillis() - cache.lastModified() < INDEX_TTL_MS) {
             parseIndexCache(cache.readText()).takeIf { it.isNotEmpty() }?.let { return it }
         }
@@ -55,13 +58,38 @@ object ScreensaverImages {
         return fresh
     }
 
+    /**
+     * A random page of results for variety, then the first page when that one is empty. Small
+     * categories have fewer than 50 matches, so a later page alone came back empty and the
+     * screensaver reported itself offline.
+     */
     private fun fetchIndex(category: PhotoCategory): List<CommonsImage> {
+        for (offset in listOf(listOf(0, 50, 100).random(), 0).distinct()) {
+            val page = fetchPage(category, offset)
+            if (page.isNotEmpty()) return page
+        }
+        return emptyList()
+    }
+
+    private fun fetchPage(category: PhotoCategory, offset: Int): List<CommonsImage> {
         val search = "${category.query} incategory:Featured_pictures_on_Wikimedia_Commons filetype:bitmap"
-        val offset = listOf(0, 50, 100).random()
         val url = "$COMMONS?action=query&generator=search&gsrnamespace=6&gsrlimit=50&gsroffset=$offset" +
             "&gsrsearch=${enc(search)}&prop=imageinfo&iiprop=url%7Csize%7Cextmetadata&iiurlwidth=1920&format=json"
         val res = runCatching { HttpJson.get(url, headers = UA) }.getOrNull() ?: return emptyList()
         return if (res.code in 200..299) parseCommons(res.body) else emptyList()
+    }
+
+    /** One slide from each category in turn, so a mix alternates instead of running in blocks. */
+    fun <T> takeTurns(groups: List<List<T>>): List<T> = buildList {
+        val longest = groups.maxOfOrNull { it.size } ?: 0
+        for (i in 0 until longest) groups.forEach { group -> group.getOrNull(i)?.let(::add) }
+    }
+
+    /** True when Android reports a validated internet connection. */
+    fun online(context: Context): Boolean {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     fun parseCommons(body: String): List<CommonsImage> {

@@ -196,7 +196,11 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
             val slides = withContext(Dispatchers.IO) { loadSlides() }
             if (slides.isEmpty()) {
                 fallBackToClock(
-                    if (config.mode == ScreensaverMode.UPLOADED) "No photos uploaded yet" else "Photos unavailable offline",
+                    when {
+                        config.mode == ScreensaverMode.UPLOADED -> "No photos uploaded yet"
+                        ScreensaverImages.online(context) -> "No photos found right now"
+                        else -> "Photos unavailable offline"
+                    },
                 )
                 return@launch
             }
@@ -223,7 +227,10 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
     private fun loadSlides(): List<Slide> = when (config.mode) {
         ScreensaverMode.UPLOADED -> ScreensaverImages.uploaded(context).shuffled().map { Slide.Local(it) }
         ScreensaverMode.PHOTOS ->
-            ScreensaverImages.onlineIndex(context, config.category).map { Slide.Remote(it) }
+            ScreensaverImages.takeTurns(
+                PhotoCategory.entries.filter { it in config.categories }
+                    .map { ScreensaverImages.onlineIndex(context, it) },
+            ).map { Slide.Remote(it) }
         ScreensaverMode.CLOCK, ScreensaverMode.DVD, ScreensaverMode.NOW_PLAYING, ScreensaverMode.MAZE,
         ScreensaverMode.PIPES, ScreensaverMode.MYSTIFY, ScreensaverMode.STARFIELD,
         -> emptyList()

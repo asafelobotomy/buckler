@@ -6,14 +6,17 @@ import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 
-/** Full-screen preview of the configured screensaver; any key or touch closes it. */
+/** Full-screen preview of a screensaver ([EXTRA_MODE], else the chosen one); any key or touch closes it. */
 class ScreensaverPreviewActivity : ComponentActivity() {
     private var saver: ScreensaverView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        val view = ScreensaverView(this, ScreensaverPrefs.load(this))
+        val saved = ScreensaverPrefs.load(this)
+        // A screensaver's own settings page previews that one, even before it is chosen.
+        val mode = intent.getStringExtra(EXTRA_MODE)?.let(ScreensaverMode::fromName) ?: saved.mode
+        val view = ScreensaverView(this, saved.copy(mode = mode))
         saver = view
         setContentView(view)
         view.start()
@@ -33,5 +36,9 @@ class ScreensaverPreviewActivity : ComponentActivity() {
         saver?.stop()
         saver = null
         super.onDestroy()
+    }
+
+    companion object {
+        const val EXTRA_MODE = "dev.solon.bucklerhome.SAVER_MODE"
     }
 }
