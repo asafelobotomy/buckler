@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -254,7 +253,3 @@ def handover(adb: Adb, *, reboot: bool = False) -> HandoverResult:
         f"HOME is now {home_after}",
         journal_path=path,
     )
-
-
-def which_java() -> str | None:
-    return shutil.which("java")

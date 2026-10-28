@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from buckler.adb import Adb
-from buckler.paths import journals_dir, repo_root
+from buckler.paths import journals_dir
 
 DEFAULT_DOCK = [
     "org.jellyfin.androidtv",
@@ -29,10 +29,6 @@ DEVICE_RELATIVE = "Android/data/dev.solon.bucklerhome/files/home-layout.json"
 
 class HomeLayoutError(ValueError):
     """Invalid home-layout document."""
-
-
-def schema_path() -> Path:
-    return repo_root() / "schema" / "home-layout.v1.json"
 
 
 def default_home_layout(

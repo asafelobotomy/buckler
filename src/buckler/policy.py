@@ -28,16 +28,6 @@ AI_STACK = frozenset(
 )
 
 
-class PolicyError(RuntimeError):
-    """Raised when an action would violate safety invariants."""
-
-
-def assert_not_blocked(package: str) -> None:
-    never = load_never()
-    if package in never:
-        raise PolicyError(f"Refusing to disable hard-blocked package: {package}")
-
-
 def filter_allowed(packages: list[str]) -> tuple[list[str], list[str]]:
     never = load_never()
     allowed: list[str] = []

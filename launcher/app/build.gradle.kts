@@ -75,6 +75,11 @@ android {
         buildConfig = true
     }
 
+    lint {
+        // Preferences are written with edit().apply() throughout; KTX's edit { } is the same call.
+        disable += "UseKtx"
+    }
+
     testOptions {
         unitTests.isReturnDefaultValues = true
     }

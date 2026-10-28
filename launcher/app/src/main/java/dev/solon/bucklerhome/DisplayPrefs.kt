@@ -125,7 +125,6 @@ data class DisplayConfig(
 ) {
     /** What the News stage shows and the Weather stage uses: the header's when synced. */
     val stageNews: List<NewsSource> get() = if (newsSynced) newsSources else stageNewsSources
-    val stageRegion: NewsRegion get() = if (newsSynced) newsRegion else stageNewsRegion
     val stageWeatherPlace: Place? get() = if (weatherSynced) place else stagePlace
     val stageWeatherFahrenheit: Boolean get() = if (weatherSynced) fahrenheit else stageFahrenheit
 
