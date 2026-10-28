@@ -38,6 +38,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -47,21 +50,38 @@ import coil.compose.AsyncImagePainter
 
 data class CoverSize(val width: Dp, val height: Dp, val artHeight: Dp)
 
+/** Tile name size: a little smaller on the small tiles. */
+fun labelFontSize(tileSize: TileSize): TextUnit =
+    if (tileSize == TileSize.SMALL || tileSize == TileSize.THIN) 11.sp else 12.sp
+
+/**
+ * Room for a tile's name: two lines (one on a banner) at the current text size, plus padding.
+ * It follows the text, not the tile, so a Thin tile or Extra large text never cuts a name off.
+ */
+fun labelHeight(layout: CoverLayout, tileSize: TileSize, density: Density): Dp {
+    val lines = if (layout == CoverLayout.BANNER) 1 else 2
+    return with(density) { labelFontSize(tileSize).toDp() } * 1.3f * lines + 8.dp
+}
+
+/** [density] sizes the name under the tile; pass Compose's own (it carries the text size) when [showLabels]. */
 fun coverSize(
     layout: CoverLayout,
     tileSize: TileSize = TileSize.MEDIUM,
     showLabels: Boolean = false,
+    density: Density = Density(1f),
 ): CoverSize {
     val (width, art) = when (layout) {
         // Square icon, 2:3 poster, 16:9 TV banner. The old sizes included a title band.
         CoverLayout.ICON -> 132.dp to 132.dp
-        CoverLayout.POSTER -> 120.dp to 180.dp
+        // Large (210 dp tall) still fits a whole shelf under the Main Stage on a 1080p TV.
+        CoverLayout.POSTER -> 112.dp to 168.dp
         CoverLayout.BANNER -> 220.dp to 124.dp
     }
     val k = tileSize.scale
-    val h = tileSize.heightScale
-    val label = if (!showLabels) 0.dp else if (layout == CoverLayout.BANNER) 32.dp else 44.dp
-    return CoverSize(width * k, art * h + label * h, art * h)
+    // Thin slims banners into a strip; a square icon or a poster squashed the same way loses its edges.
+    val h = if (layout == CoverLayout.BANNER) tileSize.heightScale else k
+    val label = if (showLabels) labelHeight(layout, tileSize, density) else 0.dp
+    return CoverSize(width * k, art * h + label, art * h)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -84,7 +104,7 @@ fun CoverTile(
     /** Main Stage, above the first shelf. */
     up: FocusRequester? = null,
 ) {
-    val size = coverSize(layout, tileSize, showLabels)
+    val size = coverSize(layout, tileSize, showLabels, LocalDensity.current)
     val menu = rememberTvMenuInteraction(onOpen = onLaunch, onMenu = onLongPress)
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
@@ -181,7 +201,7 @@ fun CoverTile(
             if (showLabels) {
                 Text(
                     text = item.title,
-                    fontSize = if (tileSize == TileSize.SMALL || tileSize == TileSize.THIN) 11.sp else 12.sp,
+                    fontSize = labelFontSize(tileSize),
                     color = if (focused || moving) ColorOnBrand else ColorText,
                     maxLines = if (layout == CoverLayout.BANNER) 1 else 2,
                     overflow = TextOverflow.Ellipsis,

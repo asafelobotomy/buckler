@@ -51,7 +51,7 @@ enum class TextSize(val label: String, val scale: Float) {
 enum class TileSize(
     val label: String,
     val scale: Float,
-    /** Height factor. Thin is shorter than its width, so banners become a slim strip. */
+    /** Height factor for banners. Thin is shorter than its width, so banners become a slim strip. */
     val heightScale: Float = scale,
 ) {
     THIN("Thin", 0.68f, 0.48f),

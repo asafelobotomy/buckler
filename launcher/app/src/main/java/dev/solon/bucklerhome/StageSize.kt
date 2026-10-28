@@ -18,6 +18,9 @@ enum class StageSize(val label: String, val fraction: Float) {
     }
 }
 
+/** Space between the Main Stage and the first shelf. */
+val STAGE_GAP = 20.dp
+
 /** Heights for a 16:9 TV. The band stops before it covers the first shelf's title and tiles. */
 data class StageMetrics(
     val band: Dp,
@@ -31,9 +34,13 @@ data class StageMetrics(
     val compact: Boolean,
 )
 
-fun stageMetrics(viewport: Dp, shelfArt: Dp, size: StageSize, headerVisible: Boolean): StageMetrics {
-    val headerReserve = if (headerVisible) 110.dp else 8.dp
-    val cap = (viewport - shelfArt - 72.dp - headerReserve).coerceAtLeast(128.dp)
+/**
+ * [header] is the header's measured height with the gap under it; [shelf] is one whole shelf: its
+ * title, tiles (with labels) and room for the focus zoom ([shelfBlock]). The band stops where that
+ * shelf would no longer fit beneath it, down to the 128 dp the stage needs for itself.
+ */
+fun stageMetrics(viewport: Dp, shelf: Dp, size: StageSize, header: Dp): StageMetrics {
+    val cap = (viewport - header - STAGE_GAP - shelf).coerceAtLeast(128.dp)
     val band = (viewport * size.fraction).coerceIn(128.dp, cap)
     val room = (band - 40.dp).coerceAtLeast(96.dp)
     val card = when (size) {

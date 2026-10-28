@@ -15,16 +15,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -47,6 +43,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -96,8 +95,11 @@ fun ShelfSection(
     showLabels: Boolean,
     actions: ShelfActions,
     focus: ShelfFocus,
+    /** A row of this shelf took focus: scroll Home so it starts [offset] px into the shelf (0: the title). */
+    onRowFocused: (offset: Int) -> Unit = {},
 ) {
     val menuFocus = remember { FocusRequester() }
+    val sectionTop = remember { floatArrayOf(0f) }
     var showOptions by remember(shelf.config.id) { mutableStateOf(false) }
     var leaveOptions by remember(shelf.config.id) { mutableStateOf(false) }
     val artHeight = coverSize(coverLayout, tileSize).artHeight
@@ -113,11 +115,12 @@ fun ShelfSection(
         }.getOrDefault(false)
         if (!focused) showOptions = false
     }
-    Column(modifier = Modifier.clipToBounds()) {
+    Column(modifier = Modifier.onGloballyPositioned { sectionTop[0] = it.positionInRoot().y }) {
         Text(
             text = if (focus.movingShelf) "▲▼  ${shelf.config.title}" else shelf.config.title,
             color = if (focus.movingShelf) ColorBrand else ColorSection,
-            fontSize = 14.sp,
+            fontSize = SHELF_TITLE_SIZE,
+            maxLines = 1,
             modifier = Modifier
                 .padding(bottom = 10.dp)
                 .semantics {
@@ -151,6 +154,9 @@ fun ShelfSection(
                         LibraryGrid(
                             shelf.items, coverLayout, tileSize, showLabels, actions, focus,
                             onLeftEdge = { showOptions = true },
+                            onRowFocused = { row, rowTop ->
+                                onRowFocused(if (row == 0) 0 else (rowTop - sectionTop[0]).toInt())
+                            },
                         )
                     else -> {
                         val isApps = shelf.config.type == ShelfType.APPS
@@ -273,21 +279,26 @@ private fun LibraryGrid(
     actions: ShelfActions,
     focus: ShelfFocus,
     onLeftEdge: () -> Unit,
+    /** Row index and its top on screen, less the zoom room above it. */
+    onRowFocused: (row: Int, top: Float) -> Unit,
 ) {
-    val tileWidth = coverSize(coverLayout, tileSize).width
+    val size = coverSize(coverLayout, tileSize, showLabels, LocalDensity.current)
+    val tileWidth = size.width
+    val room = with(LocalDensity.current) { zoomRoom(size).toPx() }
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         // As many tiles per row as fit, so Small shows more and Large fewer.
         val columns = ((maxWidth + TileGap) / (tileWidth + TileGap)).toInt().coerceAtLeast(1)
-        Column(
-            verticalArrangement = Arrangement.spacedBy(TileGap),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 360.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
+        // Rows are not a scroll of their own: Home's list moves the focused row to the top.
+        Column(verticalArrangement = Arrangement.spacedBy(TileGap), modifier = Modifier.fillMaxWidth()) {
             val rows = items.chunked(columns)
             rows.forEachIndexed { rowIndex, row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(TileGap)) {
+                val top = remember { floatArrayOf(0f) }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(TileGap),
+                    modifier = Modifier
+                        .onGloballyPositioned { top[0] = it.positionInRoot().y }
+                        .onFocusChanged { if (it.hasFocus) onRowFocused(rowIndex, top[0] - room) },
+                ) {
                     row.forEachIndexed { col, item ->
                         CoverTile(
                             item = item,
@@ -325,10 +336,13 @@ private fun ShelfRow(
     LaunchedEffect(trackIndex) {
         if (trackIndex >= 0) listState.animateScrollToItem((trackIndex - 1).coerceAtLeast(0))
     }
+    // The row clips at its ends; reach into the margin so the first tile's zoom is not cut off.
+    val room = zoomRoom(coverSize(coverLayout, tileSize, showLabels, LocalDensity.current))
     LazyRow(
         state = listState,
         horizontalArrangement = Arrangement.spacedBy(TileGap),
-        contentPadding = PaddingValues(end = 16.dp),
+        contentPadding = PaddingValues(start = room, end = 16.dp),
+        modifier = Modifier.bleed(start = room, end = 0.dp),
     ) {
         // Item ids are de-duplicated in Shelves; duplicate LazyRow keys would crash.
         itemsIndexed(items, key = { _, item -> item.id }) { index, item ->

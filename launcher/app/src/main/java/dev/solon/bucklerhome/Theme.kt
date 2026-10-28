@@ -87,13 +87,19 @@ fun BucklerHomeTheme(content: @Composable () -> Unit) {
     }
 }
 
+/** For a list that places its focused item itself (Home's shelves): focus never scrolls it. */
+@OptIn(ExperimentalFoundationApi::class)
+internal object NoFocusScroll : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
+}
+
 /**
  * Scroll a list only as far as it takes to show the focused item, as Compose did before 1.7.
  * On TV devices Compose now moves the focused item toward a fixed pivot, which slid Home's
  * shelves up under the stage and hid the heading of the shelf above.
  */
 @OptIn(ExperimentalFoundationApi::class)
-private object ScrollOnlyAsNeeded : BringIntoViewSpec {
+internal object ScrollOnlyAsNeeded : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         val trailing = offset + size
         return when {

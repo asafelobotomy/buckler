@@ -1,5 +1,6 @@
 package dev.solon.bucklerhome
 
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -55,6 +56,21 @@ class AppearanceTest {
         assertEquals(220.dp, labeled.width)
         assertTrue(labeled.height > labeled.artHeight)
         assertEquals(labeled.artHeight, coverSize(CoverLayout.BANNER).height)
+    }
+
+    @Test
+    fun thinOnlySlimsBannersAndNamesFollowTheText() {
+        // Thin keeps icons square and posters 2:3; only banners become a strip.
+        val icon = coverSize(CoverLayout.ICON, TileSize.THIN)
+        assertEquals(icon.width, icon.artHeight)
+        val poster = coverSize(CoverLayout.POSTER, TileSize.THIN)
+        assertEquals((poster.width * 1.5f).value, poster.artHeight.value, 0.01f)
+        val banner = coverSize(CoverLayout.BANNER, TileSize.THIN)
+        assertTrue(banner.artHeight < banner.width * 9f / 16f)
+        // Larger text gets a taller name strip, the same on every tile size.
+        val normal = coverSize(CoverLayout.ICON, TileSize.THIN, showLabels = true)
+        val bigText = coverSize(CoverLayout.ICON, TileSize.THIN, showLabels = true, density = Density(1f, fontScale = 1.3f))
+        assertTrue(bigText.height - bigText.artHeight > normal.height - normal.artHeight)
     }
 
     @Test

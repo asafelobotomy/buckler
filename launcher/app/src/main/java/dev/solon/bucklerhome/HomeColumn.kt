@@ -12,10 +12,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -30,8 +40,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private val HEADER_GAP = 14.dp
+private val SHELF_GAP = 20.dp
+
+/** How far the shelf list reaches into the side margins, for a zoomed tile at either end. */
+private val LIST_BLEED = 16.dp
+
 /** Header, Main Stage, and shelves. State and dialogs stay in [HomeScreen]. */
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeColumn(
     config: DisplayConfig,
@@ -108,8 +124,13 @@ fun HomeColumn(
             .moveModeKeys(shelfMove, onStep = onStepShelf, onPlace = onPlaceShelf)
             .padding(start = 56.dp, top = 28.dp, end = 56.dp, bottom = 8.dp),
     ) {
-        val shelfArt = coverSize(layout.layout, layout.tileSize).artHeight
-        val metrics = stageMetrics(maxHeight, shelfArt, layout.stageSize, config.headerVisible)
+        val density = LocalDensity.current
+        val tile = coverSize(layout.layout, layout.tileSize, layout.showLabels, density)
+        val shelfHeight = shelfBlock(tile, density)
+        // The header's real height (its size, the ticker, text size), measured; a guess until then.
+        var headerHeight by remember { mutableStateOf(96.dp) }
+        val header = if (config.headerVisible) headerHeight + HEADER_GAP else 0.dp
+        val metrics = stageMetrics(maxHeight, shelfHeight, layout.stageSize, header)
         Column(modifier = Modifier.fillMaxSize()) {
         if (config.headerVisible) {
             HomeHeader(
@@ -123,9 +144,11 @@ fun HomeColumn(
                 actions = actions,
                 below = stageFocus,
                 endFocus = headerEnd,
-                modifier = Modifier.wrapFocus(FocusDirection.Up, focusManager, ::wrapToBottom),
+                modifier = Modifier
+                    .wrapFocus(FocusDirection.Up, focusManager, ::wrapToBottom)
+                    .onSizeChanged { headerHeight = with(density) { it.height.toDp() } },
             )
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(HEADER_GAP))
         }
 
         Box(
@@ -158,16 +181,40 @@ fun HomeColumn(
                 weatherSpan = config.weatherSpan,
             )
         }
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(STAGE_GAP))
 
         val topShelf = shelves.firstOrNull()
         val lastShelf = shelves.lastOrNull()?.takeIf { !homeOptions }
+        // The focused shelf (or Library row) moves to the top of the list, whole; the next one
+        // peeks in below and fades out. Space after the end lets the last ones reach the top too.
+        fun showRow(index: Int, offset: Int) {
+            scope.launch { listState.animateScrollToItem(index, offset) }
+        }
+        // A new tile size or layout changes every offset: start the shelf in view at its title again.
+        LaunchedEffect(layout.layout, layout.tileSize, layout.showLabels) {
+            if (listState.firstVisibleItemScrollOffset != 0) listState.scrollToItem(listState.firstVisibleItemIndex)
+        }
+        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        val listHeight = maxHeight
+        // Focus would otherwise also scroll the list, just far enough, and undo the placement.
+        CompositionLocalProvider(LocalBringIntoViewSpec provides NoFocusScroll) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.weight(1f).clipToBounds(),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            modifier = Modifier
+                .bleed(LIST_BLEED)
+                .fadeBottom((listHeight - shelfHeight).coerceIn(0.dp, 40.dp))
+                .fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = LIST_BLEED,
+                end = LIST_BLEED,
+                // Enough for a Library's last row, without its shelf title, to reach the top.
+                bottom = (listHeight - tile.height - zoomRoom(tile)).coerceAtLeast(0.dp),
+            ),
+            verticalArrangement = Arrangement.spacedBy(SHELF_GAP),
         ) {
-            items(shelves, key = { it.config.id }) { shelf ->
+            itemsIndexed(shelves, key = { _, it -> it.config.id }) { index, shelf ->
+              // Rows inside still scroll sideways to the focused tile.
+              CompositionLocalProvider(LocalBringIntoViewSpec provides ScrollOnlyAsNeeded) {
                 val id = shelf.config.id
                 val last = shelf == lastShelf
                 val libraryBottom = last && shelf.config.type == ShelfType.LIBRARY && shelf.items.isNotEmpty()
@@ -177,10 +224,13 @@ fun HomeColumn(
                     stageDown.takeIf { shelf == topShelf },
                     bottom.takeIf { last && !libraryBottom },
                 )
+                val library = shelf.config.type == ShelfType.LIBRARY && shelf.items.isNotEmpty()
                 Box(
                     Modifier
                         .then(if (last) Modifier.wrapFocus(FocusDirection.Down, focusManager, ::wrapToTop) else Modifier)
-                        .focusGroupTarget(targets),
+                        .focusGroupTarget(targets)
+                        // The Library places each of its rows itself.
+                        .onFocusChanged { if (it.hasFocus && !library && !move.active) showRow(index, 0) },
                 ) {
                     ShelfSection(
                         shelf = shelf,
@@ -202,12 +252,18 @@ fun HomeColumn(
                             up = if (shelf == topShelf) stageFocus else null,
                             bottom = if (libraryBottom) bottom else null,
                         ),
+                        onRowFocused = { offset -> if (!move.active) showRow(index, offset) },
                     )
                 }
+              }
             }
             if (homeOptions) {
                 item(key = "home_options") {
-                    Box(Modifier.wrapFocus(FocusDirection.Down, focusManager, ::wrapToTop)) {
+                    Box(
+                        Modifier
+                            .wrapFocus(FocusDirection.Down, focusManager, ::wrapToTop)
+                            .onFocusChanged { if (it.hasFocus) showRow(shelves.size, 0) },
+                    ) {
                         HomeOptionsCard(
                             onReset = onResetHome,
                             onSettings = actions.onSettings,
@@ -218,6 +274,8 @@ fun HomeColumn(
                     }
                 }
             }
+        }
+        }
         }
 
         val hint = when {
