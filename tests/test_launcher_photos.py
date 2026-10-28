@@ -66,6 +66,8 @@ def test_grant_settings_runs_appop_and_secure_grant() -> None:
     ran = grant_settings_access(adb)  # type: ignore[arg-type]
     assert adb.shells == [
         ("appops", "set", "dev.solon.bucklerhome", "WRITE_SETTINGS", "allow"),
+        ("appops", "set", "dev.solon.bucklerhome", "REQUEST_INSTALL_PACKAGES", "allow"),
+        ("appops", "set", "dev.solon.bucklerhome", "GET_USAGE_STATS", "allow"),
         ("pm", "grant", "dev.solon.bucklerhome", "android.permission.WRITE_SECURE_SETTINGS"),
     ]
-    assert len(ran) == 2
+    assert len(ran) == 4

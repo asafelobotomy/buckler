@@ -82,7 +82,7 @@ def launcher_media_access(ctx: click.Context) -> None:
 @launcher_group.command("grant-settings")
 @click.pass_context
 def launcher_grant_settings(ctx: click.Context) -> None:
-    """Let Settings change the screensaver delay / off switch and mono audio (one-time)."""
+    """One-time grants: screensaver and audio settings, self-updates, and app usage (Unused apps)."""
     try:
         for command in grant_settings_access(make_adb(ctx.obj["host"])):
             click.echo(f"ok: {command}")

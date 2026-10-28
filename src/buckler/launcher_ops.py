@@ -128,20 +128,23 @@ def grant_media_access(adb: Adb) -> str:
     return adb.shell("cmd", "notification", "allow_listener", MEDIA_LISTENER)
 
 
-SETTINGS_APPOP = "WRITE_SETTINGS"
 SECURE_SETTINGS_PERMISSION = "android.permission.WRITE_SECURE_SETTINGS"
+# WRITE_SETTINGS: screensaver delay and mono audio. REQUEST_INSTALL_PACKAGES: Buckler's own
+# updates install without Android stopping to ask. GET_USAGE_STATS: Settings → Unused apps.
+GRANTED_APPOPS = ("WRITE_SETTINGS", "REQUEST_INSTALL_PACKAGES", "GET_USAGE_STATS")
 
 
 def grant_settings_access(adb: Adb) -> list[str]:
-    """One-time grants so Settings can change the screensaver delay, switch it off, and set mono audio.
+    """One-time grants for what Settings changes or reads on the TV.
 
-    WRITE_SETTINGS (an appop) covers the idle delay and mono audio; WRITE_SECURE_SETTINGS covers
-    turning the screensaver off entirely. Returns the commands that ran.
+    The appops in [GRANTED_APPOPS]; WRITE_SECURE_SETTINGS covers turning the screensaver off
+    entirely and the remote's ≡ button. Returns the commands that ran.
     """
     adb.connect()
     ran: list[str] = []
-    adb.shell("appops", "set", OUR_LAUNCHER, SETTINGS_APPOP, "allow")
-    ran.append(f"appops set {OUR_LAUNCHER} {SETTINGS_APPOP} allow")
+    for appop in GRANTED_APPOPS:
+        adb.shell("appops", "set", OUR_LAUNCHER, appop, "allow")
+        ran.append(f"appops set {OUR_LAUNCHER} {appop} allow")
     adb.shell("pm", "grant", OUR_LAUNCHER, SECURE_SETTINGS_PERMISSION)
     ran.append(f"pm grant {OUR_LAUNCHER} {SECURE_SETTINGS_PERMISSION}")
     return ran
