@@ -95,7 +95,7 @@ tests/        policy / handover / journal / schema unit tests
 
 ## Launcher (buckler-home)
 
-Compose-for-TV HOME (**0.13.0**) with a live header, a Main Stage, cover layouts, shelves, **Buckler Settings**, GitHub OTA prompts, and keyless Change cover (local + curated pack). Optional SteamGridDB / IGDB link via TV QR / device-code — not required for covers.
+Compose-for-TV HOME (**0.14.0**) with a live header, a Main Stage, cover layouts, shelves, **Buckler Settings**, GitHub OTA prompts, and keyless Change cover (local + curated pack). Optional SteamGridDB / IGDB link via TV QR / device-code — not required for covers.
 
 ```bash
 buckler home write                 # journals/home-layout.json
@@ -129,7 +129,7 @@ buckler launcher build && buckler launcher install
 
 **DNS:** `buckler dns status` (alias `get`) / `set --hostname …` / `off`.
 
-Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.13.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, header weather/news, online screensaver photos and optional linked APIs; `ACCESS_NETWORK_STATE` for the Wi-Fi / Ethernet / VPN icons — no ads, no account telemetry. Release APKs are signed with `launcher/keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; git-ignored) when present, otherwise with the machine-local debug key — OTA updates only install over an APK signed with the same key. Switching keys means one uninstall/reinstall. Backups are disabled (tokens live in encrypted prefs). Feeds and artwork must be `https://`.
+Package id: `dev.solon.bucklerhome`. CLI and launcher both track **0.14.0**. Uses `INTERNET` for artwork, curated pack, GitHub updates, header weather/news, online screensaver photos and optional linked APIs; `ACCESS_NETWORK_STATE` for the Wi-Fi / Ethernet / VPN icons — no ads, no account telemetry. Release APKs are signed with `launcher/keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`; git-ignored) when present, otherwise with the machine-local debug key — OTA updates only install over an APK signed with the same key. Switching keys means one uninstall/reinstall. Backups are disabled (tokens live in encrypted prefs). Feeds and artwork must be `https://`.
 
 ## Development
 
