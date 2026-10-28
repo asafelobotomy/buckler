@@ -2,9 +2,9 @@ package dev.solon.bucklerhome
 
 import android.content.Context
 import android.content.Intent
+import android.media.tv.TvContract
 import android.net.Uri
-import androidx.tvprovider.media.tv.TvContractCompat
-import androidx.tvprovider.media.tv.WatchNextProgram
+import android.provider.BaseColumns
 
 /** How many Up Next cards one publishing app may contribute. */
 const val UP_NEXT_PER_SOURCE = 3
@@ -55,25 +55,33 @@ object WatchNextRepository {
 
     private fun read(context: Context): List<Row> {
         val rows = mutableListOf<Row>()
-        val uri = TvContractCompat.WatchNextPrograms.CONTENT_URI
-        val order = "${TvContractCompat.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS} DESC"
+        val uri = TvContract.WatchNextPrograms.CONTENT_URI
+        val order = "${TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS} DESC"
+        val projection = arrayOf(
+            BaseColumns._ID,
+            TvContract.WatchNextPrograms.COLUMN_TITLE,
+            TvContract.WatchNextPrograms.COLUMN_PACKAGE_NAME,
+            TvContract.WatchNextPrograms.COLUMN_POSTER_ART_URI,
+            TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI,
+            TvContract.WatchNextPrograms.COLUMN_INTENT_URI,
+        )
         return runCatching {
-            context.contentResolver.query(uri, WatchNextProgram.PROJECTION, null, null, order)?.use { cursor ->
+            context.contentResolver.query(uri, projection, null, null, order)?.use { cursor ->
+                fun text(i: Int) = if (cursor.isNull(i)) null else cursor.getString(i)?.takeIf { it.isNotBlank() }
                 while (cursor.moveToNext() && rows.size < SCAN_LIMIT) {
-                    val program = WatchNextProgram.fromCursor(cursor) ?: continue
-                    val title = program.title?.toString()?.takeIf { it.isNotBlank() } ?: continue
-                    val pkg = program.packageName?.takeIf { it.isNotBlank() } ?: continue
-                    val art = program.posterArtUri ?: program.thumbnailUri
+                    val title = text(1) ?: continue
+                    val pkg = text(2) ?: continue
+                    val art = (text(3) ?: text(4))?.let(Uri::parse)
                     val artStr = art?.toString()
                     rows.add(
                         Row(
                             packageName = pkg,
                             item = ShelfItem(
-                                id = "wn-${program.id}",
+                                id = "wn-${cursor.getLong(0)}",
                                 title = title,
                                 subtitle = null,
                                 packageName = null,
-                                launchIntent = resolveIntent(program),
+                                launchIntent = text(5)?.let(::parseIntent)?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                                 imageUri = art,
                                 imageUrl = artStr?.takeIf { it.startsWith("https://") },
                             ),
@@ -85,13 +93,6 @@ object WatchNextRepository {
         }.getOrDefault(emptyList())
     }
 
-    private fun resolveIntent(program: WatchNextProgram): Intent? {
-        program.intentUri?.let { uri ->
-            parseIntent(uri)?.let { return it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-        }
-        return null
-    }
-
-    private fun parseIntent(uri: Uri): Intent? =
-        runCatching { Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME) }.getOrNull()
+    private fun parseIntent(uri: String): Intent? =
+        runCatching { Intent.parseUri(uri, Intent.URI_INTENT_SCHEME) }.getOrNull()
 }

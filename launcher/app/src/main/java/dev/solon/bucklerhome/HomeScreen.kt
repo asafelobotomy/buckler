@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,7 +36,7 @@ fun HomeScreen(
     var config by remember { mutableStateOf(DisplayPrefs.load(context)) }
     var editTarget by remember { mutableStateOf<ShelfItem?>(null) }
     var changeCoverTarget by remember { mutableStateOf<ShelfItem?>(null) }
-    var coverVersion by remember { mutableStateOf(0) }
+    var coverVersion by remember { mutableIntStateOf(0) }
     var updateDismissed by remember { mutableStateOf<GitHubRelease?>(null) }
     val availableUpdate by rememberAvailableUpdate(resumeTick)
     var shelvesLoaded by remember { mutableStateOf(false) }
@@ -46,13 +47,13 @@ fun HomeScreen(
     val stageDown = remember { FocusRequester() }
     val move = remember { MoveMode() }
     val moveFocus = remember { FocusRequester() }
-    var refocusTick by remember { mutableStateOf(0) }
+    var refocusTick by remember { mutableIntStateOf(0) }
     var focusPkg by remember { mutableStateOf<String?>(null) }
-    var settleTick by remember { mutableStateOf(0) }
+    var settleTick by remember { mutableIntStateOf(0) }
     val shelfMove = remember { MoveMode(vertical = true) }
     val shelfRequester = remember { FocusRequester() }
     var focusShelfId by remember { mutableStateOf<String?>(null) }
-    var shelfSettleTick by remember { mutableStateOf(0) }
+    var shelfSettleTick by remember { mutableIntStateOf(0) }
     var shelfMenu by remember { mutableStateOf<ShelfConfig?>(null) }
     var sourceShelf by remember { mutableStateOf<ShelfConfig?>(null) }
     var reading by remember { mutableStateOf<Headline?>(null) }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,7 +31,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ScreensaverPane() {
     val context = LocalContext.current
-    var tick by remember { mutableStateOf(0) }
+    var tick by remember { mutableIntStateOf(0) }
     val cfg = remember(tick) { ScreensaverPrefs.load(context) }
     var editing by remember { mutableStateOf<ScreensaverMode?>(null) }
     var lastEdited by remember { mutableStateOf<ScreensaverMode?>(null) }

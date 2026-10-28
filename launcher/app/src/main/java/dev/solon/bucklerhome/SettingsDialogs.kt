@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -113,7 +114,7 @@ fun UploadPhotosDialog(onDismiss: () -> Unit) {
     val server = remember { UploadServer(context.applicationContext) }
     var url by remember { mutableStateOf<String?>(null) }
     var failed by remember { mutableStateOf(false) }
-    var count by remember { mutableStateOf(ScreensaverImages.uploaded(context).size) }
+    var count by remember { mutableIntStateOf(ScreensaverImages.uploaded(context).size) }
     val qr = remember(url) { url?.let { QrBitmap.encode(it) } }
 
     DisposableEffect(server) {

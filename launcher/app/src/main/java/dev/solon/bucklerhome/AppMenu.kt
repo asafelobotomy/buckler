@@ -4,24 +4,14 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.provider.Settings
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,90 +22,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.core.graphics.drawable.toBitmap
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun AppTile(
-    app: LaunchableApp,
-    onLaunch: () -> Unit,
-    onLongPress: () -> Unit,
-    modifier: Modifier = Modifier,
-    focusRequester: FocusRequester? = null,
-) {
-    val bmp = remember(app.packageName) {
-        app.icon?.toBitmap(128, 128)?.asImageBitmap()
-    }
-    val menu = rememberTvMenuInteraction(onOpen = onLaunch, onMenu = onLongPress)
-    val interactionSource = remember { MutableInteractionSource() }
-    val focused by interactionSource.collectIsFocusedAsState()
-    var tileModifier = modifier
-        .width(132.dp)
-        .scale(if (focused) 1.1f else 1f)
-        .clip(RoundedCornerShape(8.dp))
-        .background(if (focused) ColorBrand else ColorTile)
-    if (focusRequester != null) {
-        tileModifier = tileModifier.focusRequester(focusRequester)
-    }
-    tileModifier = tileModifier
-        .focusable(interactionSource = interactionSource)
-        .tvMenuKeys(menu)
-        .pointerInput(app.packageName) {
-            detectTapGestures(
-                onLongPress = { menu.openMenu() },
-                onTap = { menu.open() },
-            )
-        }
-
-    Box(modifier = tileModifier) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 14.dp),
-        ) {
-            if (bmp != null) {
-                Image(
-                    bitmap = bmp,
-                    contentDescription = app.label,
-                    modifier = Modifier.size(64.dp),
-                )
-            } else {
-                Box(modifier = Modifier.size(64.dp))
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = app.label,
-                fontSize = 13.sp,
-                color = if (focused) ColorOnBrand else ColorText,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                lineHeight = 16.sp,
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable

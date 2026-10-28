@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -25,7 +25,7 @@ import java.time.LocalTime
 @Composable
 fun DisplayPane() {
     val context = LocalContext.current
-    var tick by remember { mutableStateOf(0) }
+    var tick by remember { mutableIntStateOf(0) }
     val cfg = remember(tick) { DisplayPrefs.load(context) }
     val flow = Arrangement.spacedBy(12.dp)
 
@@ -134,7 +134,7 @@ fun DisplayPane() {
 @Composable
 fun NewsPane() {
     val context = LocalContext.current
-    var tick by remember { mutableStateOf(0) }
+    var tick by remember { mutableIntStateOf(0) }
     val cfg = remember(tick) { DisplayPrefs.load(context) }
     val flow = Arrangement.spacedBy(12.dp)
     val summary = when {

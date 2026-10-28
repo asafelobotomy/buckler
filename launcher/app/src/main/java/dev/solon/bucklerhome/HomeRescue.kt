@@ -85,8 +85,8 @@ fun needsHomeOptions(config: DisplayConfig, shelves: List<ResolvedShelf>): Boole
     shelves.isEmpty() || !config.reachesSettings
 
 /** Requesters on a container: focus enters its first composed child. Empty: no group at all. */
-fun List<FocusRequester>.focusGroupTarget(): Modifier =
-    if (isEmpty()) Modifier else fold(Modifier as Modifier) { m, r -> m.focusRequester(r) }.focusGroup()
+fun Modifier.focusGroupTarget(requesters: List<FocusRequester>): Modifier =
+    if (requesters.isEmpty()) this else requesters.fold(this) { m, r -> m.focusRequester(r) }.focusGroup()
 
 private fun Modifier.upTo(up: FocusRequester?): Modifier =
     if (up != null) focusProperties { this.up = up } else this

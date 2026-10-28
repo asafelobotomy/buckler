@@ -179,7 +179,7 @@ fun HomeColumn(
                 Box(
                     Modifier
                         .then(if (last) Modifier.wrapFocus(FocusDirection.Down, focusManager, ::wrapToTop) else Modifier)
-                        .then(targets.focusGroupTarget()),
+                        .focusGroupTarget(targets),
                 ) {
                     ShelfSection(
                         shelf = shelf,

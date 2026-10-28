@@ -223,8 +223,8 @@ private fun ShelfFocus.withoutAppMove() = ShelfFocus(
     bottom = bottom,
 )
 
-private fun FocusRequester?.asRequester(): Modifier =
-    if (this != null) Modifier.focusRequester(this) else Modifier
+private fun Modifier.focusRequesterIfAny(requester: FocusRequester?): Modifier =
+    if (requester != null) focusRequester(requester) else this
 
 private fun ShelfFocus.firstTileRequester(index: Int, item: ShelfItem): FocusRequester? = when {
     focusPackage != null && item.packageName == focusPackage -> moveFocus
@@ -291,7 +291,7 @@ private fun LibraryGrid(
                     row.forEachIndexed { col, item ->
                         CoverTile(
                             item = item,
-                            modifier = focus.bottom.takeIf { rowIndex == rows.lastIndex && col == 0 }.asRequester(),
+                            modifier = Modifier.focusRequesterIfAny(focus.bottom.takeIf { rowIndex == rows.lastIndex && col == 0 }),
                             layout = coverLayout,
                             tileSize = tileSize,
                             showLabels = showLabels,

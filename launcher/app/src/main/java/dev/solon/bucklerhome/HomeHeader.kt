@@ -51,9 +51,9 @@ fun HomeHeader(
     nowPlaying: NowPlayingModel?,
     actions: HeaderActions,
     below: FocusRequester?,
+    modifier: Modifier = Modifier,
     /** Rightmost icon, where Down from the bottom of Home wraps to. */
     endFocus: FocusRequester? = null,
-    modifier: Modifier = Modifier,
 ) {
     val metrics = HeaderMetrics(config.headerSize)
     Column(modifier = modifier.fillMaxWidth()) {

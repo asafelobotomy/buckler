@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -70,7 +71,7 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
     var connectIgdb by remember { mutableStateOf(false) }
     var connectSgdb by remember { mutableStateOf(false) }
     var connectGithub by remember { mutableStateOf(false) }
-    var accountTick by remember { mutableStateOf(0) }
+    var accountTick by remember { mutableIntStateOf(0) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var availableRelease by remember { mutableStateOf<GitHubRelease?>(null) }
     // Pressing Left inside a pane returns to the nav entry for that pane, not whichever is nearest.

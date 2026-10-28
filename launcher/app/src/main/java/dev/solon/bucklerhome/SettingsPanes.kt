@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -178,7 +179,7 @@ fun CoversPane(
                 }
             }
             // Only when there are custom covers to clear.
-            var customCount by remember { mutableStateOf(CoverStore.all(context).size) }
+            var customCount by remember { mutableIntStateOf(CoverStore.all(context).size) }
             if (customCount > 0) {
                 SettingsAction(
                     if (confirmClearCovers) "Press again to clear $customCount" else "Clear custom covers",

@@ -25,7 +25,6 @@ import kotlinx.coroutines.delay
 object ScreensaverTimeout {
     const val MIN_MS = 30_000
     const val MAX_MS = 12 * 3_600_000
-    const val CUSTOM_STEP_MS = 30_000
 
     val PRESETS_MS = listOf(60_000, 90_000, 120_000, 300_000, 600_000, 900_000, 3_600_000)
 

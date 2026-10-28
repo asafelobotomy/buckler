@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">buckler-home</string>
-    <string name="brand_name">Buckler</string>
     <string name="settings_activity_label">Buckler Settings</string>
     <string name="file_provider_authority">dev.solon.bucklerhome.fileprovider</string>
 </resources>

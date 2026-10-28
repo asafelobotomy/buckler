@@ -26,7 +26,6 @@ data class CuratedCoverEntry(
 object CuratedCovers {
     private const val PREFS = "bucklerhome"
     private const val KEY_CACHE = "curated_covers_json"
-    private const val KEY_FETCHED = "curated_covers_fetched_at"
     private const val KEY_SOURCE = "curated_covers_source"
     private const val KEY_ASSET_HASH = "curated_covers_asset_hash"
     private const val SOURCE_ASSET = "asset"
@@ -82,7 +81,6 @@ object CuratedCovers {
                 prefs(context).edit()
                     .putString(KEY_CACHE, body)
                     .putString(KEY_SOURCE, SOURCE_NETWORK)
-                    .putLong(KEY_FETCHED, System.currentTimeMillis())
                     .apply()
                 return true
             }
@@ -107,7 +105,6 @@ object CuratedCovers {
             .putString(KEY_CACHE, asset)
             .putString(KEY_SOURCE, SOURCE_ASSET)
             .putInt(KEY_ASSET_HASH, asset.hashCode())
-            .putLong(KEY_FETCHED, System.currentTimeMillis())
             .apply()
         return true
     }
@@ -133,13 +130,9 @@ object CuratedCovers {
         if (response != null && response.code in 200..299 && response.body.isNotBlank()) {
             prefs(context).edit()
                 .putString(KEY_CACHE, response.body)
-                .putLong(KEY_FETCHED, System.currentTimeMillis())
-                .apply()
+                    .apply()
         }
     }
-
-    fun lastFetched(context: Context): Long =
-        prefs(context).getLong(KEY_FETCHED, 0L)
 
     private fun readAsset(context: Context): String? =
         runCatching {
