@@ -49,7 +49,8 @@ fun IconPackSection() {
     val covered by produceState<Pair<Int, Int>?>(null, chosen) {
         value = chosen?.let { pack ->
             withContext(Dispatchers.IO) {
-                val apps = loadLaunchableApps(context).map { it.packageName }
+                val packages = IconPacks.installedPackages(context)
+                val apps = loadLaunchableApps(context).map { it.packageName }.filterNot { it in packages }
                 IconPacks.coverage(context, pack, apps) to apps.size
             }
         }
