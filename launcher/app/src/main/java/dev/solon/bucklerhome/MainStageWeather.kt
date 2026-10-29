@@ -38,27 +38,31 @@ fun WeatherStage(
     onHold: () -> Unit,
 ) {
     val context = LocalContext.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .stageTarget(stageFocus, onDown, "Open weather", onLongPress = onHold) { launchWeatherApp(context) },
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         StageHeading("Weather", place?.name)
-        when {
-            place == null -> Text(
-                text = "Set a city in Settings → Appearance → Main Stage to show the forecast.",
-                color = ColorMuted,
-                fontSize = 15.sp,
-            )
-            forecast == null -> Text(text = "…", color = ColorMuted, fontSize = 15.sp)
-            else -> {
-                val days = span == WeatherSpan.DAYS
-                SlotRow(
-                    title = if (days) "Next 10 days" else "Next hours",
-                    slots = if (days) forecast.days.take(10) else forecast.hours.take(8),
-                    fahrenheit = fahrenheit,
-                    use24h = use24h,
+        // The focus frame goes round the forecast, not the heading, and keeps clear of its text.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .stageTarget(stageFocus, onDown, "Open weather", onLongPress = onHold) { launchWeatherApp(context) }
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            when {
+                place == null -> Text(
+                    text = "Set a city in Settings → Appearance → Main Stage to show the forecast.",
+                    color = ColorMuted,
+                    fontSize = 15.sp,
                 )
+                forecast == null -> Text(text = "…", color = ColorMuted, fontSize = 15.sp)
+                else -> {
+                    val days = span == WeatherSpan.DAYS
+                    SlotRow(
+                        title = if (days) "Next 10 days" else "Next hours",
+                        slots = if (days) forecast.days.take(10) else forecast.hours.take(8),
+                        fahrenheit = fahrenheit,
+                        use24h = use24h,
+                    )
+                }
             }
         }
     }
