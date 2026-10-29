@@ -73,6 +73,7 @@ fun NowPlayingStage(
                         onDown = onDown,
                     ) { model.togglePlayPause() }
                     HeaderIconButton(R.drawable.ic_next, "Next", size = 52.dp, onDown = onDown) { model.next() }
+                    LoveButton(model, info, 52.dp, onDown = onDown)
                 }
             } else if (!model.accessGranted) {
                 Text(
@@ -115,24 +116,10 @@ private fun RowScope.PlayingSummary(
         StageArt(info, artSize)
         Spacer(modifier = Modifier.size(20.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = info.title,
-                color = ColorText,
-                fontSize = if (artSize < 100.dp) 18.sp else 22.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = if (artSize < 100.dp) 1 else 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = info.subtitle.ifBlank { info.appLabel },
-                color = ColorMuted,
-                fontSize = 15.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (info.subtitle.isNotBlank() && artSize >= 100.dp) {
-                Text(text = info.appLabel, color = ColorHint, fontSize = 13.sp, maxLines = 1)
-            }
+            // One line each, scrolling sideways when long.
+            ScrollingLine(info.title, ColorText, if (artSize < 100.dp) 18.sp else 22.sp, fontWeight = FontWeight.Medium)
+            ScrollingLine(info.subtitle.ifBlank { info.appLabel }, ColorMuted, 15.sp)
+            PlayTime(info, ColorHint, 13.sp)
         }
     }
 }
