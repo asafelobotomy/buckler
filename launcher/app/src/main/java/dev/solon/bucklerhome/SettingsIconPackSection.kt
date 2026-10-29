@@ -31,6 +31,7 @@ fun IconPackSection() {
     val tick = rememberResumeTick() + changed
     val tinted = remember(tick) { IconPackStore.tinted(context) }
     val inLibrary = remember(tick) { IconPackStore.packsInLibrary(context) }
+    val fillGaps = remember(tick) { IconPackStore.fillGaps(context) }
     val packs by produceState<List<IconPack>?>(null, tick) {
         value = withContext(Dispatchers.IO) { IconPacks.installed(context) }
     }
@@ -50,8 +51,8 @@ fun IconPackSection() {
         value = chosen?.let { pack ->
             withContext(Dispatchers.IO) {
                 val packages = IconPacks.installedPackages(context)
-                val apps = loadLaunchableApps(context).map { it.packageName }.filterNot { it in packages }
-                IconPacks.coverage(context, pack, apps) to apps.size
+                val apps = loadLaunchableApps(context).filterNot { it.packageName in packages }
+                IconPacks.coverage(context, pack, apps.associate { it.packageName to it.label }) to apps.size
             }
         }
     }
@@ -66,8 +67,10 @@ fun IconPackSection() {
                 "No icon pack installed. Any launcher icon pack works, such as Arcticons " +
                     "(buckler launcher iconpack install arcticons) or Lawnicons."
             chosen == null -> "Apps show their own icons. A pack replaces each icon it has, matched by app."
-            else -> covered?.let { (n, total) -> "The pack has icons for $n of your $total apps; the rest keep their own." }
-                ?: "Reading the pack…"
+            else -> covered?.let { (n, total) ->
+                val rest = if (fillGaps) "Buckler draws the other ${total - n} in its style" else "the rest keep their own"
+                "The pack has icons for $n of your $total apps; $rest."
+            } ?: "Reading the pack…"
         },
     )
     if (list.isNullOrEmpty()) return
@@ -96,8 +99,15 @@ fun IconPackSection() {
     }
     if (chosen != null) {
         Spacer(modifier = Modifier.height(14.dp))
-        SettingsRow("Single-colour packs (Arcticons, Lawnicons) look best in the theme's text colour.")
+        SettingsRow(
+            "Single-colour packs (Arcticons, Lawnicons) look best in the theme's text colour. Apps the pack has no " +
+                "icon for can be drawn in its style: their logo traced as a line, or their initials.",
+        )
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+            SettingsAction("Fill missing icons", selected = fillGaps) {
+                IconPackStore.setFillGaps(context, !fillGaps)
+                changed++
+            }
             SettingsAction("Theme colour", selected = tinted) {
                 IconPackStore.setTinted(context, !tinted)
                 changed++
