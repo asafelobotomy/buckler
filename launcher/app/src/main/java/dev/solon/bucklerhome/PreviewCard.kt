@@ -47,6 +47,7 @@ fun PreviewCard(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     width: Dp = PreviewCardWidth,
+    previewHeight: Dp = PreviewHeight,
     onClick: () -> Unit,
     preview: @Composable BoxScope.() -> Unit,
 ) {
@@ -81,7 +82,7 @@ fun PreviewCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(PreviewHeight)
+                .height(previewHeight)
                 .clip(RoundedCornerShape(8.dp)),
             content = preview,
         )

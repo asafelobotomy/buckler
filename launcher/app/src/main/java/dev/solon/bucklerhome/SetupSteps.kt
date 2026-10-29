@@ -145,17 +145,7 @@ fun ScreensaverStep(choices: SetupChoices, onChange: (SetupChoices) -> Unit) {
         when (key) {
             "style" -> {
                 SetupNote("A still of each; the highlighted one runs. Opens on the TV as it looks here.")
-                CardColumns(columns = 3) { width ->
-                    ScreensaverMode.entries.forEach { mode ->
-                        PreviewCard(
-                            mode.label,
-                            mode == choices.saver,
-                            modifier = Modifier.runsWhenFocused(mode.name),
-                            width = width,
-                            onClick = { onChange(choices.copy(saver = mode)) },
-                        ) { ScreensaverCard(mode, live = running == mode.name) }
-                    }
-                }
+                ScreensaverPicker(choices.saver) { onChange(choices.copy(saver = it)) }
             }
             "system" -> {
                 SetupNote("Choosing Buckler's turns Google's Backdrop off; choosing Backdrop turns it back on.")

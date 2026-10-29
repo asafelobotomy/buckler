@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
@@ -33,8 +34,13 @@ fun ScreensaverPane() {
     val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle("Screensaver")
-    SettingsRow("In use: ${cfg.mode.label}. Each screensaver has its own page with its own options, in the list beside this one.")
-    Spacer(modifier = Modifier.height(6.dp))
+    SettingsRow("Each screensaver has its own page with its own options, in the list beside this one. The highlighted card runs.")
+    PickerTitle("In use")
+    ScreensaverPicker(cfg.mode) {
+        ScreensaverPrefs.setMode(context, it)
+        tick++
+    }
+    Spacer(modifier = Modifier.height(18.dp))
     StartAfterSection(tick = tick, onChanged = { tick++ }, onCustom = { customTimeout = true })
     Spacer(modifier = Modifier.height(12.dp))
     SettingsAction("System screensaver settings") {
@@ -73,16 +79,27 @@ fun ScreensaverModePane(mode: ScreensaverMode) {
     val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle(mode.label)
+    // This screensaver with its options as set below: a still, running while highlighted. OK opens it full screen.
+    var running by remember(mode) { mutableStateOf(false) }
+    PreviewCard(
+        label = "Preview full screen",
+        selected = false,
+        modifier = Modifier.onFocusChanged { running = it.hasFocus },
+        width = 360.dp,
+        // A TV's shape, so the screensaver shows as it will.
+        previewHeight = 186.dp,
+        onClick = {
+            val intent = Intent(context, ScreensaverPreviewActivity::class.java)
+                .putExtra(ScreensaverPreviewActivity.EXTRA_MODE, mode.name)
+            safeLaunch(context, intent, "Preview")
+        },
+    ) { ScreensaverCard(mode, live = running, saved = cfg) }
+    Spacer(modifier = Modifier.height(12.dp))
     SettingsRow(describe(mode, cfg, photoCount))
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
         SettingsAction(if (mode == cfg.mode) "In use" else "Use this screensaver", selected = mode == cfg.mode) {
             ScreensaverPrefs.setMode(context, mode)
             tick++
-        }
-        SettingsAction("Preview") {
-            val intent = Intent(context, ScreensaverPreviewActivity::class.java)
-                .putExtra(ScreensaverPreviewActivity.EXTRA_MODE, mode.name)
-            safeLaunch(context, intent, "Preview")
         }
     }
 

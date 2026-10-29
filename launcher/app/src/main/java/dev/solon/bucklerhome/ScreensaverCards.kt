@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -33,9 +35,9 @@ private val SCREEN_H = 540.dp
 /** How long a screensaver runs before its still is taken: long enough to have drawn something. */
 private const val STILL_AFTER_MS = 2_500L
 
-/** Each screensaver's still, taken once per run of Buckler; one is made at a time. */
+/** Each screensaver's still, by its settings (so a changed option gets a new one); one is made at a time. */
 private object SaverStills {
-    val taken = HashMap<ScreensaverMode, ImageBitmap>()
+    val taken = HashMap<ScreensaverConfig, ImageBitmap>()
     val turn = Mutex()
 }
 
@@ -45,26 +47,28 @@ private object SaverStills {
  * once briefly; until then the drawn [ScreensaverMiniature] stands in.
  */
 @Composable
-fun BoxScope.ScreensaverCard(mode: ScreensaverMode, live: Boolean) {
-    var still by remember(mode) { mutableStateOf(SaverStills.taken[mode]) }
-    var taking by remember(mode) { mutableStateOf(false) }
-    var view by remember(mode) { mutableStateOf<ScreensaverView?>(null) }
-    LaunchedEffect(mode) {
+fun BoxScope.ScreensaverCard(mode: ScreensaverMode, live: Boolean, saved: ScreensaverConfig? = null) {
+    val context = LocalContext.current
+    val config = remember(mode, saved) { (saved ?: ScreensaverPrefs.load(context)).copy(mode = mode) }
+    var still by remember(config) { mutableStateOf(SaverStills.taken[config]) }
+    var taking by remember(config) { mutableStateOf(false) }
+    var view by remember(config) { mutableStateOf<ScreensaverView?>(null) }
+    LaunchedEffect(config) {
         if (still != null) return@LaunchedEffect
         SaverStills.turn.withLock {
-            SaverStills.taken[mode]?.let {
+            SaverStills.taken[config]?.let {
                 still = it
                 return@withLock
             }
             taking = true
             delay(STILL_AFTER_MS)
-            view?.let { v -> snapshot(v)?.let { SaverStills.taken[mode] = it; still = it } }
+            view?.let { v -> snapshot(v)?.let { SaverStills.taken[config] = it; still = it } }
             taking = false
         }
     }
     val image = still
     when {
-        live || taking -> RunningScreensaver(mode) { view = it }
+        live || taking -> RunningScreensaver(config) { view = it }
         image != null -> Image(image, contentDescription = mode.label, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         else -> ScreensaverMiniature(mode)
     }
@@ -72,21 +76,22 @@ fun BoxScope.ScreensaverCard(mode: ScreensaverMode, live: Boolean) {
 
 /** A [ScreensaverView] laid out at full screen size and scaled to fill the card, cropped to it. */
 @Composable
-private fun RunningScreensaver(mode: ScreensaverMode, onView: (ScreensaverView) -> Unit) {
-    val context = LocalContext.current
-    val config = remember { ScreensaverPrefs.load(context) }
+private fun RunningScreensaver(config: ScreensaverConfig, onView: (ScreensaverView) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
         val scale = maxOf(maxWidth / SCREEN_W, maxHeight / SCREEN_H)
-        AndroidView(
-            factory = { ctx -> ScreensaverView(ctx, config.copy(mode = mode)).also { it.start(); onView(it) } },
-            onRelease = { it.stop() },
-            modifier = Modifier
-                .requiredSize(SCREEN_W, SCREEN_H)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                },
-        )
+        // Keyed by its settings, so a changed option starts a fresh view.
+        key(config) {
+            AndroidView(
+                factory = { ctx -> ScreensaverView(ctx, config).also { it.start(); onView(it) } },
+                onRelease = { it.stop() },
+                modifier = Modifier
+                    .requiredSize(SCREEN_W, SCREEN_H)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    },
+            )
+        }
     }
 }
 
@@ -98,4 +103,26 @@ private fun snapshot(view: ScreensaverView): ImageBitmap? {
         Canvas(bitmap).apply { scale(0.25f, 0.25f) }.let(view::draw)
         bitmap.asImageBitmap()
     }.getOrNull()
+}
+
+/**
+ * Every screensaver as a card ([ScreensaverCard]): stills, with the highlighted one running.
+ * Used by the setup wizard and by Settings → Screensaver.
+ */
+@Composable
+fun ScreensaverPicker(selected: ScreensaverMode, onPick: (ScreensaverMode) -> Unit) {
+    var running by remember { mutableStateOf<ScreensaverMode?>(null) }
+    CardColumns(columns = 3) { width ->
+        ScreensaverMode.entries.forEach { mode ->
+            PreviewCard(
+                mode.label,
+                mode == selected,
+                modifier = Modifier.onFocusChanged { state ->
+                    if (state.hasFocus) running = mode else if (running == mode) running = null
+                },
+                width = width,
+                onClick = { onPick(mode) },
+            ) { ScreensaverCard(mode, live = running == mode) }
+        }
+    }
 }
