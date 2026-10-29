@@ -10,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.ui.graphics.toArgb
@@ -23,58 +24,69 @@ import kotlin.math.roundToInt
  * a pack is in use and [IconPackStore.fillGaps] is on, one drawn in the pack's style from the
  * app's own icon, else the app's own icon.
  */
-fun appIcon(context: Context, component: ComponentName?, label: String, own: () -> Drawable?): Drawable? {
+fun appIcon(
+    context: Context,
+    component: ComponentName?,
+    label: String,
+    packages: Collection<String>,
+    own: () -> Drawable?,
+): Drawable? {
     component?.let { IconPacks.iconFor(context, it, label) }?.let { return it }
     val icon = own()
     if (icon == null || component == null || !IconPackStore.fillGaps(context) || !IconPacks.isActive(context)) return icon
-    return PackStyleIcons.make(context, component.packageName, label, icon)
+    return PackStyleIcons.make(context, component.packageName, label, icon, packages)
 }
 
 /**
- * Icons in the style of the line-drawn packs (Arcticons, Lawnicons) for apps a pack has no icon
- * for. The app's own logo is traced as a thin, smooth outline; only when there is no mark to
- * trace (nothing on the icon, or one solid block) does it get the app's initials in an outlined
- * badge. Both are drawn in the theme's text colour, as a themed pack is.
+ * Icons for apps a pack has no icon for, made to match the pack's own ([PackStyle], measured from
+ * its icons): its line width and colour, the mark's size, and its backing plate when its icons are
+ * layered. A pack with its own rule for such apps ([PackFallback]) gets that rule instead, and a
+ * full-colour pack without one leaves the app's icon as it is, since no traced line would match.
  *
- * Tracing works on a soft (anti-aliased) copy of the logo at [WORK] px: blurred a little, the
- * logo's edge becomes a ramp, and the line is the middle of that ramp, fading out to either side.
- * The result is scaled down to [OUT] px with filtering, so curves and diagonals stay smooth.
+ * The app's logo is traced on a soft (anti-aliased) copy at [WORK] px: blurred, its edge becomes a
+ * ramp, and the line is the band of that ramp as wide as the pack's lines, with a one-pixel soft
+ * edge; a filled pack gets the logo's solid shape instead. Only an icon with no mark at all gets
+ * the app's initials. The result is scaled down to [OUT] px with filtering.
  */
 object PackStyleIcons {
     private const val WORK = 512
     private const val OUT = 256
 
-    /** The traced mark's longest side, as a share of the icon: about what pack icons fill. */
-    private const val MARK = 0.72f
-
-    /** Blur radius (px at [WORK]) that turns the logo's edge into a ramp; twice applied. */
-    private const val SOFTEN = 3
-
-    /** Half the line's width, in how far along the edge ramp it reaches: thin, like line packs. */
-    private const val LINE = 0.38f
-
     /** How far from the background colour (sum of RGB differences) a pixel starts and ends being logo. */
     private const val INK_FROM = 50f
     private const val INK_TO = 130f
 
-    /** By package, its update time and label, so a new version is traced again. */
+    /** Arcticons' measured look, for a pack whose icons could not be read. */
+    private val FALLBACK_STYLE = PackStyle(line = 0.0215f, mark = 0.84f, ink = Color.WHITE, plate = null, filled = false, colourful = false)
+
+    /** By package, its update time, label and the pack's look, so a change draws it again. */
     private val cache = LruCache<String, Bitmap>(48)
 
-    fun make(context: Context, pkg: String, label: String, icon: Drawable): Drawable {
+    fun make(context: Context, pkg: String, label: String, icon: Drawable, packages: Collection<String>): Drawable {
+        IconPacks.fallback(context)?.let { rule ->
+            return PackIconDrawable(BitmapDrawable(context.resources, rule.apply(icon)), 0f, themed = false)
+        }
+        val style = IconPacks.style(context, packages) ?: FALLBACK_STYLE
+        if (style.colourful) return icon
         val version = runCatching { context.packageManager.getPackageInfo(pkg, 0).lastUpdateTime }.getOrDefault(0L)
-        val key = "$pkg:$version:$label"
-        val art = cache.get(key) ?: (traced(icon) ?: initials(label)).also { cache.put(key, it) }
-        AppearanceStore.ensureLoaded(context)
-        val colour = IconPackStore.tint(context) ?: Palettes.resolve(AppearanceStore.config).text.toArgb()
-        val drawable = BitmapDrawable(context.resources, art).apply {
-            setTint(colour)
+        val key = "$pkg:$version:$label:$style"
+        val art = cache.get(key) ?: (traced(icon, style) ?: initials(label, style)).also { cache.put(key, it) }
+        val tint = IconPackStore.tint(context)
+        val glyph = BitmapDrawable(context.resources, art).apply {
+            setTint(tint ?: style.ink)
             isFilterBitmap = true
         }
-        return PackIconDrawable(drawable, 0f, themed = true)
+        val plate = style.plate
+        return when {
+            // A layered pack (Lawnicons): tinted, only the symbol shows, as with its own icons.
+            plate != null && tint != null -> PackIconDrawable(glyph, 0f, themed = true)
+            plate != null -> PackIconDrawable(AdaptiveIconDrawable(ColorDrawable(plate), glyph), 0f, themed = false)
+            else -> PackIconDrawable(glyph, IconPacks.FLAT_MARGIN, themed = tint != null)
+        }
     }
 
     /** The logo's outline, or null when there is no mark to trace. */
-    internal fun traced(icon: Drawable): Bitmap? {
+    internal fun traced(icon: Drawable, style: PackStyle): Bitmap? {
         val layer = (icon as? AdaptiveIconDrawable)?.foreground ?: icon
         val background = (icon as? AdaptiveIconDrawable)?.background?.let(FittedArt::edgeColour)
             ?: FittedArt.edgeColour(icon)
@@ -83,20 +95,47 @@ object PackStyleIcons {
         val ink = FloatArray(WORK * WORK) { i ->
             val p = pixels[i]
             val shown = ramp(Color.alpha(p) / 255f, 0.25f, 0.75f)
-            if (background == null) shown else shown * ramp(distance(p, background).toFloat(), INK_FROM, INK_TO)
+            if (background == null) shown else shown * ramp(colourDistance(p, background).toFloat(), INK_FROM, INK_TO)
         }
         val box = bounds(ink) ?: return null
         val share = ink.count { it >= 0.5f }.toFloat() / (WORK * WORK)
         // Next to nothing, or a solid block that is the whole icon: no mark to trace.
         if (share < 0.005f || share > 0.6f) return null
-        val soft = blur(blur(fit(ink, box), SOFTEN), SOFTEN)
-        val line = IntArray(WORK * WORK) { i ->
-            val a = (1f - kotlin.math.abs(soft[i] - 0.5f) / LINE).coerceIn(0f, 1f)
-            // Smoothstep the falloff so the line's sides fade rather than step.
-            val alpha = a * a * (3f - 2f * a)
+        // A crisp edge first: the blur below then ramps it predictably, so width is what is asked.
+        val fitted = fit(ink, box, style.mark).also { f ->
+            for (i in f.indices) f[i] = ((f[i] - 0.5f) * 6f + 0.5f).coerceIn(0f, 1f)
+        }
+        var width = style.line * WORK
+        var art = draw(fitted, style, width)
+        if (style.filled) return art
+        // Measure the result as the pack's icons were measured, and correct until it matches.
+        repeat(3) {
+            val got = PackStyle.measure(listOf(BitmapDrawable(null, art)))?.line ?: return art
+            // Close enough not to be noticed beside the pack's own icons.
+            if (got <= 0f || kotlin.math.abs(got - style.line) <= style.line * 0.06f) return art
+            width *= style.line / got
+            art.recycle()
+            art = draw(fitted, style, width)
+        }
+        return art
+    }
+
+    /** The traced line ([width] px at [WORK]) or, for a filled pack, the solid shape, at [OUT] px. */
+    private fun draw(fitted: FloatArray, style: PackStyle, width: Float): Bitmap {
+        val half = width / 2f
+        val r = kotlin.math.ceil(half).toInt() + 2
+        val n = 2 * r + 1
+        // After two box blurs a hard edge ramps with slope 1/n at its middle: distance ≈ |s - ½|·n.
+        val soft = blur(blur(fitted, r), r)
+        val pixels = IntArray(WORK * WORK) { i ->
+            val alpha = if (style.filled) {
+                ((soft[i] - 0.5f) * n + 0.5f).coerceIn(0f, 1f)
+            } else {
+                (half - kotlin.math.abs(soft[i] - 0.5f) * n + 0.5f).coerceIn(0f, 1f)
+            }
             Color.argb((alpha * 255).roundToInt(), 255, 255, 255)
         }
-        val full = Bitmap.createBitmap(line, WORK, WORK, Bitmap.Config.ARGB_8888)
+        val full = Bitmap.createBitmap(pixels, WORK, WORK, Bitmap.Config.ARGB_8888)
         return Bitmap.createScaledBitmap(full, OUT, OUT, true).also { if (it !== full) full.recycle() }
     }
 
@@ -114,8 +153,6 @@ object PackStyleIcons {
 
     private fun ramp(v: Float, from: Float, to: Float): Float = ((v - from) / (to - from)).coerceIn(0f, 1f)
 
-    private fun distance(a: Int, b: Int): Int =
-        abs(Color.red(a) - Color.red(b)) + abs(Color.green(a) - Color.green(b)) + abs(Color.blue(a) - Color.blue(b))
 
     /** Left, top, right, bottom of the mark (inclusive), or null when there is none. */
     private fun bounds(ink: FloatArray): IntArray? {
@@ -133,11 +170,11 @@ object PackStyleIcons {
         return if (r < 0) null else intArrayOf(l, t, r, b)
     }
 
-    /** The mark scaled so its longest side is [MARK] of the icon, centred, sampled smoothly. */
-    private fun fit(ink: FloatArray, box: IntArray): FloatArray {
+    /** The mark scaled so its longest side is [mark] of the icon, centred, sampled smoothly. */
+    private fun fit(ink: FloatArray, box: IntArray, mark: Float): FloatArray {
         val w = box[2] - box[0] + 1
         val h = box[3] - box[1] + 1
-        val scale = WORK * MARK / max(w, h)
+        val scale = WORK * mark / max(w, h)
         val ox = (WORK - w * scale) / 2f
         val oy = (WORK - h * scale) / 2f
         fun at(x: Int, y: Int): Float =
@@ -179,16 +216,16 @@ object PackStyleIcons {
         return out
     }
 
-    /** One or two letters in a thin outlined rounded square. */
-    internal fun initials(label: String): Bitmap {
+    /** One or two letters in an outlined rounded square, at the pack's line width and size. */
+    internal fun initials(label: String, look: PackStyle): Bitmap {
         val bitmap = Bitmap.createBitmap(OUT, OUT, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             style = Paint.Style.STROKE
-            strokeWidth = OUT * 0.016f
+            strokeWidth = OUT * look.line
         }
-        val inset = OUT * 0.16f
+        val inset = OUT * (1f - look.mark) / 2f + line.strokeWidth / 2f
         canvas.drawRoundRect(RectF(inset, inset, OUT - inset, OUT - inset), OUT * 0.14f, OUT * 0.14f, line)
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE

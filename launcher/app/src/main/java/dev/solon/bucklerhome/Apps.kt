@@ -79,7 +79,7 @@ fun loadLaunchableApps(context: Context): List<LaunchableApp> {
                 label = label,
                 packageName = pkg,
                 launchIntent = intent,
-                icon = appIcon(context, intent.component, label) { runCatching { info.loadIcon(pm) }.getOrNull() },
+                icon = appIcon(context, intent.component, label, resolved.keys) { runCatching { info.loadIcon(pm) }.getOrNull() },
                 isSystem = isSystem,
             )
         }

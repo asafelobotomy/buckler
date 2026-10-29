@@ -32,7 +32,20 @@ object IconPacks {
         "org.adw.launcher.icons.ACTION_PICK_ICON",
     )
 
-    private class Mapping(val version: Long, val byComponent: Map<String, String>, val byPackage: Map<String, String>)
+    private class Mapping(
+        val version: Long,
+        val byComponent: Map<String, String>,
+        val byPackage: Map<String, String>,
+        /** `<iconback>`, `<iconmask>`, `<iconupon>` drawable names and `<scale>`, when the pack sets them. */
+        val back: String?,
+        val mask: String?,
+        val upon: String?,
+        val scale: Float,
+    ) {
+        /** Measured once per pack version (see [style]). */
+        @Volatile var style: PackStyle? = null
+        @Volatile var measured = false
+    }
 
     /** Room around a flat pack icon (Arcticons), matching the margin layered icons have. */
     private const val MARGIN = 0.16f
@@ -72,6 +85,45 @@ object IconPacks {
         val symbol = (adaptive?.foreground ?: icon).mutate().apply { setTint(tint) }
         return PackIconDrawable(symbol, if (adaptive != null) 0f else MARGIN, themed = true)
     }
+
+    /**
+     * The chosen pack's look, measured from its own icons for [packages] (the apps on this TV it
+     * covers), once per pack version; null when no pack is in use or none of its icons could be read.
+     */
+    fun style(context: Context, packages: Collection<String>): PackStyle? {
+        val pack = IconPackStore.pack(context) ?: return null
+        val mapping = mapping(context, pack) ?: return null
+        if (mapping.measured) return mapping.style
+        val res = resources(context, pack) ?: return null
+        val names = packages.mapNotNull { mapping.byPackage[it] }.ifEmpty { mapping.byPackage.values.take(12) }
+        val icons = names.distinct().take(12).mapNotNull { load(res, pack, it) }
+        mapping.style = PackStyle.measure(icons)
+        mapping.measured = true
+        return mapping.style
+    }
+
+    /** The pack's own rule for apps it lacks, when it has one ([PackFallback]). */
+    fun fallback(context: Context): PackFallback? {
+        val pack = IconPackStore.pack(context) ?: return null
+        val mapping = mapping(context, pack) ?: return null
+        val res = resources(context, pack) ?: return null
+        val rule = PackFallback(
+            mapping.back?.let { load(res, pack, it) },
+            mapping.mask?.let { load(res, pack, it) },
+            mapping.upon?.let { load(res, pack, it) },
+            mapping.scale,
+        )
+        return rule.takeUnless { it.isEmpty }
+    }
+
+    @Suppress("DiscouragedApi")
+    private fun load(res: Resources, pack: String, name: String): Drawable? {
+        val id = res.getIdentifier(name, "drawable", pack).takeIf { it != 0 } ?: return null
+        return runCatching { res.getDrawableForDensity(id, DisplayMetrics.DENSITY_XXHIGH, null) }.getOrNull()
+    }
+
+    /** Room around a flat pack icon, for icons Buckler draws to sit like the pack's own. */
+    internal val FLAT_MARGIN: Float get() = MARGIN
 
     /** How many of [apps] (package to label) the chosen [pack] has an icon for, by package or by name. */
     fun coverage(context: Context, pack: String, apps: Map<String, String>): Int {
@@ -115,9 +167,20 @@ object IconPacks {
         val res = resources(context, pack) ?: return null
         val byComponent = HashMap<String, String>()
         val byPackage = HashMap<String, String>()
+        var back: String? = null
+        var mask: String? = null
+        var upon: String? = null
+        var scale = 1f
         fun read(parser: XmlPullParser) {
             while (parser.next() != XmlPullParser.END_DOCUMENT) {
-                if (parser.eventType != XmlPullParser.START_TAG || parser.name != "item") continue
+                if (parser.eventType != XmlPullParser.START_TAG) continue
+                when (parser.name) {
+                    "iconback" -> back = back ?: parser.getAttributeValue(null, "img1")
+                    "iconmask" -> mask = mask ?: parser.getAttributeValue(null, "img1")
+                    "iconupon" -> upon = upon ?: parser.getAttributeValue(null, "img1")
+                    "scale" -> scale = parser.getAttributeValue(null, "factor")?.toFloatOrNull()?.coerceIn(0.2f, 1f) ?: 1f
+                }
+                if (parser.name != "item") continue
                 val raw = parser.getAttributeValue(null, "component") ?: continue
                 val drawable = parser.getAttributeValue(null, "drawable")?.takeIf { it.isNotBlank() } ?: continue
                 val component = raw.removePrefix("ComponentInfo{").removeSuffix("}")
@@ -137,7 +200,7 @@ object IconPacks {
                 }
             }
         }.isSuccess
-        return if (ok && byComponent.isNotEmpty()) Mapping(version, byComponent, byPackage) else null
+        return if (ok && byComponent.isNotEmpty()) Mapping(version, byComponent, byPackage, back, mask, upon, scale) else null
     }
 }
 
