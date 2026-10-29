@@ -1,27 +1,28 @@
 package dev.solon.bucklerhome
 
 import android.content.Context
-import android.content.Intent
-import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +43,7 @@ private enum class SetupStep(val title: String) {
 }
 
 /** Where applying stands: not started, running, stopped on the connection, or finished. */
-private sealed interface ApplyState {
+internal sealed interface ApplyState {
     data object Idle : ApplyState
     data class Running(val step: String) : ApplyState
     data class Blocked(val reason: String) : ApplyState
@@ -142,146 +143,56 @@ fun SetupWizard(resumed: SetupChoices?, onDone: () -> Unit) {
 
     BackHandler(onBack = ::back)
 
+    // Pages with choices: a fixed frame (title, choices, then Back / Next), the choices scrolling inside.
+    val choicePage = step in steps && step != SetupStep.WELCOME && step != SetupStep.REVIEW
+    val nextButton = remember { FocusRequester() }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(HomeBgBrush)
-            // Each page starts at its top.
-            .verticalScroll(remember(step) { ScrollState(0) })
-            .padding(horizontal = 64.dp, vertical = 48.dp)
+            .padding(horizontal = 56.dp, vertical = 32.dp)
             .autoFocus(step to (apply is ApplyState.Blocked)),
     ) {
         val number = steps.indexOf(step).takeIf { it >= 0 }?.let { "${it + 1} of ${steps.size}" } ?: step.title
         StepHeader(step.title, number)
-        when (step) {
-            SetupStep.WELCOME -> {
-                StepBody(
-                    "Buckler is an ad-free Home for your TV. Choose how to set it up; every choice can be " +
-                        "changed later, here or in Settings." + if (shield) " Nothing changes until you review it." else "",
-                )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PrimaryButton("Simple") { choices = choices.copy(mode = SetupMode.SIMPLE); next() }
-                    PrimaryButton("Advanced") { choices = choices.copy(mode = SetupMode.ADVANCED); next() }
-                    SecondaryButton(if (firstRun) "Skip setup" else "Close", ::leave)
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-                SettingsRow(
-                    "Simple: colours, layout, shelves, screensaver" +
-                        (if (shield) ", icon packs and open apps, and three clean-up switches." else ".") +
-                        "  Advanced: also the font" + (if (shield) ", app-by-app clean-up, animation speed and Private DNS." else "."),
-                )
+        stepIntro(step)?.let { SetupNote(it) }
+        Spacer(modifier = Modifier.height(16.dp))
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+          CompositionLocalProvider(LocalSetupNext provides nextButton.takeIf { choicePage }) {
+            when (step) {
+                SetupStep.WELCOME -> WelcomeStep(shield, firstRun, onMode = { mode ->
+                    choices = choices.copy(mode = mode)
+                    next()
+                }, onLeave = ::leave)
+                SetupStep.LOOK -> LookStep(choices) { choices = it }
+                SetupStep.SHELVES -> ShelvesStep(choices) { choices = it }
+                SetupStep.SCREENSAVER -> ScreensaverStep(choices) { choices = it }
+                SetupStep.APPS -> AppsStep(choices) { choices = it }
+                SetupStep.CLEAN -> CleanStep(choices) { choices = it }
+                SetupStep.SYSTEM -> SystemStep(choices) { choices = it }
+                SetupStep.REVIEW -> ReviewStep(resumed != null, changes, ::back, ::finish, ::run)
+                SetupStep.APPLY -> ApplyStep(apply, context, ::finish) { run(tvChanges = true) }
+                SetupStep.DONE -> DoneStep(results, tvTouched, ::finish)
             }
-            SetupStep.LOOK -> LookStep(choices) { choices = it }
-            SetupStep.SHELVES -> {
-                StepBody("Choose the rows Home shows. The Apps row always shows.")
-                ShelvesStep(choices) { choices = it }
-            }
-            SetupStep.SCREENSAVER -> {
-                StepBody("Shown when the TV is idle.")
-                ScreensaverStep(choices) { choices = it }
-            }
-            SetupStep.APPS -> {
-                StepBody("Optional extras, downloaded from their makers and checked against a pinned checksum.")
-                AppsStep(choices) { choices = it }
-            }
-            SetupStep.CLEAN -> {
-                StepBody(
-                    "Turn off apps the SHIELD runs in the background. Nothing is uninstalled: each app " +
-                        "is recorded and can be turned back on, here or in Settings → Setup.",
-                )
-                CleanStep(choices) { choices = it }
-            }
-            SetupStep.SYSTEM -> {
-                StepBody("System settings Buckler can set once it has its permissions.")
-                SystemStep(choices) { choices = it }
-            }
-            SetupStep.REVIEW -> ReviewStep(resumed != null, changes, ::back, ::finish, ::run)
-            SetupStep.APPLY -> ApplyStep(apply, context, ::finish) { run(tvChanges = true) }
-            SetupStep.DONE -> {
-                StepBody(results.joinToString("\n"))
-                if (tvTouched) {
-                    SettingsRow("You can turn Network debugging off again in Developer options; Buckler asks to connect next time.")
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PrimaryButton("Go to Home", ::finish)
-                    if (tvTouched) SecondaryButton("Developer options") { openDeveloperOptions(context) }
-                }
-            }
+          }
         }
-        if (step in steps && step != SetupStep.WELCOME && step != SetupStep.REVIEW) {
-            Spacer(modifier = Modifier.height(28.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SecondaryButton("Back", ::back)
-                PrimaryButton("Next", ::next)
+        if (choicePage) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                SecondaryButton("Back", onClick = ::back)
+                PrimaryButton("Next", Modifier.focusRequester(nextButton), ::next)
             }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ReviewStep(
-    resumed: Boolean,
-    changes: List<SetupChange>,
-    onBack: () -> Unit,
-    onFinish: () -> Unit,
-    onApply: (tvChanges: Boolean) -> Unit,
-) {
-    val tv = changes.any { it.needsTv }
-    StepBody(
-        when {
-            resumed -> "Buckler restarted after getting its permissions, as Android does. Here is what is left to do."
-            changes.isEmpty() -> "Nothing to change: the TV already looks like this."
-            else -> "These are the changes. Nothing has been changed yet."
-        },
-    )
-    changes.forEach { SettingsRow("•  ${it.text}") }
-    if (tv) {
-        Spacer(modifier = Modifier.height(12.dp))
-        SettingsRow(
-            "The SHIELD changes go over Network debugging, from the TV itself. Turn it on in Developer options " +
-                "(Settings → Device Preferences → About: press Build seven times to show them). The TV then asks " +
-                "once to allow Buckler.",
-        )
-    }
-    Spacer(modifier = Modifier.height(24.dp))
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (changes.isEmpty()) {
-            PrimaryButton("Go to Home", onFinish)
-        } else {
-            PrimaryButton(if (tv) "Apply all" else "Apply") { onApply(tv) }
-            if (tv && changes.any { !it.needsTv }) SecondaryButton("Apply without SHIELD changes") { onApply(false) }
-        }
-        SecondaryButton("Back", onBack)
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ApplyStep(apply: ApplyState, context: Context, onFinish: () -> Unit, onRetry: () -> Unit) {
-    when (apply) {
-        is ApplyState.Running -> StepBody(apply.step)
-        is ApplyState.Blocked -> {
-            StepBody(apply.reason)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                PrimaryButton("Try again", onRetry)
-                SecondaryButton("Developer options") { openDeveloperOptions(context) }
-                SecondaryButton("Finish without them", onFinish)
-            }
-        }
-        else -> StepBody("…")
-    }
-}
-
-fun openDeveloperOptions(context: Context) = launchFirstThatWorks(
-    context,
-    "Developer options",
-    listOf(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS), Intent(Settings.ACTION_SETTINGS)),
-)
-
-/** Opens the setup wizard on Home, from Settings. */
-fun openSetupWizard(context: Context) {
-    val intent = Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_SETUP, true)
-    safeLaunch(context, intent, "Setup wizard")
+/** One line under a page's title saying what the page is for. */
+private fun stepIntro(step: SetupStep): String? = when (step) {
+    SetupStep.LOOK -> "How Home looks. Colours change as you choose them, so you can judge them here."
+    SetupStep.SHELVES -> "The rows Home shows. The picture follows your choices."
+    SetupStep.SCREENSAVER -> "What shows when the TV is idle."
+    SetupStep.APPS -> "Optional: an icon pack, and open apps from their makers."
+    SetupStep.CLEAN -> "Apps the SHIELD runs in the background, in groups. Nothing is uninstalled."
+    SetupStep.SYSTEM -> "System settings Buckler sets once it has its permissions."
+    else -> null
 }

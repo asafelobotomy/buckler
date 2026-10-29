@@ -3,8 +3,19 @@ package dev.solon.bucklerhome
 import android.content.Context
 import android.provider.Settings
 
+/** Where a change belongs, for grouping the review the way the wizard's pages are. */
+enum class SetupArea(val label: String, val glyph: String) {
+    LOOK("Look", "🎨"),
+    HOME("Home", "🏠"),
+    SCREENSAVER("Screensaver", "🌙"),
+    APPS("Apps and icons", "🧩"),
+    CLEAN("Clean up", "🧹"),
+    SYSTEM("Speed and network", "⚡"),
+    BUCKLER("Buckler", "🛡"),
+}
+
 /** One line of the wizard's review. [needsTv]: made over Network debugging, not by Buckler alone. */
-data class SetupChange(val text: String, val needsTv: Boolean)
+data class SetupChange(val text: String, val needsTv: Boolean, val area: SetupArea)
 
 /**
  * Turns the wizard's choices into changes: first a review of only what differs from how the TV
@@ -15,46 +26,48 @@ data class SetupChange(val text: String, val needsTv: Boolean)
 object SetupApply {
     fun changes(context: Context, from: SetupChoices, to: SetupChoices): List<SetupChange> {
         val out = mutableListOf<SetupChange>()
-        fun local(text: String) = out.add(SetupChange(text, needsTv = false))
-        fun tv(text: String) = out.add(SetupChange(text, needsTv = true))
-        if (to.theme != from.theme) local("Colour scheme: ${to.theme.label}")
-        if (to.font != from.font) local("Font: ${to.font.label}")
-        if (to.layout != from.layout || to.tileSize != from.tileSize) local("Apps as ${to.layout.name.lowercase()}s, ${to.tileSize.label}")
-        to.shelves.filter { (type, on) -> from.shelves[type] != on }.forEach { (type, on) ->
-            local("${shelfName(type)} shelf: ${if (on) "shown" else "hidden"}")
+        fun local(area: SetupArea, text: String) = out.add(SetupChange(text, needsTv = false, area))
+        fun tv(area: SetupArea, text: String) = out.add(SetupChange(text, needsTv = true, area))
+        if (to.theme != from.theme) local(SetupArea.LOOK, "Colour scheme: ${to.theme.label}")
+        if (to.font != from.font) local(SetupArea.LOOK, "Font: ${to.font.label}")
+        if (to.layout != from.layout || to.tileSize != from.tileSize) {
+            local(SetupArea.LOOK, "Apps as ${to.layout.name.lowercase()}s, ${to.tileSize.label}")
         }
-        if (to.saver != from.saver) local("Screensaver: ${to.saver.label}")
+        to.shelves.filter { (type, on) -> from.shelves[type] != on }.forEach { (type, on) ->
+            local(SetupArea.HOME, "${shelfName(type)} shelf: ${if (on) "shown" else "hidden"}")
+        }
+        if (to.saver != from.saver) local(SetupArea.SCREENSAVER, "Screensaver: ${to.saver.label}")
         val data = ShieldData.load(context)
         val dock = dockChange(context, to, data)
-        if (dock != null) local(dock)
+        if (dock != null) local(SetupArea.APPS, dock)
         val pack = data.apps.firstOrNull { it.packageName == to.iconPack }
         if (to.iconPack != from.iconPack && (to.iconPack.isBlank() || SetupApps.installed(context, to.iconPack))) {
-            local("App icons: ${pack?.label ?: if (to.iconPack.isBlank()) "apps' own" else to.iconPack}")
+            local(SetupArea.APPS, "App icons: ${pack?.label ?: if (to.iconPack.isBlank()) "apps' own" else to.iconPack}")
         }
         if (!SetupState.isShield()) return out
 
         val grantsMissing = ShieldOps.missingPermissions(context).isNotEmpty() || ShieldOps.missingAppops(context).isNotEmpty()
-        if (grantsMissing) tv("Give Buckler its permissions (system settings, installs, app usage)")
-        if (HomeStatus.isHome(context).not()) tv("Make Buckler the Home screen (the stock one stays installed)")
+        if (grantsMissing) tv(SetupArea.BUCKLER, "Give Buckler its permissions (system settings, installs, app usage)")
+        if (HomeStatus.isHome(context).not()) tv(SetupArea.BUCKLER, "Make Buckler the Home screen (the stock one stays installed)")
         val (off, on) = appChanges(context, to)
-        if (off.isNotEmpty()) tv("Turn off ${off.size} apps: ${labels(context, off)}")
-        if (on.isNotEmpty()) tv("Turn back on ${on.size} apps: ${labels(context, on)}")
+        if (off.isNotEmpty()) tv(SetupArea.CLEAN, "Turn off ${off.size} apps: ${labels(context, off)}")
+        if (on.isNotEmpty()) tv(SetupArea.CLEAN, "Turn back on ${on.size} apps: ${labels(context, on)}")
         // System settings need Buckler's grant; without it they go over the connection too.
-        if (to.animation != from.animation) out += SetupChange("Animation speed: ${animationLabel(to.animation)}", grantsMissing)
-        if (to.dns != from.dns) out += SetupChange("Private DNS: ${dnsLabel(to.dns)}", grantsMissing)
+        if (to.animation != from.animation) out += SetupChange("Animation speed: ${animationLabel(to.animation)}", grantsMissing, SetupArea.SYSTEM)
+        if (to.dns != from.dns) out += SetupChange("Private DNS: ${dnsLabel(to.dns)}", grantsMissing, SetupArea.SYSTEM)
         if (to.systemSaver != from.systemSaver) {
-            tv(if (to.systemSaver) "Use Buckler's screensaver; turn off Google's Backdrop" else "Use Google's Backdrop screensaver again")
+            tv(SetupArea.SCREENSAVER, if (to.systemSaver) "Use Buckler's screensaver; turn off Google's Backdrop" else "Use Google's Backdrop screensaver again")
         } else if (to.systemSaver && SetupState.backdropOn(context)) {
-            tv("Turn off Google's Backdrop (Buckler's screensaver is in use)")
+            tv(SetupArea.SCREENSAVER, "Turn off Google's Backdrop (Buckler's screensaver is in use)")
         }
         if (to.mediaAccess != from.mediaAccess) {
-            tv(if (to.mediaAccess) "Let Now Playing show what's playing" else "Stop Now Playing reading what's playing")
+            tv(SetupArea.HOME, if (to.mediaAccess) "Let Now Playing show what's playing" else "Stop Now Playing reading what's playing")
         }
-        toInstall(context, to, data).forEach { tv("Install ${it.label} ${it.version} (download checked against its pinned checksum)") }
+        toInstall(context, to, data).forEach { tv(SetupArea.APPS, "Install ${it.label} ${it.version} (download checked against its pinned checksum)") }
         if (pack != null && !SetupApps.installed(context, pack.packageName)) {
-            tv("Install ${pack.label} ${pack.version} and use it for app icons (checked download)")
+            tv(SetupArea.APPS, "Install ${pack.label} ${pack.version} and use it for app icons (checked download)")
         }
-        if (out.any { it.needsTv } && !SetupState.compiled(context)) tv("Speed up Buckler's start (compile it ahead of time)")
+        if (out.any { it.needsTv } && !SetupState.compiled(context)) tv(SetupArea.BUCKLER, "Speed up Buckler's start (compile it ahead of time)")
         return out
     }
 
