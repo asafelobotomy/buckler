@@ -71,6 +71,22 @@ fun ShieldPane() {
         SettingsAction("Run setup wizard") { openSetupWizard(context) }
     }
     if (!SetupState.isShield()) return
+    val back = remember(status) { SetupState.cameBack(context) }
+    if (back.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(12.dp))
+        SettingsRow(
+            "${appCount(back.size)} Buckler keeps off ${if (back.size == 1) "is" else "are"} on again, usually after a " +
+                "system update: ${SetupApply.labels(context, back)}.",
+        )
+        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+            SettingsAction(if (back.size == 1) "Turn it off again" else "Turn them off again") {
+                run("Turning them off") { ops ->
+                    val r = ops.disable(back, "came back after an update")
+                    "Turned off ${r.changed.size} again" + if (r.failed.isEmpty()) "." else "; ${r.failed.size} could not be."
+                }
+            }
+        }
+    }
     Spacer(modifier = Modifier.height(18.dp))
     PickerTitle("SHIELD, step by step")
     SettingsRow(
@@ -130,6 +146,7 @@ fun ShieldPane() {
                 confirm = null
                 run("Turning off ${profile.name}") { ops ->
                     val r = ops.disable(profile.packages, profile.description)
+                    SetupState.setIntendedOff(context, SetupState.intendedOff(context) + r.changed + r.already)
                     listOfNotNull(
                         "Turned off ${r.changed.size}",
                         "${r.already.size} already off",
@@ -154,10 +171,16 @@ fun ShieldPane() {
                     return@SettingsAction
                 }
                 confirm = null
-                run("Restoring") { ops -> "Turned back on: ${ops.restore().size}." }
+                run("Restoring") { ops ->
+                    val restored = ops.restore()
+                    SetupState.setIntendedOff(context, SetupState.intendedOff(context) - restored.toSet())
+                    "Turned back on: ${restored.size}."
+                }
             }
         }
     }
 }
 
 private const val RESTORE = "restore"
+
+fun appCount(n: Int): String = if (n == 1) "1 app" else "$n apps"

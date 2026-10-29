@@ -62,6 +62,8 @@ fun HomeColumn(
     nowPlaying: NowPlayingModel,
     actions: HeaderActions,
     shelves: List<ResolvedShelf>,
+    /** False while the shelves are still loading: an empty list then is not an empty Home. */
+    shelvesLoaded: Boolean,
     listState: LazyListState,
     scope: CoroutineScope,
     move: MoveMode,
@@ -97,7 +99,7 @@ fun HomeColumn(
     val focusManager = LocalFocusManager.current
     val headerEnd = remember { FocusRequester() }
     val bottom = remember { FocusRequester() }
-    val homeOptions = needsHomeOptions(config, shelves)
+    val homeOptions = if (shelvesLoaded) needsHomeOptions(config, shelves) else !config.reachesSettings
     val rows = shelves.size + if (homeOptions) 1 else 0
     val hasHeaderEnd = config.headerVisible && headerEndElement(config, actions.onPlayStore != null) != null
     // Down past the last row: the rightmost header icon, or the stage when the header has none.

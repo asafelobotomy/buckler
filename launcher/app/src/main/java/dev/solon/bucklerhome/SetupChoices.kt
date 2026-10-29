@@ -63,6 +63,14 @@ data class SetupChoices(
     val offApps: Set<String>,
     val animation: Float,
     val dns: DnsChoice,
+    /** Buckler's screensaver is the TV's screensaver (and Google's Backdrop is off). */
+    val systemSaver: Boolean = false,
+    /** Now Playing may read the TV's media notifications. */
+    val mediaAccess: Boolean = false,
+    /** Catalog swaps and suggestions chosen ([CatalogApp.id]); installed ones stay chosen. */
+    val apps: Set<String> = emptySet(),
+    /** The icon pack's package, or blank for apps' own icons. */
+    val iconPack: String = "",
 ) {
     fun withGroup(group: CleanGroup, on: Boolean, data: ShieldData): SetupChoices {
         val apps = group.packages(data).toSet()
@@ -76,6 +84,8 @@ data class SetupChoices(
         .put("shelves", JSONObject().apply { shelves.forEach { (k, v) -> put(k.name, v) } })
         .put("groups", JSONArray(groups.map { it.name }))
         .put("off_apps", JSONArray(offApps.toList()))
+        .put("system_saver", systemSaver).put("media_access", mediaAccess)
+        .put("apps", JSONArray(apps.toList())).put("icon_pack", iconPack)
 
     companion object {
         /** Shelves the wizard offers (the Apps shelf always shows). */
@@ -95,6 +105,10 @@ data class SetupChoices(
                 offApps = strings("off_apps").toSet(),
                 animation = json.getDouble("animation").toFloat(),
                 dns = DnsChoice(json.getString("dns_mode"), json.optString("dns_host")),
+                systemSaver = json.optBoolean("system_saver"),
+                mediaAccess = json.optBoolean("media_access"),
+                apps = json.optJSONArray("apps")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty(),
+                iconPack = json.optString("icon_pack"),
             )
         }.getOrNull()
     }
@@ -104,6 +118,11 @@ data class SetupChoices(
 object SetupState {
     private const val PREFS = "bucklerhome"
     private const val KEY_RESUME = "setup_resume"
+    private const val KEY_INTENDED_OFF = "setup_off_apps"
+    private const val KEY_COMPILED = "setup_compiled_version"
+    private const val KEY_FINGERPRINT = "setup_checked_fingerprint"
+    const val BACKDROP = "com.google.android.backdrop"
+    private const val DREAM = ".ClockDream"
 
     /** A SHIELD: the clean-up and SHIELD steps apply. Other TVs get the Home settings only. */
     fun isShield(): Boolean = Build.MANUFACTURER.equals("NVIDIA", ignoreCase = true)
@@ -123,20 +142,35 @@ object SetupState {
         return packages.filter { runCatching { pm.getApplicationInfo(it, PackageManager.MATCH_DISABLED_COMPONENTS) }.isSuccess }
     }
 
-    fun current(context: Context, firstRun: Boolean): SetupChoices {
+    /**
+     * The wizard's starting choices. [intended] adds back clean-up apps meant to be off that an
+     * update turned on again, so Review offers to turn them off; without it this is the TV as it
+     * is, which Review compares against.
+     */
+    fun current(context: Context, firstRun: Boolean, intended: Boolean = true): SetupChoices {
         val data = ShieldData.load(context)
         AppearanceStore.ensureLoaded(context)
         val appearance = AppearanceStore.config
         val layout = HomeLayout.load(context)
-        val off = if (isShield()) disabledApps(context, data) else emptySet()
-        // First run: the suggested clean-up. Later runs: a group is on when all its apps here are off.
-        val groups = if (firstRun) {
-            CleanGroup.entries.filter { it.onByDefault }.toSet()
-        } else {
-            CleanGroup.entries.filter { g -> presentApps(context, g.packages(data)).let { it.isNotEmpty() && it.all(off::contains) } }.toSet()
+        val shield = isShield()
+        val disabled = if (shield) disabledApps(context, data) else emptySet()
+        val off = when {
+            !shield -> emptySet()
+            firstRun -> disabled + CleanGroup.entries.filter { it.onByDefault }.flatMap { it.packages(data) }
+            intended -> disabled + cameBack(context, data)
+            else -> disabled
         }
-        val offApps = if (firstRun) off + groups.flatMap { it.packages(data) } else off
+        // A group is on when every one of its apps here is off.
+        val groups = CleanGroup.entries.filter { g -> presentApps(context, g.packages(data)).let { it.isNotEmpty() && it.all(off::contains) } }
         val resolver = context.contentResolver
+        val pins = layout.appsPackages()
+        val apps = data.apps.filter { app ->
+            when {
+                app.group == CatalogApp.ICON_PACK -> false
+                app.installable -> SetupApps.installed(context, app.packageName)
+                else -> app.dock == "unpin-only" && app.stockPackage !in pins
+            }
+        }.map { it.id }.toSet()
         return SetupChoices(
             theme = appearance.theme,
             font = appearance.font,
@@ -144,14 +178,73 @@ object SetupState {
             tileSize = layout.tileSize,
             shelves = SetupChoices.OPTIONAL_SHELVES.associateWith { type -> layout.shelves.any { it.type == type && it.enabled } },
             saver = ScreensaverPrefs.load(context).mode,
-            groups = groups,
-            offApps = offApps,
+            groups = if (firstRun && shield) CleanGroup.entries.filter { it.onByDefault }.toSet() else groups.toSet(),
+            offApps = off,
             animation = Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f),
             dns = DnsChoice(
                 Settings.Global.getString(resolver, "private_dns_mode") ?: "opportunistic",
                 Settings.Global.getString(resolver, "private_dns_specifier").orEmpty(),
             ),
+            systemSaver = (firstRun && shield) || isSystemSaver(context),
+            mediaAccess = (firstRun && shield) || hasMediaAccess(context),
+            apps = apps,
+            iconPack = IconPackStore.pack(context).orEmpty(),
         )
+    }
+
+    /** Buckler's dream is the TV's screensaver. */
+    fun isSystemSaver(context: Context): Boolean =
+        Settings.Secure.getString(context.contentResolver, "screensaver_components").orEmpty().startsWith(context.packageName + "/")
+
+    fun dreamComponent(context: Context): String = context.packageName + "/" + DREAM
+
+    fun backdropOn(context: Context): Boolean = runCatching {
+        context.packageManager.getApplicationEnabledSetting(BACKDROP).let {
+            it == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT || it == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        } && SetupApps.installed(context, BACKDROP)
+    }.getOrDefault(false)
+
+    fun hasMediaAccess(context: Context): Boolean =
+        androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+
+    /**
+     * Clean-up apps meant to be off: what the wizard last applied or, before it ever has, the ones
+     * off when this was first asked (so an update that turns them back on is noticed either way).
+     */
+    fun intendedOff(context: Context, data: ShieldData = ShieldData.load(context)): Set<String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.getStringSet(KEY_INTENDED_OFF, null)?.let { return it.toSet() }
+        return disabledApps(context, data).also { setIntendedOff(context, it) }
+    }
+
+    fun setIntendedOff(context: Context, packages: Set<String>) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet(KEY_INTENDED_OFF, packages).apply()
+    }
+
+    /** Clean-up apps meant to be off that are on again, usually after a system update. */
+    fun cameBack(context: Context, data: ShieldData = ShieldData.load(context)): List<String> {
+        if (!isShield()) return emptyList()
+        val off = disabledApps(context, data)
+        return presentApps(context, intendedOff(context, data).toList()).filter { it !in off }
+    }
+
+    /**
+     * Apps that came back on since the last check, once per system build: empty unless the build
+     * fingerprint changed (an update), so Home mentions it once and not on every start.
+     */
+    fun cameBackAfterUpdate(context: Context): List<String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val seen = prefs.getString(KEY_FINGERPRINT, null)
+        prefs.edit().putString(KEY_FINGERPRINT, Build.FINGERPRINT).apply()
+        return if (seen == null || seen == Build.FINGERPRINT) emptyList() else cameBack(context)
+    }
+
+    /** Buckler was compiled ahead of time for this version. */
+    fun compiled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_COMPILED, 0) == BuildConfig.VERSION_CODE
+
+    fun setCompiled(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_COMPILED, BuildConfig.VERSION_CODE).apply()
     }
 
     /** Saved choices to pick up after Buckler restarts mid-setup, or null. */

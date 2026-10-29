@@ -18,6 +18,8 @@ https://github.com/asafelobotomy/buckler/releases/latest/download/buckler-home.a
 3. Open Buckler from the apps row. Its setup wizard starts:
    - **Simple** asks for a colour scheme, a layout, the shelves and a screensaver. On a SHIELD it
      also has three clean-up switches (Privacy and Extras on, Voice & Assistant off).
+   - On a SHIELD, Simple also offers Now Playing, Buckler as the TV's screensaver, icon packs
+     and open apps (each download checked against a pinned checksum).
    - **Advanced** adds the font, clean-up app by app, animation speed and Private DNS.
    - **Review** lists every change before anything is made. Nothing changes until you choose
      **Apply**.
@@ -61,6 +63,11 @@ so later commands don't need it.
   `buckler` did.
 - **Home screen:** Buckler never removes the stock launcher. Uninstall Buckler (Settings → Apps)
   and the TV goes back to it.
+
+## After a system update
+
+An Android update can turn apps Buckler turned off back on. Home says so once after the update,
+and Settings → Setup lists them with **Turn them off again** (Network debugging needed).
 
 ## Updates
 

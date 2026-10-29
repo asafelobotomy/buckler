@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Base64
 import java.io.Closeable
 import java.io.DataInputStream
+import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.math.BigInteger
@@ -23,7 +24,7 @@ import java.security.spec.X509EncodedKeySpec
  * A connection to this TV's own debugging service (Network debugging, `127.0.0.1:5555`), so
  * Buckler can make the changes `buckler setup` makes from a computer: disable apps, grant its own
  * permissions, set Home. It speaks the plain adb protocol: connect, prove who it is with its own
- * RSA key, then open `shell:` streams. The first time, the TV asks "Allow debugging?" for Buckler's
+ * RSA key, then open `shell:` streams (and `exec:` for installs). The first time, the TV asks "Allow debugging?" for Buckler's
  * key; with "Always allow" ticked it does not ask again. The key never leaves the TV.
  *
  * Blocking: use it off the main thread. One connection runs any number of [shell] commands.
@@ -32,6 +33,9 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
     private val input = DataInputStream(socket.getInputStream().buffered())
     private val output: OutputStream = socket.getOutputStream()
     private var nextLocalId = 1
+
+    /** The largest payload the TV accepts in one message (from its CNXN). */
+    private var maxData = 256 * 1024
 
     /** Output of a shell command and its exit code. */
     data class Result(val output: String, val exit: Int) {
@@ -64,7 +68,8 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
                     out.append(String(m.data, Charsets.UTF_8))
                     send(OKAY, local, remote, ByteArray(0))
                 }
-                CLSE -> if (m.arg1 == local || remote == 0) {
+                // Only this stream's close ends it: a late CLSE for the previous command must not.
+                CLSE -> if (m.arg1 == local) {
                     if (remote != 0) send(CLSE, local, remote, ByteArray(0))
                     break
                 }
@@ -75,6 +80,76 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
         if (at < 0) return Result(text.trimEnd(), -1)
         val exit = text.substring(at + EXIT_MARK.length).trim().toIntOrNull() ?: -1
         return Result(text.substring(0, at).trimEnd(), exit)
+    }
+
+    /**
+     * Installs [apk] as `adb install` does: `cmd package install -S` reading the file from this
+     * stream, so Android asks nothing. [onProgress] gets the bytes sent so far.
+     */
+    fun install(apk: File, onProgress: (Long) -> Unit = {}): Result {
+        // Android checks and optimises a big app after the last byte: allow it minutes.
+        socket.soTimeout = 300_000
+        try {
+            return streamInstall(apk, onProgress)
+        } finally {
+            socket.soTimeout = 60_000
+        }
+    }
+
+    private fun streamInstall(apk: File, onProgress: (Long) -> Unit): Result {
+        val local = nextLocalId++
+        send(OPEN, local, 0, "exec:cmd package install -S ${apk.length()}\u0000".toByteArray())
+        val out = StringBuilder()
+        var remote = 0
+        // Wait for the stream to open; a CLSE here means the TV refused it.
+        while (remote == 0) {
+            val m = read()
+            if (m.arg1 != local) continue
+            when (m.command) {
+                OKAY -> remote = m.arg0
+                CLSE -> return Result("could not start the install", -1)
+            }
+        }
+        apk.inputStream().buffered().use { file ->
+            val buffer = ByteArray(maxData)
+            var sent = 0L
+            while (true) {
+                val n = file.read(buffer)
+                if (n <= 0) break
+                send(WRTE, local, remote, buffer.copyOf(n))
+                // One message in flight: wait for its OKAY, answering any output meanwhile.
+                while (true) {
+                    val m = read()
+                    if (m.arg1 != local) continue
+                    when (m.command) {
+                        OKAY -> break
+                        WRTE -> {
+                            out.append(String(m.data, Charsets.UTF_8))
+                            send(OKAY, local, remote, ByteArray(0))
+                        }
+                        CLSE -> return Result(out.toString().trim(), -1)
+                    }
+                }
+                sent += n
+                onProgress(sent)
+            }
+        }
+        while (true) {
+            val m = read()
+            if (m.arg1 != local) continue
+            when (m.command) {
+                WRTE -> {
+                    out.append(String(m.data, Charsets.UTF_8))
+                    send(OKAY, local, remote, ByteArray(0))
+                }
+                CLSE -> {
+                    send(CLSE, local, remote, ByteArray(0))
+                    break
+                }
+            }
+        }
+        val text = out.toString().trim()
+        return Result(text, if (text.lines().any { it.trim() == "Success" }) 0 else 1)
     }
 
     override fun close() {
@@ -160,7 +235,10 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
             while (true) {
                 val m = read()
                 when (m.command) {
-                    CNXN -> return
+                    CNXN -> {
+                        maxData = m.arg1.coerceIn(4096, MAX_PAYLOAD)
+                        return
+                    }
                     AUTH -> if (m.arg0 == AUTH_TOKEN) {
                         if (!signed) {
                             // Known key: the signature is enough.

@@ -21,6 +21,10 @@ class SetupChoicesTest {
         offApps = setOf("com.nvidia.stats"),
         animation = 0.5f,
         dns = DnsChoice("hostname", "dns.quad9.net"),
+        systemSaver = true,
+        mediaAccess = true,
+        apps = setOf("smarttube", "google-tv"),
+        iconPack = "app.lawnchair.lawnicons",
     )
 
     @Test
@@ -54,5 +58,24 @@ class SetupChoicesTest {
         val on = off.withGroup(CleanGroup.EXTRAS, false, data)
         assertTrue(on.offApps.none { it in CleanGroup.EXTRAS.packages(data) })
         assertFalse(CleanGroup.EXTRAS in on.groups)
+    }
+
+    @Test
+    fun everyBundledAppIsPinnedAndHttps() {
+        assertTrue(data.apps.size >= 3)
+        data.apps.filter { it.url.isNotBlank() }.forEach { app ->
+            assertTrue(app.id, app.installable)
+            assertTrue(app.id, app.packageName !in data.never)
+        }
+        assertEquals(2, data.apps.count { it.group == CatalogApp.ICON_PACK })
+    }
+
+    @Test
+    fun dockRulesMatchTheCli() {
+        val byId = data.apps.associateBy { it.id }
+        val dock = listOf("com.google.android.youtube.tv", "com.google.android.videos", "org.jellyfin.androidtv")
+        val next = SetupApps.applyDock(dock, listOfNotNull(byId["smarttube"], byId["google-tv"], byId["moonlight"]))
+        // SmartTube takes YouTube's place, Google TV is unpinned, Moonlight goes last.
+        assertEquals(listOf("org.smarttube.stable", "org.jellyfin.androidtv", "com.limelight"), next)
     }
 }

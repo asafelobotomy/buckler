@@ -99,9 +99,13 @@ def free_kb(adb: Adb) -> int:
 
 
 def clear_caches(adb: Adb) -> int:
-    """Clear every app's cache (Android's own `pm trim-caches`); returns the KiB freed."""
+    """Free app cache space (Android's own `pm trim-caches`); returns the KiB freed.
+
+    Android clears only caches over each app's share of the cache quota; an app's own cache
+    within its share is kept (clear that from the app's page in Settings).
+    """
     adb.connect()
     before = free_kb(adb)
-    # Asking for more than the disk holds makes Android clear all caches it can.
+    # Asking for more than the disk holds makes Android clear every cache it is willing to.
     adb.shell("pm", "trim-caches", "999G")
     return max(free_kb(adb) - before, 0)

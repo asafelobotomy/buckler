@@ -59,6 +59,14 @@ fun ShelvesStep(choices: SetupChoices, onChange: (SetupChoices) -> Unit) {
         val on = choices.shelves[type] == true
         ToggleRow(SetupApply.shelfName(type), on, shelfDetail(type)) { onChange(choices.copy(shelves = choices.shelves + (type to it))) }
     }
+    if (SetupState.isShield()) {
+        Spacer(modifier = Modifier.height(12.dp))
+        ToggleRow(
+            "Now Playing",
+            choices.mediaAccess,
+            "Show the song or video playing in any app, with its controls, in the header and on the Main Stage.",
+        ) { onChange(choices.copy(mediaAccess = it)) }
+    }
 }
 
 private fun shelfDetail(type: ShelfType): String = when (type) {
@@ -75,6 +83,51 @@ fun ScreensaverStep(choices: SetupChoices, onChange: (SetupChoices) -> Unit) {
     FlowRow(horizontalArrangement = Gap, verticalArrangement = Gap) {
         ScreensaverMode.entries.forEach { mode ->
             SettingsAction(mode.label, selected = mode == choices.saver) { onChange(choices.copy(saver = mode)) }
+        }
+    }
+    if (SetupState.isShield()) {
+        Spacer(modifier = Modifier.height(16.dp))
+        ToggleRow(
+            "Use it as the TV's screensaver",
+            choices.systemSaver,
+            "Instead of Google's Backdrop, which is turned off (and back on if you switch this off).",
+        ) { onChange(choices.copy(systemSaver = it)) }
+    }
+}
+
+/** Icon packs and the open apps from the catalog: each download is checked before it is installed. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun AppsStep(choices: SetupChoices, onChange: (SetupChoices) -> Unit) {
+    val context = LocalContext.current
+    val data = remember { ShieldData.load(context) }
+    val packs = data.apps.filter { it.group == CatalogApp.ICON_PACK }
+    PickerTitle("App icons")
+    SettingsRow("An icon pack redraws every app's icon in one style; apps it lacks are drawn to match.")
+    FlowRow(horizontalArrangement = Gap, verticalArrangement = Gap) {
+        SettingsAction("Apps' own icons", selected = choices.iconPack.isBlank()) { onChange(choices.copy(iconPack = "")) }
+        packs.forEach { pack ->
+            val label = if (SetupApps.installed(context, pack.packageName)) pack.label else "${pack.label} (download)"
+            SettingsAction(label, selected = choices.iconPack == pack.packageName) { onChange(choices.copy(iconPack = pack.packageName)) }
+        }
+        if (choices.iconPack.isNotBlank() && packs.none { it.packageName == choices.iconPack }) {
+            SettingsAction("Now: ${appName(context, choices.iconPack)}", selected = true) {}
+        }
+    }
+    packs.forEach { SettingsRow("${it.label}: ${it.note}") }
+    Spacer(modifier = Modifier.height(20.dp))
+    PickerTitle("Open apps")
+    SettingsRow("Optional. Nothing stock is removed: a swap only takes its app's place in the Apps row.")
+    data.apps.filter { it.group != CatalogApp.ICON_PACK }.forEach { app ->
+        val installed = app.installable && SetupApps.installed(context, app.packageName)
+        val title = when {
+            !app.installable -> "Unpin ${app.stockLabel} from the Apps row"
+            app.group == CatalogApp.SWAP -> "${app.label} in place of ${app.stockLabel}" + if (installed) " (installed)" else ""
+            else -> app.label + if (installed) " (installed)" else ""
+        }
+        // Installed apps stay chosen: the wizard installs, it never uninstalls.
+        ToggleRow(title, app.id in choices.apps || installed, app.note) {
+            if (!installed) onChange(choices.copy(apps = if (it) choices.apps + app.id else choices.apps - app.id))
         }
     }
 }

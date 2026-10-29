@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -130,18 +131,37 @@ fun CleanUpPane() {
 fun CachePane() {
     val context = LocalContext.current
     val resume = rememberResumeTick()
-    val apps by produceState<List<AppStorage>?>(null, resume) {
+    var cleared by remember { mutableIntStateOf(0) }
+    val apps by produceState<List<AppStorage>?>(null, resume, cleared) {
         value = withContext(Dispatchers.IO) {
             StorageUse.scan(context).filter { it.cacheBytes >= CACHE_WORTH_BYTES }.sortedByDescending { it.cacheBytes }
         }
     }
 
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf<String?>(null) }
     SectionTitle("Cache")
     SettingsRow(
         "Files apps keep to start faster. Clearing a cache is safe: nothing you made or signed in to is lost. " +
-            "Android lets only its own app page clear another app's cache, or `buckler clean` from a " +
-            "computer clears every app's at once.",
+            "Free cache space clears, over Network debugging, every cache Android lets go of: the part " +
+            "over each app's share. Each app's page below clears the rest of its own.",
     )
+    SettingsAction(status ?: "Free cache space") {
+        if (status?.endsWith("…") == true) return@SettingsAction
+        status = "Clearing…"
+        scope.launch {
+            status = withContext(Dispatchers.IO) {
+                runCatching {
+                    val free = { android.os.StatFs(context.filesDir.path).availableBytes }
+                    val before = free()
+                    AdbSelf.connect(context) { status = "Allow debugging on the TV's prompt…" }.use { it.shell("pm trim-caches 999G") }
+                    cleared++
+                    "Freed ${StorageUse.size(context, (free() - before).coerceAtLeast(0))}. Apps rebuild what they need."
+                }.getOrElse { if (it is AdbSelf.Failure.NotListening) "Turn on Network debugging first (Developer options)." else "Not cleared: ${it.message}" }
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(12.dp))
     AppStorageList(apps, empty = "No app holds more than ${StorageUse.size(context, CACHE_WORTH_BYTES)} of cache.") { app ->
         "Cache ${StorageUse.size(context, app.cacheBytes)} · ${StorageUse.size(context, app.totalBytes)} in all"
     }

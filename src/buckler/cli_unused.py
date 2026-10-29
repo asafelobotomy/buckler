@@ -1,5 +1,5 @@
 """`buckler unused` lists (and optionally disables) apps Buckler found unused; `buckler clean`
-clears every app's cache."""
+frees app cache space."""
 
 from __future__ import annotations
 
@@ -48,10 +48,13 @@ def unused_cmd(ctx: click.Context, packages: tuple[str, ...], apply_: bool, dry_
 @cli.command("clean")
 @click.pass_context
 def clean_cmd(ctx: click.Context) -> None:
-    """Clear every app's cache on the TV (apps rebuild what they need; nothing else is removed)."""
+    """Free app cache space on the TV (what Android lets go of; apps rebuild what they need)."""
     adb = make_adb(ctx.obj["host"])
     try:
         freed = clear_caches(adb)
     except AdbError as exc:
         raise click.ClickException(str(exc)) from exc
-    click.echo(f"cleared app caches: {freed / 1024:.0f} MB freed")
+    click.echo(
+        f"freed {freed / 1024:.0f} MB of app caches (Android keeps each app's cache "
+        "within its share; an app's own Settings page clears the rest)"
+    )

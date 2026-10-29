@@ -33,6 +33,7 @@ private enum class SetupStep(val title: String) {
     LOOK("Look"),
     SHELVES("Shelves"),
     SCREENSAVER("Screensaver"),
+    APPS("Apps and icons"),
     CLEAN("Clean up the SHIELD"),
     SYSTEM("Speed and network"),
     REVIEW("Review"),
@@ -61,7 +62,7 @@ fun SetupWizard(resumed: SetupChoices?, onDone: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val firstRun = remember { isFirstRunPending(context) }
-    val from = remember { SetupState.current(context, firstRun = false) }
+    val from = remember { SetupState.current(context, firstRun = false, intended = false) }
     var choices by remember { mutableStateOf(resumed ?: SetupState.current(context, firstRun)) }
     var step by remember { mutableStateOf(if (resumed != null) SetupStep.REVIEW else SetupStep.WELCOME) }
     var apply by remember { mutableStateOf<ApplyState>(ApplyState.Idle) }
@@ -72,7 +73,7 @@ fun SetupWizard(resumed: SetupChoices?, onDone: () -> Unit) {
 
     val steps = SetupStep.entries.filter {
         when (it) {
-            SetupStep.CLEAN -> shield
+            SetupStep.CLEAN, SetupStep.APPS -> shield
             SetupStep.SYSTEM -> shield && choices.mode == SetupMode.ADVANCED
             SetupStep.APPLY, SetupStep.DONE -> false
             else -> true
@@ -165,7 +166,8 @@ fun SetupWizard(resumed: SetupChoices?, onDone: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(20.dp))
                 SettingsRow(
-                    "Simple: colours, layout, shelves, screensaver" + (if (shield) " and three clean-up switches." else ".") +
+                    "Simple: colours, layout, shelves, screensaver" +
+                        (if (shield) ", icon packs and open apps, and three clean-up switches." else ".") +
                         "  Advanced: also the font" + (if (shield) ", app-by-app clean-up, animation speed and Private DNS." else "."),
                 )
             }
@@ -177,6 +179,10 @@ fun SetupWizard(resumed: SetupChoices?, onDone: () -> Unit) {
             SetupStep.SCREENSAVER -> {
                 StepBody("Shown when the TV is idle.")
                 ScreensaverStep(choices) { choices = it }
+            }
+            SetupStep.APPS -> {
+                StepBody("Optional extras, downloaded from their makers and checked against a pinned checksum.")
+                AppsStep(choices) { choices = it }
             }
             SetupStep.CLEAN -> {
                 StepBody(

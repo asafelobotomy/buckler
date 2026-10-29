@@ -108,5 +108,124 @@
   ],
   "permissions": [
     "android.permission.WRITE_SECURE_SETTINGS"
+  ],
+  "apps": [
+    {
+      "id": "smarttube",
+      "label": "SmartTube",
+      "group": "swap",
+      "package": "org.smarttube.stable",
+      "version": "32.68",
+      "url": "https://github.com/yuliskov/SmartTube/releases/download/32.68s/SmartTube_stable_32.68_arm64-v8a.apk",
+      "sha256": "0a3d3f024eae66b8468f75fe85ab421169177f5ea1223a5d097d1dc9e1c84cf3",
+      "dock": "replace-pin",
+      "stock_package": "com.google.android.youtube.tv",
+      "stock_label": "YouTube",
+      "note": "Official stable build includes Firebase Crashlytics. YouTube stays installed so a phone can still cast."
+    },
+    {
+      "id": "google-tv",
+      "label": "Google TV",
+      "group": "swap",
+      "package": "",
+      "version": "",
+      "url": "",
+      "sha256": "",
+      "dock": "unpin-only",
+      "stock_package": "com.google.android.videos",
+      "stock_label": "Google TV",
+      "note": "Jellyfin and VLC stay on the dock. Play purchases stay in the Google app."
+    },
+    {
+      "id": "moonlight",
+      "label": "Moonlight",
+      "group": "swap",
+      "package": "com.limelight",
+      "version": "12.2",
+      "url": "https://github.com/moonlight-stream/moonlight-android/releases/download/v12.2/app-nonRoot-release.apk",
+      "sha256": "a871f6190365386ef3ac5722a016d4da015ee1555631ec257f6e5dc3f4a45fe0",
+      "dock": "append",
+      "stock_package": "com.nvidia.nvgamecast",
+      "stock_label": "GameStream",
+      "note": "GameStream is already disabled by the minimal profile. Moonlight plays from a Sunshine host on your PC."
+    },
+    {
+      "id": "localsend",
+      "label": "LocalSend",
+      "group": "suggestion",
+      "package": "org.localsend.localsend_app",
+      "version": "1.18.2",
+      "url": "https://github.com/localsend/localsend/releases/download/v1.18.2/LocalSend-1.18.2-android-arm64v8.apk",
+      "sha256": "82ec3568fba2aa5295b9aae8b76f701d7a4703d86b9f8bad749472038fbaeab3",
+      "dock": "append",
+      "stock_package": "",
+      "stock_label": "",
+      "note": "File drop from a phone."
+    },
+    {
+      "id": "wireguard",
+      "label": "WireGuard",
+      "group": "suggestion",
+      "package": "com.wireguard.android",
+      "version": "1.0.20260315",
+      "url": "https://download.wireguard.com/android-client/com.wireguard.android-1.0.20260315.apk",
+      "sha256": "f92971bc804f4c448e8845ae97e426095eab06ec09a2473a3fa2cfe7288e3298",
+      "dock": "append",
+      "stock_package": "",
+      "stock_label": "",
+      "note": "The header VPN icon opens whichever VPN app is installed."
+    },
+    {
+      "id": "tailscale",
+      "label": "Tailscale",
+      "group": "suggestion",
+      "package": "com.tailscale.ipn",
+      "version": "1.104.2",
+      "url": "https://github.com/tailscale/tailscale-android/releases/download/1.104.2-tc3430f0d2-gb01fa89d5/tailscale-android-universal-1.104.2.apk",
+      "sha256": "270b3e6e54c99103ed98fa967de7bbf6053e1066250ea35d2b9f450947fd0a78",
+      "dock": "append",
+      "stock_package": "",
+      "stock_label": "",
+      "note": "Mesh VPN. The client is open; run Headscale if you want your own control plane."
+    },
+    {
+      "id": "nova",
+      "label": "Nova",
+      "group": "suggestion",
+      "package": "org.courville.nova",
+      "version": "6.5.5",
+      "url": "https://github.com/nova-video-player/aos-AVP/releases/download/v6.5.5/org.courville.nova-2672099-6.5.5-20261009.2113-arm64-v8a-release.apk",
+      "sha256": "e5342e829fbf708d835345707e71d7ee46e64c54ca93c8bdded31766db443cf0",
+      "dock": "append",
+      "stock_package": "",
+      "stock_label": "",
+      "note": "Library UI over SMB, beside VLC."
+    },
+    {
+      "id": "lawnicons",
+      "label": "Lawnicons",
+      "group": "iconpack",
+      "package": "app.lawnchair.lawnicons",
+      "version": "2.19.0",
+      "url": "https://github.com/LawnchairLauncher/lawnicons/releases/download/v2.19.0/Lawnicons.2.19.0.apk",
+      "sha256": "5ed67a0338c207bd0f8c44392dedbae8d0449fef5c8d773a202451d42bbd8cdd",
+      "dock": "",
+      "stock_package": "",
+      "stock_label": "",
+      "note": "Single-colour outline icons (about 23,000 app mappings), 19 MB."
+    },
+    {
+      "id": "arcticons",
+      "label": "Arcticons",
+      "group": "iconpack",
+      "package": "com.donnnno.arcticons",
+      "version": "15.3.2",
+      "url": "https://f-droid.org/repo/com.donnnno.arcticons_1570.apk",
+      "sha256": "653ea050715c4d40c15da7e6cefad17e389afcd6a518636f6115de2ae1310fc1",
+      "dock": "",
+      "stock_package": "",
+      "stock_label": "",
+      "note": "White line icons (about 49,000 app mappings), 71 MB."
+    }
   ]
 }

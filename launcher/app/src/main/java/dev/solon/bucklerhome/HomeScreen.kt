@@ -84,7 +84,6 @@ fun HomeScreen(
         config = DisplayPrefs.load(context)
         apps = withContext(Dispatchers.IO) { loadLaunchableApps(context) }
     }
-
     val layout = homeLayout
     val appList = apps
     LaunchedEffect(layout, appList, coverVersion) {
@@ -287,6 +286,7 @@ fun HomeScreen(
             nowPlaying = nowPlaying,
             actions = actions,
             shelves = shelves,
+            shelvesLoaded = shelvesLoaded,
             listState = listState,
             scope = scope,
             move = move,

@@ -2,6 +2,7 @@ package dev.solon.bucklerhome
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.DisposableEffect
@@ -13,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import kotlin.concurrent.thread
 
 private enum class RootScreen {
     HOME,
@@ -36,6 +38,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         if (intent.getBooleanExtra(EXTRA_EDIT_HOME, false)) editRequests.intValue++
         AppearanceStore.ensureLoaded(this)
+        noticeAppsBackAfterUpdate()
         showSetup.value = isFirstRunPending(this) || intent.getBooleanExtra(EXTRA_SETUP, false) || SetupState.resume(this) != null
         setContent {
             BucklerHomeTheme {
@@ -75,6 +78,21 @@ class MainActivity : ComponentActivity() {
                         onOpenEditHome = { screen = RootScreen.EDIT },
                     )
                 }
+            }
+        }
+    }
+
+    /** Once after a system update: say if it turned clean-up apps back on, and where to fix it. */
+    private fun noticeAppsBackAfterUpdate() {
+        thread(name = "buckler-after-update") {
+            val back = runCatching { SetupState.cameBackAfterUpdate(this) }.getOrDefault(emptyList())
+            if (back.isEmpty()) return@thread
+            runOnUiThread {
+                Toast.makeText(
+                    this,
+                    "The update turned ${appCount(back.size)} back on. Settings → Setup turns ${if (back.size == 1) "it" else "them"} off again.",
+                    Toast.LENGTH_LONG,
+                ).show()
             }
         }
     }

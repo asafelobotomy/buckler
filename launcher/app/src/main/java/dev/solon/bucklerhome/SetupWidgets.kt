@@ -50,7 +50,7 @@ fun StepBody(text: String) {
 fun ToggleRow(label: String, enabled: Boolean, detail: String? = null, indent: Boolean = false, onChange: (Boolean) -> Unit) {
     Surface(
         onClick = { onChange(!enabled) },
-        modifier = Modifier.padding(start = if (indent) 40.dp else 0.dp, bottom = 10.dp).width(if (indent) 820.dp else 860.dp),
+        modifier = Modifier.padding(start = if (indent) 40.dp else 0.dp, bottom = 10.dp).width(if (indent) 560.dp else 600.dp),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = ColorTile,

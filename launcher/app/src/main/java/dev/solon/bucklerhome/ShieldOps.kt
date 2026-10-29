@@ -22,6 +22,7 @@ class ShieldData(
     val stockLaunchers: Set<String>,
     val appops: List<String>,
     val permissions: List<String>,
+    val apps: List<CatalogApp> = emptyList(),
 ) {
     companion object {
         @Volatile private var cached: ShieldData? = null
@@ -46,6 +47,8 @@ class ShieldData(
                 stockLaunchers = json.getJSONArray("stock_launchers").strings().toSet(),
                 appops = json.getJSONArray("appops").strings(),
                 permissions = json.getJSONArray("permissions").strings(),
+                apps = json.optJSONArray("apps")?.let { all -> (0 until all.length()).map { CatalogApp.from(all.getJSONObject(it)) } }
+                    .orEmpty(),
             )
         }
     }
