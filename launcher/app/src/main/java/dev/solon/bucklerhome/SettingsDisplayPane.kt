@@ -139,4 +139,25 @@ fun HeaderPane() {
         SettingsRow("Hidden while the Main Stage shows Now Playing, so it is not on screen twice.")
     }
     if (cfg.nowPlaying) MediaAccessSection()
+    Spacer(modifier = Modifier.height(14.dp))
+    PickerTitle("While nothing plays")
+    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        SideIdle.entries.forEach { idle ->
+            SettingsAction(idle.label, selected = idle == cfg.sideIdle) {
+                StagePrefs.setSideIdle(context, idle)
+                tick++
+            }
+        }
+    }
+    when (cfg.sideIdle) {
+        SideIdle.GLANCE -> {
+            Spacer(modifier = Modifier.height(14.dp))
+            CalendarSection()
+        }
+        SideIdle.COMPANION -> {
+            Spacer(modifier = Modifier.height(14.dp))
+            CompanionPicker(cfg.companion) { tick++ }
+        }
+        SideIdle.NOTHING -> Unit
+    }
 }

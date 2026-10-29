@@ -181,6 +181,7 @@ fun HomeColumn(
                 onPickSpan = onPickSpan,
                 metrics = metrics,
                 weatherSpan = config.weatherSpan,
+                companion = config.companion,
             )
         }
         Spacer(modifier = Modifier.height(STAGE_GAP))

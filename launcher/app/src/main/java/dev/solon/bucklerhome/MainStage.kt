@@ -43,6 +43,10 @@ enum class MainStage(val label: String) {
     LYRICS("Lyrics"),
     WEATHER("Weather"),
     SUGGESTED("Suggested"),
+    GLANCE("At a Glance"),
+    CALENDAR("Calendar"),
+    WEATHER_MAP("Weather map"),
+    COMPANION("Companion"),
     ;
 
     fun wire(): String = name.lowercase()
@@ -76,6 +80,7 @@ fun MainStage(
     onPickSpan: (WeatherSpan) -> Unit,
     metrics: StageMetrics,
     weatherSpan: WeatherSpan,
+    companion: CompanionKind,
 ) {
     when (mode) {
         MainStage.NEWS -> NewsStage(headlines, newsSources, newsPace, stageFocus, onDown, onOpenStory, onHold, metrics)
@@ -85,6 +90,10 @@ fun MainStage(
         MainStage.SUGGESTED -> SuggestedStage(
             nowPlaying, stageFocus, onDown, onPickStage, weatherSpan, onPickSpan, metrics,
         )
+        MainStage.GLANCE -> GlanceStage(place, fahrenheit, use24h, stageFocus, onDown, onHold, metrics, refresh = null)
+        MainStage.CALENDAR -> CalendarStage(use24h, stageFocus, onDown, onHold, metrics, refresh = null)
+        MainStage.WEATHER_MAP -> WeatherMapStage(place, stageFocus, onDown, onHold, metrics)
+        MainStage.COMPANION -> CompanionStage(companion, place, stageFocus, onDown, onHold, metrics)
     }
 }
 

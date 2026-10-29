@@ -5,6 +5,9 @@
     <!-- Artwork / optional suggested feed / GitHub updates. Still no ads or account telemetry. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- At a Glance and Calendar read what the TV's accounts and DAVx⁵/OpenTasks already sync. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="org.dmfs.permission.READ_TASKS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Home lists every app, and setup reads the state of the SHIELD apps it can turn off. -->

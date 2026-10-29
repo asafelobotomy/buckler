@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -63,7 +64,7 @@ fun HomeHeader(
         ) {
             ClockBlock(clock, date, config, weather, metrics)
             Box(modifier = Modifier.weight(1f).padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
-                if (config.showsNowPlaying && nowPlaying != null) NowPlayingPanel(nowPlaying, below, metrics)
+                SideStage(config, nowPlaying, below, metrics)
             }
             StatusAndActions(net, config, actions, below, endFocus, metrics)
         }
@@ -213,4 +214,28 @@ private fun networkDescription(link: LinkType): String = when (link) {
     LinkType.ETHERNET -> "Ethernet connected"
     LinkType.OTHER -> "Network connected"
     LinkType.NONE -> "No network"
+}
+
+/**
+ * The header's Side Stage: what is playing, with its controls; while nothing plays, the idle
+ * choice (At a Glance or the companion) if one is set, else Now Playing's own hint as before.
+ */
+@Composable
+private fun SideStage(config: DisplayConfig, nowPlaying: NowPlayingModel?, below: FocusRequester?, metrics: HeaderMetrics) {
+    val playing = config.showsNowPlaying && nowPlaying?.info != null
+    when {
+        playing -> NowPlayingPanel(nowPlaying!!, below, metrics)
+        config.sideIdle == SideIdle.GLANCE -> GlanceSide(config, refresh = null)
+        config.sideIdle == SideIdle.COMPANION -> {
+            val weather by rememberGlanceWeather(config.place)
+            CompanionScene(
+                kind = config.companion,
+                weatherCode = weather?.now?.code,
+                isDay = weather?.now?.isDay ?: true,
+                // About as wide as the Now Playing panel it stands in for.
+                modifier = Modifier.height(metrics.art + 24.dp).width(metrics.titleMax * 2),
+            )
+        }
+        config.showsNowPlaying && nowPlaying != null -> NowPlayingPanel(nowPlaying, below, metrics)
+    }
 }

@@ -136,10 +136,21 @@ object SetupState {
         }.toSet()
     }
 
-    /** Apps of [CleanGroup]s present on this TV (a missing app counts as off). */
+    /**
+     * Apps of [CleanGroup]s present on this TV (a missing app counts as off), less any that
+     * [keptOn] needs: those are no longer the clean-up's to turn off.
+     */
     fun presentApps(context: Context, packages: List<String>): List<String> {
         val pm = context.packageManager
-        return packages.filter { runCatching { pm.getApplicationInfo(it, PackageManager.MATCH_DISABLED_COMPONENTS) }.isSuccess }
+        val kept = keptOn(context)
+        return packages.filter { it !in kept && runCatching { pm.getApplicationInfo(it, PackageManager.MATCH_DISABLED_COMPONENTS) }.isSuccess }
+    }
+
+    /** Clean-up apps a chosen widget needs: Google's calendar sync while a stage shows the calendar. */
+    fun keptOn(context: Context): Set<String> {
+        val stage = HomeLayout.load(context).mainStage
+        val calendar = stage == MainStage.GLANCE || stage == MainStage.CALENDAR || StagePrefs.sideIdle(context) == SideIdle.GLANCE
+        return if (calendar) setOf(GOOGLE_CALENDAR_SYNC) else emptySet()
     }
 
     /**

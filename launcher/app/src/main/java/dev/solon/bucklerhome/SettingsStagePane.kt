@@ -124,6 +124,47 @@ fun MainStagePane() {
             SettingsRow("Cards for what you played recently. Hold OK on a card to pin or unpin it.")
             MediaAccessSection()
         }
+        MainStage.GLANCE -> {
+            SectionTitle("At a Glance")
+            SettingsRow(
+                "What matters next, by plain rules: an event under way or coming up, reminders due, a change in " +
+                    "the weather, sunrise or sunset, and tomorrow's first event in the evening. No ads, nothing promoted.",
+            )
+            WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
+            Spacer(modifier = Modifier.height(14.dp))
+            CalendarSection()
+        }
+        MainStage.CALENDAR -> CalendarSection()
+        MainStage.WEATHER_MAP -> {
+            SectionTitle("Weather map")
+            SettingsRow(
+                "Pressure (isobars, with highs and lows), wind and rain around the city for the next day, from " +
+                    "Open-Meteo over Natural Earth's coastlines. ◀ ▶ on the stage step through the hours.",
+            )
+            WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
+        }
+        MainStage.COMPANION -> {
+            CompanionPicker(cfg.companion) { tick++ }
+            Spacer(modifier = Modifier.height(14.dp))
+            WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
+        }
+    }
+}
+
+/** Which companion the stages draw; it goes about its day by the clock and the weather. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun CompanionPicker(current: CompanionKind, onChanged: () -> Unit) {
+    val context = LocalContext.current
+    SectionTitle("Companion")
+    SettingsRow("Sleeps at night, wakes at dawn, and keeps busy through the day; it shelters when it rains.")
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        CompanionKind.entries.forEach { kind ->
+            SettingsAction(kind.label, selected = kind == current) {
+                StagePrefs.setCompanion(context, kind)
+                onChanged()
+            }
+        }
     }
 }
 

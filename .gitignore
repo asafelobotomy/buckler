@@ -24,3 +24,6 @@ launcher/.idea/
 launcher/keystore.properties
 *.jks
 *.keystore
+
+# Agent worktrees made by Claude Code
+.claude/worktrees/

@@ -122,6 +122,9 @@ data class DisplayConfig(
     val weatherSynced: Boolean = true,
     val stagePlace: Place? = place,
     val stageFahrenheit: Boolean = fahrenheit,
+    /** The Side Stage while nothing plays, and which companion the stages draw ([StagePrefs]). */
+    val sideIdle: SideIdle = SideIdle.NOTHING,
+    val companion: CompanionKind = CompanionKind.CAT,
 ) {
     /** What the News stage shows and the Weather stage uses: the header's when synced. */
     val stageNews: List<NewsSource> get() = if (newsSynced) newsSources else stageNewsSources
@@ -208,6 +211,8 @@ object DisplayPrefs {
             stagePlace = readPlace(p, "${KEY_STAGE_PLACE}_name", "${KEY_STAGE_PLACE}_lat", "${KEY_STAGE_PLACE}_lon")
                 ?: place.takeIf { !p.contains("${KEY_STAGE_PLACE}_cleared") },
             stageFahrenheit = if (p.contains(KEY_STAGE_FAHRENHEIT)) p.getBoolean(KEY_STAGE_FAHRENHEIT, false) else fahrenheit,
+            sideIdle = StagePrefs.sideIdle(context),
+            companion = StagePrefs.companion(context),
         )
     }
 
