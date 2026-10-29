@@ -19,17 +19,31 @@ import kotlinx.coroutines.withContext
 
 /**
  * App Thumbnails → Icon pack: any installed launcher icon pack, matched to apps by package name.
- * Apps the pack has no icon for keep their own; the tint suits single-colour packs.
+ * Apps the pack has no icon for keep their own; the tint suits single-colour packs. Packs stay out
+ * of the Library unless shown here, and each can be uninstalled from here.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IconPackSection() {
     val context = LocalContext.current
-    var tick by remember { mutableIntStateOf(0) }
-    val chosen = remember(tick) { IconPackStore.pack(context) }
+    var changed by remember { mutableIntStateOf(0) }
+    // Looks again on return from an uninstall.
+    val tick = rememberResumeTick() + changed
     val tinted = remember(tick) { IconPackStore.tinted(context) }
-    val packs by produceState<List<IconPack>?>(null) {
+    val inLibrary = remember(tick) { IconPackStore.packsInLibrary(context) }
+    val packs by produceState<List<IconPack>?>(null, tick) {
         value = withContext(Dispatchers.IO) { IconPacks.installed(context) }
+    }
+    // A chosen pack that has been uninstalled is no longer chosen.
+    val chosen = remember(tick, packs) {
+        val saved = IconPackStore.pack(context)
+        val installed = packs
+        if (saved != null && installed != null && installed.none { it.packageName == saved }) {
+            IconPackStore.setPack(context, null)
+            null
+        } else {
+            saved
+        }
     }
     // How many of the TV's apps the chosen pack covers; reading a pack's list takes a moment.
     val covered by produceState<Pair<Int, Int>?>(null, chosen) {
@@ -59,13 +73,24 @@ fun IconPackSection() {
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
         SettingsAction("Apps' own icons", selected = chosen == null) {
             IconPackStore.setPack(context, null)
-            tick++
+            changed++
         }
         list.forEach { pack ->
             SettingsAction(pack.label, selected = pack.packageName == chosen) {
                 IconPackStore.setPack(context, pack.packageName)
-                tick++
+                changed++
             }
+        }
+    }
+    Spacer(modifier = Modifier.height(14.dp))
+    SettingsRow("Icon packs are not apps to open, so they stay out of the Library unless shown.")
+    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        SettingsAction("Show in Library", selected = inLibrary) {
+            IconPackStore.setPacksInLibrary(context, !inLibrary)
+            changed++
+        }
+        list.forEach { pack ->
+            SettingsAction("Uninstall ${pack.label}") { uninstallPackage(context, pack.packageName) }
         }
     }
     if (chosen != null) {
@@ -74,7 +99,7 @@ fun IconPackSection() {
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             SettingsAction("Theme colour", selected = tinted) {
                 IconPackStore.setTinted(context, !tinted)
-                tick++
+                changed++
             }
         }
     }

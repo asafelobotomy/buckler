@@ -46,6 +46,8 @@ object IconPacks {
             .sortedBy { it.label.lowercase() }
     }
 
+    fun installedPackages(context: Context): Set<String> = installed(context).mapTo(HashSet()) { it.packageName }
+
     /**
      * The chosen pack's icon for an app, sized for a TV, or null to keep the app's own: no pack
      * chosen, the pack is gone, or it has nothing for this app.
@@ -129,12 +131,18 @@ object IconPackStore {
     private const val PREFS = "icon_pack"
     private const val KEY_PACK = "pack"
     private const val KEY_TINT = "tint"
+    private const val KEY_IN_LIBRARY = "in_library"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun pack(context: Context): String? = prefs(context).getString(KEY_PACK, null)?.takeIf { it.isNotBlank() }
 
     fun setPack(context: Context, pack: String?) = prefs(context).edit().putString(KEY_PACK, pack.orEmpty()).apply()
+
+    /** Whether installed icon packs show in the Library (off: they are not apps to open). */
+    fun packsInLibrary(context: Context): Boolean = prefs(context).getBoolean(KEY_IN_LIBRARY, false)
+
+    fun setPacksInLibrary(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY_IN_LIBRARY, on).apply()
 
     fun tinted(context: Context): Boolean = prefs(context).getBoolean(KEY_TINT, false)
 

@@ -46,8 +46,11 @@ object Shelves {
                 pkgs.mapNotNull { byPkg[it] }.map { it.toShelfItem() }
                     .ifEmpty { apps.filterNot { it.isSystem }.take(6).map { it.toShelfItem() } }
             }
-            ShelfType.LIBRARY ->
-                apps.filterNot { it.isSystem }.map { it.toShelfItem() }
+            ShelfType.LIBRARY -> {
+                // Icon packs have a launcher entry but are not apps to open; hidden unless asked for.
+                val packs = if (IconPackStore.packsInLibrary(context)) emptySet() else IconPacks.installedPackages(context)
+                apps.filterNot { it.isSystem || it.packageName in packs }.map { it.toShelfItem() }
+            }
             ShelfType.RECENTS ->
                 LaunchStats.loadRecents(context).mapNotNull { byPkg[it]?.toShelfItem() }
             ShelfType.WATCH_NEXT -> {
