@@ -30,6 +30,7 @@ def save_host(host: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         if saved_host() != host:
             path.write_text(host + "\n", encoding="utf-8")
+            click.echo(f"(remembering {host} for next time: {path})", err=True)
     except OSError:
         pass
 

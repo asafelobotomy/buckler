@@ -13,6 +13,7 @@ venv/
 journals/*.json
 !journals/.gitkeep
 launcher/.gradle/
+launcher/.kotlin/
 launcher/build/
 launcher/*/build/
 launcher/local.properties

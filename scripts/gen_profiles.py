@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bundle the CLI's profiles and safety lists into the launcher, for its on-TV setup engine.
 
-Writes `launcher/app/src/main/assets/shield_profiles.json` from profiles/*.yaml, the stock
+Writes `launcher/app/src/main/assets/shield_profiles.json` from src/buckler/data/profiles/*.yaml, the stock
 launchers in policy.py and the grants in launcher_ops.py, so the TV and `buckler setup` apply
 the same lists with the same never-touch rules. test_parity checks the file is up to date.
 

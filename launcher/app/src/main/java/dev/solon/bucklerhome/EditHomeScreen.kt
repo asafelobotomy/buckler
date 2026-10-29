@@ -61,7 +61,7 @@ fun EditHomeScreen(
             layout = HomeLayout.load(context)
             return
         }
-        persist(HomeLayout.default(DockPrefs.loadPins(context)))
+        persist(HomeLayout.default(layout.appsPackages()))
     }
 
     fun moveShelf(index: Int, delta: Int) {

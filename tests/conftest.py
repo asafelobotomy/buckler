@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def journals_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     jdir = tmp_path / "journals"
     jdir.mkdir()
@@ -16,6 +16,7 @@ def journals_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr("buckler.launcher_ops.journals_dir", lambda: jdir)
     monkeypatch.setattr("buckler.tune.journals_dir", lambda: jdir)
     monkeypatch.setattr("buckler.setup_wizard.journals_dir", lambda: jdir)
+    monkeypatch.setattr("buckler.home_layout.journals_dir", lambda: jdir)
     return jdir
 
 

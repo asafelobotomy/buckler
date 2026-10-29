@@ -42,15 +42,14 @@ fun CalendarStage(
     onDown: () -> Unit,
     onHold: () -> Unit,
     metrics: StageMetrics,
-    refresh: Any?,
 ) {
-    val agenda by rememberAgenda(refresh, days = 7)
+    val agenda by rememberAgenda(days = 7)
     val now by rememberNow()
     val tight = metrics.cardHeight < 150.dp
     val dayCount = if (metrics.compact) 3 else 4
     val days = (0 until dayCount).map { now.toLocalDate().plusDays(it.toLong()) }
     val tasks = agenda?.tasks.orEmpty()
-    val clock = DateTimeFormatter.ofPattern(if (use24h) "HH:mm" else "h:mm a", currentLocale())
+    val clock = DisplayFormat.clock(use24h, currentLocale())
     // Rows that fit under a day's title: roughly one per 26 dp.
     val rows = ((metrics.cardHeight.value - 60) / 26).toInt().coerceIn(1, 7)
 
@@ -98,7 +97,7 @@ private fun DayColumn(
     val title = when (day) {
         today -> "Today"
         today.plusDays(1) -> "Tomorrow"
-        else -> day.format(DateTimeFormatter.ofPattern("EEE d", currentLocale()))
+        else -> day.format(shortDay(currentLocale()))
     }
     // Events touching this day: all-day ones first, then by start; ones already over today drop out.
     val mine = events.filter { e ->
@@ -133,13 +132,16 @@ private fun RemindersColumn(tasks: List<AgendaTask>, now: ZonedDateTime, clock: 
                 due.toLocalDate().isBefore(today) -> "Overdue"
                 due.toLocalDate() == today -> if (t.dueHasTime) due.format(clock) else "Today"
                 due.toLocalDate() == today.plusDays(1) -> "Tomorrow"
-                else -> due.format(DateTimeFormatter.ofPattern("EEE d", currentLocale()))
+                else -> due.format(shortDay(currentLocale()))
             }
             EntryRow(ColorBrand, label, t.title, faded = false)
         }
         if (shown.size > rows) Text("+${shown.size - rows} more", color = ColorHint, fontSize = 13.sp)
     }
 }
+
+/** "Sat 31": a day within the coming week. */
+private fun shortDay(locale: java.util.Locale): DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d", locale)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

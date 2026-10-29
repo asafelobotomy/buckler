@@ -32,7 +32,8 @@ object ScreensaverImages {
         name.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS
 
     fun uploaded(context: Context): List<File> =
-        uploadDir(context).listFiles { f -> f.isFile && isImageName(f.name) }
+        // An upload in progress is still a zero-byte placeholder: not a photo yet.
+        uploadDir(context).listFiles { f -> f.isFile && isImageName(f.name) && f.length() > 0 }
             ?.sortedBy { it.name }
             .orEmpty()
 

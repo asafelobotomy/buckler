@@ -64,7 +64,8 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
                 val now = DisplayFormat.time(LocalTime.now(), config.use24h)
                 clock.text = if (withDate) "$now\n${DisplayFormat.date(LocalDate.now(), config.dateStyle)}" else now
                 overlayClock.text = now
-                delay(15_000)
+                // Wake on the next minute, so the clock never shows the old one for long.
+                delay(60_000 - System.currentTimeMillis() % 60_000 + 50)
             }
         }
         when (config.mode) {

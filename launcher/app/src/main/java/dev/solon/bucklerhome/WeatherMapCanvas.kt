@@ -89,17 +89,22 @@ fun WeatherMap(place: Place, grid: WeatherGrid?, hour: Int, modifier: Modifier =
     val shown = hour.coerceIn(0, grid.hours.size - 1)
     val layers = remember(grid, shown) { MapLayers.build(grid, shown) }
     val sea = ColorTile
-    val colours = MapColours(
-        sea = sea,
-        land = lerp(sea, ColorText, 0.10f),
-        coast = lerp(sea, ColorText, 0.24f),
-        isobar = ColorMuted.copy(alpha = 0.85f),
-        text = ColorText,
-        // The weather-map convention (blue H, red L) reads on every scheme, even where the
-        // theme's brand and section colours are the same.
-        high = Color(0xFF4F8EF7),
-        low = Color(0xFFE5534B),
-    )
+    val text = ColorText
+    val muted = ColorMuted
+    // Once per scheme: a new MapColours each recomposition would rebuild the whole draw cache.
+    val colours = remember(sea, text, muted) {
+        MapColours(
+            sea = sea,
+            land = lerp(sea, text, 0.10f),
+            coast = lerp(sea, text, 0.24f),
+            isobar = muted.copy(alpha = 0.85f),
+            text = text,
+            // The weather-map convention (blue H, red L) reads on every scheme, even where the
+            // theme's brand and section colours are the same.
+            high = Color(0xFF4F8EF7),
+            low = Color(0xFFE5534B),
+        )
+    }
     val measurer = rememberTextMeasurer()
     Box(modifier.clipToBounds()) {
         Spacer(

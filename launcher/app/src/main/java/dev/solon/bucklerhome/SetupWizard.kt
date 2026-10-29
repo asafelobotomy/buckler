@@ -274,7 +274,7 @@ private fun ApplyStep(apply: ApplyState, context: Context, onFinish: () -> Unit,
     }
 }
 
-private fun openDeveloperOptions(context: Context) = launchFirstThatWorks(
+fun openDeveloperOptions(context: Context) = launchFirstThatWorks(
     context,
     "Developer options",
     listOf(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS), Intent(Settings.ACTION_SETTINGS)),

@@ -106,7 +106,7 @@ private const val GITHUB_TOKEN_URL = "https://github.com/settings/tokens?type=be
 fun ConnectGithubDialog(onDismiss: () -> Unit, onLinked: () -> Unit) {
     val context = LocalContext.current
     TokenDialog(
-        title = "Link GitHub (private repo)",
+        title = "Link GitHub (optional)",
         instructions = "Scan QR → create a fine-grained PAT with Contents + Releases read → paste below.",
         url = GITHUB_TOKEN_URL,
         fieldLabel = "Personal access token",

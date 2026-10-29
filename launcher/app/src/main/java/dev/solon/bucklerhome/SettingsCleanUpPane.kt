@@ -157,7 +157,7 @@ fun CachePane() {
                     AdbSelf.connect(context) { status = "Allow debugging on the TV's prompt…" }.use { it.shell("pm trim-caches 999G") }
                     cleared++
                     "Freed ${StorageUse.size(context, (free() - before).coerceAtLeast(0))}. Apps rebuild what they need."
-                }.getOrElse { if (it is AdbSelf.Failure.NotListening) "Turn on Network debugging first (Developer options)." else "Not cleared: ${it.message}" }
+                }.getOrElse { AdbSelf.explain(it, "Not cleared") }
             }
         }
     }

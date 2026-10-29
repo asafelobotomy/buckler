@@ -32,10 +32,6 @@ class UploadServer(private val context: Context) {
     var port: Int = 0
         private set
 
-    @Volatile
-    var received: Int = 0
-        private set
-
     private var server: ServerSocket? = null
     private val workers = Executors.newFixedThreadPool(WORKERS) { r -> Thread(r, "buckler-upload-conn").apply { isDaemon = true } }
     private val clients = ConcurrentHashMap.newKeySet<Socket>()
@@ -124,22 +120,29 @@ class UploadServer(private val context: Context) {
                 val dest = uniqueFile(dir, name)
                 val tmp = File(dir, dest.name + ".part")
                 var remaining = length
-                tmp.outputStream().use { file ->
-                    val buf = ByteArray(64 * 1024)
-                    while (remaining > 0) {
-                        val n = input.read(buf, 0, minOf(buf.size.toLong(), remaining).toInt())
-                        if (n < 0) break
-                        file.write(buf, 0, n)
-                        remaining -= n
+                var kept = false
+                try {
+                    tmp.outputStream().use { file ->
+                        val buf = ByteArray(64 * 1024)
+                        while (remaining > 0) {
+                            val n = input.read(buf, 0, minOf(buf.size.toLong(), remaining).toInt())
+                            if (n < 0) break
+                            file.write(buf, 0, n)
+                            remaining -= n
+                        }
+                    }
+                    // dest is the empty placeholder uniqueFile created; the finished upload replaces it.
+                    kept = remaining == 0L && tmp.renameTo(dest)
+                } finally {
+                    // A dropped or timed-out phone must not leave an empty "photo" (or a .part) behind.
+                    if (!kept) {
+                        tmp.delete()
+                        dest.delete()
                     }
                 }
-                // dest is the empty placeholder uniqueFile created; the finished upload replaces it.
-                if (remaining == 0L && tmp.renameTo(dest)) {
-                    received++
+                if (kept) {
                     respond(out, 200, "text/plain", "ok")
                 } else {
-                    tmp.delete()
-                    dest.delete()
                     respond(out, 400, "text/plain", "Incomplete upload")
                 }
             }

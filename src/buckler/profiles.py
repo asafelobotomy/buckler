@@ -1,4 +1,4 @@
-"""Load YAML package profiles from profiles/."""
+"""Load YAML package profiles from the bundled data/profiles/."""
 
 from __future__ import annotations
 
@@ -19,8 +19,6 @@ class Profile:
     name: str
     description: str = ""
     packages: list[str] = field(default_factory=list)
-    stock_launcher: str | None = None
-    our_launcher: str | None = None
     path: Path | None = None
 
 
@@ -43,8 +41,6 @@ def load_profile(name: str) -> Profile:
         name=str(data.get("name") or name),
         description=str(data.get("description") or ""),
         packages=[str(p) for p in packages],
-        stock_launcher=data.get("stock_launcher"),
-        our_launcher=data.get("our_launcher"),
         path=path,
     )
 

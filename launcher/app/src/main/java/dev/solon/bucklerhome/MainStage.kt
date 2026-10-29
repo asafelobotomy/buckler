@@ -90,8 +90,8 @@ fun MainStage(
         MainStage.SUGGESTED -> SuggestedStage(
             nowPlaying, stageFocus, onDown, onPickStage, weatherSpan, onPickSpan, metrics,
         )
-        MainStage.GLANCE -> GlanceStage(place, fahrenheit, use24h, stageFocus, onDown, onHold, metrics, refresh = null)
-        MainStage.CALENDAR -> CalendarStage(use24h, stageFocus, onDown, onHold, metrics, refresh = null)
+        MainStage.GLANCE -> GlanceStage(place, fahrenheit, use24h, stageFocus, onDown, onHold, metrics)
+        MainStage.CALENDAR -> CalendarStage(use24h, stageFocus, onDown, onHold, metrics)
         MainStage.WEATHER_MAP -> WeatherMapStage(place, stageFocus, onDown, onHold, metrics)
         MainStage.COMPANION -> CompanionStage(companion, place, stageFocus, onDown, onHold, metrics)
     }

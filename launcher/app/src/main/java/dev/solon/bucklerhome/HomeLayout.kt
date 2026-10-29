@@ -156,9 +156,12 @@ data class HomeLayout(
 
     companion object {
         const val IMPORT_FILE = "home-layout.json"
+        /** `buckler apps` changes only the Apps pins, through this file (see [applyPinsPatch]). */
+        const val PATCH_FILE = "home-layout-patch.json"
         private const val PREFS = "bucklerhome"
         private const val KEY_LAYOUT = "home_layout_json"
         private const val KEY_LAYOUT_CORRUPT = "home_layout_json_corrupt"
+        private const val LEGACY_PINS = "dock_pins"
         private const val TAG = "HomeLayout"
 
         fun defaultShelves(appsPackages: List<String> = DEFAULT_DOCK_PACKAGES): List<ShelfConfig> =
@@ -215,16 +218,24 @@ data class HomeLayout(
 
         fun load(context: Context): HomeLayout {
             importIfPresent(context)
+            return stored(context)
+        }
+
+        /**
+         * The saved layout, without taking a pushed one (which [load] does first). Settings reads
+         * this, so opening a pane never consumes a layout `buckler` pushed for Home.
+         */
+        fun stored(context: Context): HomeLayout {
             val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val raw = prefs.getString(KEY_LAYOUT, null)
             if (!raw.isNullOrBlank()) {
                 return runCatching { fromJson(raw) }.getOrElse { error ->
                     Log.w(TAG, "Stored home layout is corrupt; keeping a copy and resetting", error)
                     prefs.edit().putString(KEY_LAYOUT_CORRUPT, raw).apply()
-                    migrateFromDockPrefs(context)
+                    startFresh(context)
                 }
             }
-            return migrateFromDockPrefs(context)
+            return startFresh(context)
         }
 
         fun save(context: Context, layout: HomeLayout) {
@@ -232,28 +243,82 @@ data class HomeLayout(
                 .edit()
                 .putString(KEY_LAYOUT, layout.toJson().toString())
                 .apply()
-            // Keep legacy dock pins in sync for older code paths
-            DockPrefs.savePins(context, layout.appsPackages())
         }
 
         fun importFile(context: Context): File =
             File(context.getExternalFilesDir(null) ?: context.filesDir, IMPORT_FILE)
 
+        /**
+         * Takes a layout pushed by `buckler`: a whole layout (replacing this one, unless it is
+         * marked `only_if_new` and the TV already has its own), then any pins patch on top.
+         * Returns whether anything changed.
+         */
         fun importIfPresent(context: Context): Boolean {
-            val file = importFile(context)
-            if (!file.isFile) return false
-            val parsed = runCatching { fromJson(file.readText()) }
-                .onFailure { Log.w(TAG, "Ignoring invalid ${file.name}", it) }
-                .getOrNull() ?: return false
-            save(context, parsed)
-            runCatching { file.delete() }
-            return true
+            val dir = importFile(context).parentFile ?: return false
+            var changed = false
+            val file = File(dir, IMPORT_FILE)
+            if (file.isFile) {
+                runCatching {
+                    val text = file.readText()
+                    val onlyIfNew = JSONObject(text).optBoolean("only_if_new")
+                    val hasOwn = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(KEY_LAYOUT)
+                    if (!(onlyIfNew && hasOwn)) {
+                        save(context, fromJson(text))
+                        changed = true
+                    }
+                }.onFailure { Log.w(TAG, "Ignoring invalid ${file.name}", it) }
+                runCatching { file.delete() }
+            }
+            val patch = File(dir, PATCH_FILE)
+            if (patch.isFile) {
+                runCatching {
+                    // Not load(): that imports first, and this is the import.
+                    val current = stored(context)
+                    val pins = applyPinsPatch(current.appsPackages(), JSONObject(patch.readText()))
+                    if (pins != current.appsPackages()) {
+                        save(context, current.withAppsPackages(pins))
+                        changed = true
+                    }
+                }.onFailure { Log.w(TAG, "Ignoring invalid ${patch.name}", it) }
+                runCatching { patch.delete() }
+            }
+            return changed
         }
 
-        private fun migrateFromDockPrefs(context: Context): HomeLayout {
-            val pins = DockPrefs.loadPins(context)
-            val layout = default(pins)
+        /**
+         * `{"schema":1,"apps":[{"op":"replace","from":A,"to":B},{"op":"remove","package":A},
+         * {"op":"append","package":A}]}`: the catalog's dock rules, applied to the pins the TV has
+         * now, so nothing else on Home is touched.
+         */
+        fun applyPinsPatch(pins: List<String>, patch: JSONObject): List<String> {
+            val ops = patch.optJSONArray("apps") ?: return pins
+            val out = pins.toMutableList()
+            for (i in 0 until ops.length()) {
+                val op = ops.optJSONObject(i) ?: continue
+                when (op.optString("op")) {
+                    "replace" -> {
+                        val from = op.optString("from")
+                        val to = op.optString("to").takeIf { it.isNotBlank() } ?: continue
+                        val at = out.indexOf(from)
+                        if (at >= 0) out[at] = to else if (to !in out) out += to
+                    }
+                    "remove" -> out.remove(op.optString("package"))
+                    "append" -> op.optString("package").takeIf { it.isNotBlank() && it !in out }?.let(out::add)
+                }
+            }
+            return out.distinct()
+        }
+
+        /**
+         * The default layout, keeping the pins of a Buckler from before layouts (its "dock_pins"
+         * key, read once and then dropped).
+         */
+        private fun startFresh(context: Context): HomeLayout {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val legacy = prefs.getString(LEGACY_PINS, null)?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+            val layout = default(legacy?.takeIf { it.isNotEmpty() } ?: DEFAULT_DOCK_PACKAGES)
             save(context, layout)
+            prefs.edit().remove(LEGACY_PINS).apply()
             return layout
         }
     }

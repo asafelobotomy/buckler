@@ -61,7 +61,7 @@ object CuratedCovers {
      */
     fun refresh(context: Context): Boolean {
         val headers = CoverAccounts.githubAuthHeaders(context)
-        // Prefer Contents API when a token is present (works for private repos).
+        // Prefer the Contents API when a token is linked (its own, higher rate limit).
         val apiUrl =
             "https://api.github.com/repos/${BuildConfig.GITHUB_REPO}/contents/covers/index.json?ref=main"
         val response = runCatching {
@@ -125,12 +125,14 @@ object CuratedCovers {
             return
         }
         if (reloadFromAssets(context)) return
-        // Last resort: network (may 404 on private repos).
+        // Last resort: the raw file from GitHub.
         val response = runCatching { HttpJson.get(BuildConfig.CURATED_COVERS_URL) }.getOrNull()
         if (response != null && response.code in 200..299 && response.body.isNotBlank()) {
             prefs(context).edit()
                 .putString(KEY_CACHE, response.body)
-                    .apply()
+                // Tagged, or the next APK's bundled copy would silently replace this newer one.
+                .putString(KEY_SOURCE, SOURCE_NETWORK)
+                .apply()
         }
     }
 

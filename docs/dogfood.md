@@ -58,7 +58,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - Long-press / Menu: Open, Change cover, Remove, Move, Pin to Apps, Uninstall (user apps), Info
 - Change cover works **without** linking accounts (icon / banner / curated)
 - Settings → Appearance → App Thumbnails: Connect SteamGridDB (QR) / Connect IGDB (device code when `TWITCH_CLIENT_ID` set)
-- Refresh curated pack succeeds via **bundled asset** even if GitHub raw 404s (private repo)
+- Refresh curated pack succeeds via **bundled asset** even if GitHub is unreachable
 - Update dialog appears when a newer GitHub release has an APK asset; Snooze / Dismiss work
 - Release APK naming: prefer `buckler-home*.apk` on the GitHub Release
 - `buckler check` / `snapshot` / `setup` succeed with `journals/home-layout.json` present

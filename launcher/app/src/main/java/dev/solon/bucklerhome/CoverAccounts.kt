@@ -14,7 +14,7 @@ object CoverAccounts {
     private const val KEY_IGDB_EXPIRES = "cover_account_igdb_expires_at"
     private const val KEY_GITHUB = "cover_account_github_token"
 
-    /** Optional PAT for private-repo OTA + curated covers refresh. */
+    /** Optional GitHub token: raises GitHub's hourly request limit for updates and the covers refresh. */
     fun githubToken(context: Context): String? =
         SecurePrefs.get(context).getString(KEY_GITHUB, null)?.takeIf { it.isNotBlank() }
 

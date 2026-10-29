@@ -52,13 +52,7 @@ JSON with device identity, policy flags (keep AI / Chromecast, disable mics), pr
 
 ## On-TV first-run
 
-`buckler-home` runs a short setup the first time it starts (SharedPreferences `first_run_done`), in four steps: **Welcome**, **Cover layout** (Icon / Poster / Banner and app size), **Shelves** (which ones show), **Done**. It writes Home's layout; it does not apply host profiles or talk to `buckler`. Everything it sets can be changed later in Edit Home or Buckler Settings. No account, no registration telemetry.
-
-To see it again, clear Buckler's data (this resets all of its settings):
-
-```bash
-adb shell pm clear dev.solon.bucklerhome
-```
+`buckler-home` opens its setup wizard the first time it starts, and again from Settings → Setup → *Run setup wizard*. It is the on-TV counterpart of `buckler setup`: *Simple* or *Advanced*, then a *Review* of only what will change, applied over the TV's own Network debugging (the same profiles and never-list as the CLI, journaled so Settings → Setup → *Restore everything* undoes them). See [install.md](install.md) for the steps. No account, no registration telemetry.
 
 ## Disaster path
 

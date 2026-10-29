@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,7 @@ class FakeAdb:
         self.installed: list[str] = []
         self.disabled: list[str] = []
         self.host = "192.168.1.1:5555"
+        self.pushed: dict[str, str] = {}
 
     def package_present(self, package: str) -> bool:
         return False
@@ -38,6 +40,7 @@ class FakeAdb:
         return ""
 
     def push(self, local: str, remote: str) -> str:
+        self.pushed[remote] = Path(local).read_text(encoding="utf-8")
         return remote
 
 
@@ -128,16 +131,17 @@ def test_swap_installs_and_pins(
     apk = tmp_path / "smarttube.apk"
     apk.write_bytes(b"apk")
     monkeypatch.setattr("buckler.wizard_apps.fetch_verified_apk", lambda *_a, **_k: apk)
-    monkeypatch.setattr("buckler.home_layout.journals_dir", lambda: tmp_path / "journals")
     adb = FakeAdb()
     report = WizardReport(host=adb.host, mode="test")
     result = run_app_phases(adb, report, swaps=("smarttube",), push_layout=True)
     assert result["swaps"] == ["smarttube"]
     assert adb.installed == [str(apk)]
     assert adb.disabled == []
-    saved = (tmp_path / "journals" / "home-layout.json").read_text(encoding="utf-8")
-    assert "org.smarttube.stable" in saved
-    assert "com.google.android.youtube.tv" not in saved
+    # Only a pins patch goes to the TV, never a whole layout that would replace its own.
+    (remote, text), = adb.pushed.items()
+    assert remote.endswith("home-layout-patch.json")
+    ops = json.loads(text)["apps"]
+    assert ops == [{"op": "replace", "from": "com.google.android.youtube.tv", "to": "org.smarttube.stable"}]
 
 
 def test_interactive_suggestion_defaults_off() -> None:
@@ -201,6 +205,7 @@ def test_hash_mismatch_deletes_partial(tmp_path: Path, monkeypatch: pytest.Monke
         sha256=_SHA,
         note="test",
     )
+    cache = tmp_path / "cache"
     with pytest.raises(CatalogError, match="sha256"):
-        fetch_verified_apk(entry, tmp_path)
-    assert list(tmp_path.iterdir()) == []
+        fetch_verified_apk(entry, cache)
+    assert list(cache.iterdir()) == []

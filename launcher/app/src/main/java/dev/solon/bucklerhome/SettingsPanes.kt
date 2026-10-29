@@ -45,58 +45,60 @@ fun UpdatesPane(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     key(accountTick) {
-    SectionTitle("Updates")
-    SettingsRow("Current: ${BuildConfig.VERSION_NAME}")
-    SettingsRow(
-        "GitHub token: " +
-            if (CoverAccounts.githubToken(context).isNullOrBlank()) {
-                "not set (needed for private-repo OTA)"
+        // Read once per account change: the token lives in encrypted preferences.
+        val linked = remember { !CoverAccounts.githubToken(context).isNullOrBlank() }
+        SectionTitle("Updates")
+        SettingsRow("Current: ${BuildConfig.VERSION_NAME}")
+        SettingsRow(
+            "GitHub token: " +
+                if (!linked) {
+                    "not set (optional: raises GitHub's hourly limit)"
+                } else {
+                    "linked"
+                },
+        )
+        updateResult?.let { result ->
+            val msg = when (result) {
+                is UpdateCheckResult.Available -> "Update ${result.release.tag} available"
+                UpdateCheckResult.UpToDate -> "Up to date"
+                UpdateCheckResult.Snoozed -> "Snoozed"
+                is UpdateCheckResult.Error -> "Error: ${result.message}"
+            }
+            SettingsRow(msg)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SettingsAction("Check now") {
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        UpdateChecker.check(context, force = true)
+                    }
+                    onResult(result)
+                    if (result is UpdateCheckResult.Available) {
+                        onAvailable(result.release)
+                    }
+                }
+            }
+            // Only while an update prompt is snoozed; otherwise there is nothing to clear.
+            var snoozed by remember { mutableStateOf(UpdatePrefs.snoozeUntil(context) > System.currentTimeMillis()) }
+            if (snoozed) {
+                SettingsAction("Clear snooze") {
+                    UpdatePrefs.clearSnooze(context)
+                    snoozed = false
+                    Toast.makeText(context, "Snooze cleared", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (!linked) {
+                SettingsAction("Link GitHub token") { onConnectGithub() }
             } else {
-                "linked"
-            },
-    )
-    updateResult?.let { result ->
-        val msg = when (result) {
-            is UpdateCheckResult.Available -> "Update ${result.release.tag} available"
-            UpdateCheckResult.UpToDate -> "Up to date"
-            UpdateCheckResult.Snoozed -> "Snoozed"
-            is UpdateCheckResult.Error -> "Error: ${result.message}"
-        }
-        SettingsRow(msg)
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        SettingsAction("Check now") {
-            scope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    UpdateChecker.check(context, force = true)
-                }
-                onResult(result)
-                if (result is UpdateCheckResult.Available) {
-                    onAvailable(result.release)
+                SettingsAction("Disconnect GitHub") {
+                    CoverAccounts.setGithubToken(context, null)
+                    onAccountChanged()
                 }
             }
         }
-        // Only while an update prompt is snoozed; otherwise there is nothing to clear.
-        var snoozed by remember { mutableStateOf(UpdatePrefs.snoozeUntil(context) > System.currentTimeMillis()) }
-        if (snoozed) {
-            SettingsAction("Clear snooze") {
-                UpdatePrefs.clearSnooze(context)
-                snoozed = false
-                Toast.makeText(context, "Snooze cleared", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    Spacer(modifier = Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (CoverAccounts.githubToken(context).isNullOrBlank()) {
-            SettingsAction("Link GitHub token") { onConnectGithub() }
-        } else {
-            SettingsAction("Disconnect GitHub") {
-                CoverAccounts.setGithubToken(context, null)
-                onAccountChanged()
-            }
-        }
-    }
     }
 }
 

@@ -145,7 +145,7 @@ def restore_wizard_cmd(
     "--out",
     type=click.Path(path_type=Path),
     default=None,
-    help="Output path (default: journals/snapshot-*.json).",
+    help="Output path (default: snapshot-*.json in the journals folder).",
 )
 @click.pass_context
 def snapshot_cmd(ctx: click.Context, out: Path | None) -> None:

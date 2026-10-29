@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from buckler.adb import Adb, AdbError
+from buckler.adb import Adb
 from buckler.journal import Journal, journaled_packages
 from buckler.paths import journals_dir, launcher_dir
 from buckler.policy import (
@@ -59,6 +59,8 @@ def build_launcher() -> BuildResult:
         text=True,
         env=env,
         check=False,
+        # A cold build downloads Gradle and dependencies; past half an hour something is stuck.
+        timeout=1800,
     )
     log = (result.stdout or "") + (result.stderr or "")
     if result.returncode != 0:
@@ -200,8 +202,8 @@ def handover(adb: Adb, *, reboot: bool = False) -> HandoverResult:
                 )
             adb.disable_user(stock)
             disabled_stocks.append(stock)
-    except AdbError:
-        # A failure halfway must not leave one stock launcher off with no journal.
+    except BaseException:
+        # A failure or Ctrl-C halfway must not leave one stock launcher off with no journal.
         for pkg in disabled_stocks:
             adb.enable(pkg)
         raise

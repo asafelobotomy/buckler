@@ -96,7 +96,7 @@ fun UpdateAvailableDialog(
                         UpdatePrefs.setSnoozeDays(context, 7)
                         onDismiss()
                     }
-                    SettingsAction("Dismiss") {
+                    SettingsAction("Skip this version") {
                         UpdatePrefs.setIgnoredTag(context, release.tag)
                         onDismiss()
                     }

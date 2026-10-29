@@ -36,18 +36,19 @@ class HeaderLogicTest {
 
     @Test
     fun shuffleTakesTheNextStoryFromEachSource() {
-        val mixed = NewsFeed.interleave(
+        fun group(source: NewsSource, vararg titles: String) = titles.map { Headline(source, it) }
+        val mixed = NewsFeed.interleaveHeadlines(
             listOf(
-                NewsSource.BBC_WORLD to listOf("a1", "a2"),
-                NewsSource.NPR to listOf("b1"),
-                NewsSource.GUARDIAN to listOf("c1", "c2", "c3"),
+                group(NewsSource.BBC_WORLD, "a1", "a2"),
+                group(NewsSource.NPR, "b1"),
+                group(NewsSource.GUARDIAN, "c1", "c2", "c3"),
             ),
         )
         assertEquals(listOf("a1", "b1", "c1", "a2", "c2", "c3"), mixed.map { it.title })
         assertEquals(NewsSource.NPR, mixed[1].source)
         assertEquals(NewsSource.GUARDIAN, mixed[2].source)
         assertTrue(mixed.zipWithNext().take(4).all { (a, b) -> a.source != b.source })
-        assertEquals(emptyList<Headline>(), NewsFeed.interleave(emptyList()))
+        assertEquals(emptyList<Headline>(), NewsFeed.interleaveHeadlines(emptyList()))
     }
 
     @Test
@@ -101,14 +102,14 @@ class HeaderLogicTest {
             <item><link>x</link></item>
             </channel></rss>
         """.trimIndent()
-        val titles = NewsFeed.parseHeadlines(xml, 10)
+        val titles = NewsFeed.parseStories(xml, 10).map { it.title }
         assertEquals(listOf("Fish & chips win", "Tom & Jerry's \"big\" day"), titles)
     }
 
     @Test
     fun atomEntriesAndLimitWork() {
         val xml = (1..5).joinToString("") { "<entry><title type=\"html\">T$it</title></entry>" }
-        assertEquals(listOf("T1", "T2"), NewsFeed.parseHeadlines(xml, 2))
+        assertEquals(listOf("T1", "T2"), NewsFeed.parseStories(xml, 2).map { it.title })
     }
 
     @Test

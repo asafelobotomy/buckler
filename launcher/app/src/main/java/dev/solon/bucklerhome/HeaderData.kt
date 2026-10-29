@@ -31,12 +31,20 @@ private object HeaderCache {
 /**
  * Fetches every [everyMs] (or [REFRESH_RETRY_MS] after a failure) while [visible], i.e. Home is on
  * screen. Hidden behind an app or the screensaver it stops; back on screen it fetches at once only
- * if the last success is older than [everyMs], otherwise when that runs out.
+ * if the last success is older than [everyMs], otherwise when that runs out. With nothing [shown]
+ * for this key yet (a new city, or a stage switched back to) it fetches at once, whatever the age.
  */
-private suspend fun <T : Any> poll(key: String, visible: Boolean, everyMs: Long, fetch: () -> T?, onFresh: suspend (T) -> Unit) {
+private suspend fun <T : Any> poll(
+    key: String,
+    visible: Boolean,
+    everyMs: Long,
+    shown: Boolean,
+    fetch: () -> T?,
+    onFresh: suspend (T) -> Unit,
+) {
     if (!visible) return
     val age = System.currentTimeMillis() - (HeaderCache.fetchedAt[key] ?: 0L)
-    if (age < everyMs) delay(everyMs - age)
+    if (shown && age < everyMs) delay(everyMs - age)
     while (true) {
         val fresh = withContext(Dispatchers.IO) { fetch() }
         if (fresh != null) {
@@ -55,11 +63,10 @@ fun rememberWeather(place: Place?): State<Weather?> {
         place,
         visible,
     ) {
-        if (place == null) {
-            value = null
-            return@produceState
-        }
-        poll("weather:$place", visible, REFRESH_OK_MS, { WeatherClient.fetch(place) }) { fresh ->
+        // produceState keeps the last key's value: show this place's own, or nothing.
+        value = HeaderCache.weather?.takeIf { it.first == place }?.second
+        if (place == null) return@produceState
+        poll("weather:$place", visible, REFRESH_OK_MS, value != null, { WeatherClient.fetch(place) }) { fresh ->
             HeaderCache.weather = place to fresh
             value = fresh
         }
@@ -74,12 +81,10 @@ fun rememberForecast(place: Place?): State<Forecast?> {
         place,
         visible,
     ) {
-        if (place == null) {
-            value = null
-            return@produceState
-        }
+        value = HeaderCache.forecast?.takeIf { it.first == place }?.second
+        if (place == null) return@produceState
         val fetch = { WeatherClient.fetchForecast(place)?.takeIf { it.hours.isNotEmpty() || it.days.isNotEmpty() } }
-        poll("forecast:$place", visible, REFRESH_OK_MS, fetch) { fresh ->
+        poll("forecast:$place", visible, REFRESH_OK_MS, value != null, fetch) { fresh ->
             HeaderCache.forecast = place to fresh
             value = fresh
         }
@@ -96,12 +101,11 @@ fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> {
         visible,
     ) {
         val key = query?.cacheKey
-        if (query == null || key == null) {
-            value = emptyList()
-            return@produceState
-        }
+        // produceState keeps the last key's headlines: start from this key's own.
+        value = key?.let { HeaderCache.news[it] }.orEmpty()
+        if (query == null || key == null) return@produceState
         if (value.isEmpty()) value = withContext(Dispatchers.IO) { HeadlineStore.load(context, key) }
-        poll("news:$key", visible, REFRESH_NEWS_MS, { NewsFeed.load(query).ifEmpty { null } }) { fresh ->
+        poll("news:$key", visible, REFRESH_NEWS_MS, value.isNotEmpty(), { NewsFeed.load(query).ifEmpty { null } }) { fresh ->
             HeaderCache.news[key] = fresh
             value = fresh
             withContext(Dispatchers.IO) { HeadlineStore.save(context, key, fresh) }

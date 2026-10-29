@@ -19,24 +19,26 @@ data class AgendaSnapshot(val events: List<AgendaEvent>, val tasks: List<AgendaT
 
 /** Last results, so coming back to Home shows them at once instead of a blank. */
 private object StageCache {
-    var glance: Pair<Place, GlanceWeather>? = null
+    /** By place: the Side Stage follows the header's city, the Main Stage can have its own. */
+    val glance = HashMap<Place, Pair<GlanceWeather, Long>>()
     var agenda: AgendaSnapshot? = null
-    var glanceAt = 0L
 }
 
 /** At a Glance's weather for [place], fetched while Home is on screen (every 30 minutes). */
 @Composable
 fun rememberGlanceWeather(place: Place?): State<GlanceWeather?> {
     val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
-    return produceState(StageCache.glance?.takeIf { it.first == place }?.second, place, visible) {
+    return produceState(place?.let { StageCache.glance[it]?.first }, place, visible) {
+        // produceState keeps the last key's value: show this place's own, or nothing.
+        val cached = place?.let { StageCache.glance[it] }
+        value = cached?.first
         if (place == null || !visible) return@produceState
-        val age = System.currentTimeMillis() - StageCache.glanceAt
-        if (StageCache.glance?.first == place && age < WEATHER_EVERY_MS) delay(WEATHER_EVERY_MS - age)
+        val age = System.currentTimeMillis() - (cached?.second ?: 0L)
+        if (cached != null && age < WEATHER_EVERY_MS) delay(WEATHER_EVERY_MS - age)
         while (true) {
             val fresh = withContext(Dispatchers.IO) { GlanceWeatherClient.fetch(place) }
             if (fresh != null) {
-                StageCache.glance = place to fresh
-                StageCache.glanceAt = System.currentTimeMillis()
+                StageCache.glance[place] = fresh to System.currentTimeMillis()
                 value = fresh
             }
             delay(if (fresh != null) WEATHER_EVERY_MS else RETRY_MS)
@@ -45,14 +47,14 @@ fun rememberGlanceWeather(place: Place?): State<GlanceWeather?> {
 }
 
 /**
- * The calendar and reminders, re-read every 5 minutes while Home is on screen and whenever
- * [refresh] changes (Home resuming, a reminder ticked off). Reading is local and quick.
+ * The calendar and reminders, re-read every 5 minutes while Home is on screen and each time it
+ * comes back (from Settings, after ticking off a reminder). Reading is local and quick.
  */
 @Composable
-fun rememberAgenda(refresh: Any?, days: Long = 7): State<AgendaSnapshot?> {
+fun rememberAgenda(days: Long = 7): State<AgendaSnapshot?> {
     val context = LocalContext.current
     val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
-    return produceState(StageCache.agenda, refresh, visible, days) {
+    return produceState(StageCache.agenda, visible, days) {
         if (!visible) return@produceState
         while (true) {
             val fresh = withContext(Dispatchers.IO) { readAgenda(context, days) }

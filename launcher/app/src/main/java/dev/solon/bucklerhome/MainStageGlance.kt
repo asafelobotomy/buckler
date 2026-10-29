@@ -52,15 +52,17 @@ fun rememberNow(): State<ZonedDateTime> = produceState(ZonedDateTime.now()) {
     }
 }
 
-/** At a Glance's lines for [place], or empty until something is known. */
+/** At a Glance for [place]: its lines are empty until something is known. */
 @Composable
-fun rememberGlanceLines(place: Place?, use24h: Boolean, fahrenheit: Boolean, refresh: Any?): Pair<GlanceWeather?, List<GlanceLine>> {
+fun rememberGlance(place: Place?, use24h: Boolean, fahrenheit: Boolean): Glance {
     val weather by rememberGlanceWeather(place)
-    val agenda by rememberAgenda(refresh, days = 2)
+    val agenda by rememberAgenda(days = 2)
     val now by rememberNow()
-    val lines = GlanceRules.lines(now, agenda?.events.orEmpty(), agenda?.tasks.orEmpty(), weather, use24h, fahrenheit)
-    return weather to lines
+    return Glance(now, weather, GlanceRules.lines(now, agenda?.events.orEmpty(), agenda?.tasks.orEmpty(), weather, use24h, fahrenheit))
 }
+
+/** What At a Glance shows: the time it was worked out, the weather, and its lines. */
+data class Glance(val now: ZonedDateTime, val weather: GlanceWeather?, val lines: List<GlanceLine>)
 
 /**
  * Main Stage → At a Glance: the date and the weather now on the left, then what matters next
@@ -76,10 +78,8 @@ fun GlanceStage(
     onDown: () -> Unit,
     onHold: () -> Unit,
     metrics: StageMetrics,
-    refresh: Any?,
 ) {
-    val (weather, lines) = rememberGlanceLines(place, use24h, fahrenheit, refresh)
-    val now by rememberNow()
+    val (now, weather, lines) = rememberGlance(place, use24h, fahrenheit)
     val tight = metrics.cardHeight < 130.dp
     val shown = lines.take(if (tight) 2 else if (metrics.cardHeight < 190.dp) 3 else 4)
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -143,12 +143,8 @@ private fun GlanceRow(line: GlanceLine, size: androidx.compose.ui.unit.TextUnit)
 /** The Side Stage's At a Glance: one line at a time, turning over every few seconds. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun GlanceSide(config: DisplayConfig, refresh: Any?, modifier: Modifier = Modifier) {
-    val (weather, lines) = rememberGlanceLines(config.place, config.use24h, config.fahrenheit, refresh)
-    val pool = lines.ifEmpty {
-        weather?.let { listOf(GlanceRules.weatherLine(ZonedDateTime.now(), it, DateTimeFormatter.ofPattern("HH:mm"), config.fahrenheit)) }
-            .orEmpty()
-    }
+fun GlanceSide(config: DisplayConfig, modifier: Modifier = Modifier) {
+    val pool = rememberGlance(config.place, config.use24h, config.fahrenheit).lines
     val index by produceState(0, pool.size) {
         while (pool.size > 1) {
             delay(SIDE_ROTATE_MS)

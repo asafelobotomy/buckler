@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -35,9 +36,11 @@ def default_home_layout(
     *,
     layout: str = "banner",
     packages: list[str] | None = None,
+    only_if_new: bool = False,
 ) -> dict[str, Any]:
+    """Buckler's starting layout. ``only_if_new``: the TV takes it only if it has no layout of its own."""
     pkgs = packages if packages is not None else list(DEFAULT_DOCK)
-    return {
+    doc: dict[str, Any] = {
         "schema": 1,
         "layout": layout,
         "suggested_feed_url": None,
@@ -79,6 +82,9 @@ def default_home_layout(
             },
         ],
     }
+    if only_if_new:
+        doc["only_if_new"] = True
+    return doc
 
 
 def validate_home_layout(doc: dict[str, Any]) -> None:
@@ -140,6 +146,37 @@ def write_home_layout(path: Path | None = None, doc: dict[str, Any] | None = Non
 
 def device_layout_path() -> str:
     return f"/sdcard/{DEVICE_RELATIVE}"
+
+
+DEVICE_PATCH_RELATIVE = "Android/data/dev.solon.bucklerhome/files/home-layout-patch.json"
+PIN_OPS = ("replace", "remove", "append")
+
+
+def pins_patch(ops: list[dict[str, str]]) -> dict[str, Any]:
+    """A patch that changes only the Apps pins, applied by buckler-home to the pins it has now.
+
+    Each op is ``{"op": "replace", "from": A, "to": B}``, ``{"op": "remove", "package": A}`` or
+    ``{"op": "append", "package": A}``, the catalog's dock rules, so nothing else on Home changes.
+    """
+    for i, op in enumerate(ops):
+        if op.get("op") not in PIN_OPS:
+            raise HomeLayoutError(f"apps[{i}].op must be one of {PIN_OPS}")
+        names = [op.get(k) for k in ("from", "to", "package") if k in op]
+        if not names or not all(isinstance(n, str) and n for n in names):
+            raise HomeLayoutError(f"apps[{i}] needs package names")
+    return {"schema": 1, "apps": ops}
+
+
+def push_pins_patch(adb: Adb, ops: list[dict[str, str]]) -> str:
+    """Push a pins patch (see [pins_patch]); returns the path on the TV."""
+    doc = pins_patch(ops)
+    remote = f"/sdcard/{DEVICE_PATCH_RELATIVE}"
+    with tempfile.TemporaryDirectory() as tmp:
+        local = Path(tmp) / "home-layout-patch.json"
+        local.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+        adb.shell("mkdir", "-p", remote.rsplit("/", 1)[0], check=False)
+        adb.push(str(local), remote)
+    return remote
 
 
 def push_home_layout(adb: Adb, local: Path) -> str:

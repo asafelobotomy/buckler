@@ -136,16 +136,12 @@ object NewsFeed {
      * Round-robin: the first story of each source, then the second of each, and so on. A source
      * that runs out is skipped, so neighbouring stories stay from different sources.
      */
-    fun interleave(groups: List<Pair<NewsSource, List<String>>>): List<Headline> =
-        interleaveHeadlines(groups.map { (source, titles) -> titles.map { Headline(source, it) } })
-
     fun interleaveHeadlines(groups: List<List<Headline>>): List<Headline> {
-        val columns = groups
         val out = ArrayList<Headline>()
         var row = 0
         while (true) {
             var added = false
-            for (column in columns) {
+            for (column in groups) {
                 if (row < column.size) {
                     out += column[row]
                     added = true
@@ -166,11 +162,10 @@ object NewsFeed {
     private val cdataRe = Regex("<!\\[CDATA\\[(.*?)]]>", setOf(RegexOption.DOT_MATCHES_ALL))
     private val tagRe = Regex("<[^>]+>")
 
-    /** Tolerant RSS 2.0 / Atom title extraction (no XML parser, so it is unit-testable on the JVM). */
-    fun parseHeadlines(xml: String, limit: Int): List<String> =
-        parseStories(xml, limit).map { it.title }
-
-    /** Title, a short summary and an image URL when the item carries one. */
+    /**
+     * Tolerant RSS 2.0 / Atom parsing (no XML parser, so it is unit-testable on the JVM): title, a
+     * short summary and an image URL when the item carries one.
+     */
     fun parseStories(xml: String, limit: Int): List<NewsStory> =
         itemRe.findAll(xml)
             .mapNotNull { item -> storyFrom(item.groupValues[2]) }

@@ -1,14 +1,14 @@
 name: release
 
 # Publishes a GitHub release whenever main carries a version with no tag yet: bump the version in
-# pyproject.toml and launcher/app/build.gradle.kts (they must match), push, and this tags
-# v<version> and uploads buckler-home.apk, its .sha256 and the CLI wheel (scripts/release.py).
+# pyproject.toml, src/buckler/__init__.py and launcher/app/build.gradle.kts (they must match), push,
+# and once ci passes for that commit this tags v<version> and uploads buckler-home.apk, its .sha256
+# and the CLI wheel (scripts/release.py). A red ci never releases.
 on:
-  push:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
     branches: [main]
-    paths:
-      - pyproject.toml
-      - launcher/app/build.gradle.kts
   workflow_dispatch:
 
 permissions:
@@ -20,15 +20,27 @@ concurrency:
 
 jobs:
   release:
+    # Only after a green ci on a push to main (or by hand).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: New version?
         id: version
         run: |
+          # Release exactly what ci tested: if main has moved on, that newer commit's own run decides.
+          tested="${{ github.event.workflow_run.head_sha }}"
+          if [ -n "$tested" ] && [ "$(git rev-parse HEAD)" != "$tested" ]; then
+            echo "main moved on from $tested; its own ci run will release."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           v=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
           echo "version=$v" >> "$GITHUB_OUTPUT"
           if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then
@@ -48,8 +60,8 @@ jobs:
             echo "::error::The BUCKLER_KEYSTORE_B64 and BUCKLER_KEYSTORE_PASSWORD secrets are missing (README → Releasing)."
             exit 1
           fi
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
           umask 077
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
           {
             echo "storeFile=$RUNNER_TEMP/release.jks"
             echo "storePassword=$KEYSTORE_PASSWORD"
@@ -57,11 +69,14 @@ jobs:
             echo "keyPassword=$KEYSTORE_PASSWORD"
           } > launcher/keystore.properties
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         if: steps.version.outputs.new == 'true'
         with:
           distribution: temurin
           java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        if: steps.version.outputs.new == 'true'
 
       - name: Android SDK (preinstalled on the runner)
         if: steps.version.outputs.new == 'true'
@@ -70,7 +85,7 @@ jobs:
           yes | "$sdkmanager" --licenses > /dev/null || true
           "$sdkmanager" "platforms;android-37.0" "build-tools;36.0.0" > /dev/null
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         if: steps.version.outputs.new == 'true'
 
       - name: Build, check the signer and publish

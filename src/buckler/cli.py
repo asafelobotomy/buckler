@@ -19,6 +19,7 @@ from buckler.ops import (
     restore_all_journals,
     restore_journal,
 )
+from buckler.paths import journals_dir
 from buckler.policy import verify_ai_stack
 from buckler.profiles import list_profiles
 
@@ -117,7 +118,7 @@ def restore_cmd(ctx: click.Context, journal_path: Path | None, restore_all: bool
         if restore_all:
             results = restore_all_journals(make_adb(ctx.obj["host"]))
             if not results:
-                raise click.ClickException("No journals found under journals/")
+                raise click.ClickException(f"No journals found in {journals_dir()}")
             for path, restored in results:
                 click.echo(f"restored from {path}:")
                 for pkg in restored:
@@ -127,7 +128,7 @@ def restore_cmd(ctx: click.Context, journal_path: Path | None, restore_all: bool
             return
         path = journal_path or latest_journal()
         if path is None:
-            raise click.ClickException("No journals found under journals/")
+            raise click.ClickException(f"No journals found in {journals_dir()}")
         restored = restore_journal(make_adb(ctx.obj["host"]), path)
     except AdbError as exc:
         raise click.ClickException(str(exc)) from exc

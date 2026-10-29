@@ -121,3 +121,40 @@ class HomeLayoutTest {
         assertTrue(posterOnly.urlFor(CoverLayout.ICON) == null)
     }
 }
+
+class PinsPatchTest {
+    private fun patch(vararg ops: String) = org.json.JSONObject("""{"schema":1,"apps":[${ops.joinToString(",")}]}""")
+
+    @Test
+    fun aSwapTakesItsStockAppsPlaceAndNothingElseMoves() {
+        val pins = listOf("a.tv", "com.google.android.youtube.tv", "b.tv")
+        val out = HomeLayout.applyPinsPatch(
+            pins,
+            patch("""{"op":"replace","from":"com.google.android.youtube.tv","to":"org.smarttube.stable"}"""),
+        )
+        assertEquals(listOf("a.tv", "org.smarttube.stable", "b.tv"), out)
+    }
+
+    @Test
+    fun removeAppendAndRepeatsAreSafe() {
+        val pins = listOf("a.tv", "com.google.android.videos")
+        val out = HomeLayout.applyPinsPatch(
+            pins,
+            patch(
+                """{"op":"remove","package":"com.google.android.videos"}""",
+                """{"op":"append","package":"com.limelight"}""",
+                """{"op":"append","package":"a.tv"}""",
+                """{"op":"replace","from":"not.pinned","to":"org.example"}""",
+                """{"op":"unknown","package":"x.y"}""",
+            ),
+        )
+        // A swap whose stock app isn't pinned still pins the new app, at the end.
+        assertEquals(listOf("a.tv", "com.limelight", "org.example"), out)
+    }
+
+    @Test
+    fun aPatchWithoutOpsChangesNothing() {
+        val pins = listOf("a.tv")
+        assertEquals(pins, HomeLayout.applyPinsPatch(pins, org.json.JSONObject("""{"schema":1}""")))
+    }
+}

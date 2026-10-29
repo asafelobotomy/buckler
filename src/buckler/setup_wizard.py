@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from buckler.adb import Adb
-from buckler.home_layout import push_home_layout, write_home_layout
+from buckler.home_layout import default_home_layout, push_home_layout, write_home_layout
 from buckler.journal import Journal, iter_journals
 from buckler.launcher_ops import build_launcher, handover, install_launcher
 from buckler.ops import apply_profile, format_probe, probe
@@ -265,7 +265,8 @@ def run_setup(
             push_layout = not skip_home_layout
             if push_layout:
                 try:
-                    local = write_home_layout()
+                    # Buckler's defaults, taken only by a TV that has no layout of its own yet.
+                    local = write_home_layout(doc=default_home_layout(only_if_new=True))
                     remote = push_home_layout(adb, local)
                     report.add("home_layout", True, remote)
                     _echo(echo, f"  home-layout → {remote}")

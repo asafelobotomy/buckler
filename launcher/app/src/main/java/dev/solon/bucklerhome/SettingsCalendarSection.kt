@@ -82,7 +82,7 @@ fun CalendarSection() {
                         ShieldJournal.remove(context, GOOGLE_CALENDAR_SYNC)
                         SetupState.setIntendedOff(context, SetupState.intendedOff(context) - GOOGLE_CALENDAR_SYNC)
                         "Google Calendar Sync is on."
-                    }.getOrElse { if (it is AdbSelf.Failure.NotListening) "Turn on Network debugging first." else "Not turned on: ${it.message}" }
+                    }.getOrElse { AdbSelf.explain(it, "Not turned on") }
                 }
                 tick++
             }
@@ -149,11 +149,11 @@ private fun RemindersEditor(tick: Int, onChanged: () -> Unit) {
     }
 }
 
-/** Quick due choices, since typing a date with a remote is slow. */
+/** Quick due choices, since typing a date with a remote is slow. Tonight is 20:00, tomorrow morning 09:00. */
 enum class DuePreset(val label: String) {
     TODAY("Today"),
-    TONIGHT("Tonight 20:00"),
-    TOMORROW("Tomorrow 09:00"),
+    TONIGHT("Tonight"),
+    TOMORROW("Tomorrow morning"),
     WEEKEND("Saturday"),
     SOMEDAY("Someday"),
     ;

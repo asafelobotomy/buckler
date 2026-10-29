@@ -105,7 +105,14 @@ fun CompanionScene(kind: CompanionKind, weatherCode: Int?, isDay: Boolean, modif
     val phase = rememberDayPhase()
     val sky = Sky.of(weatherCode)
     val clock = rememberSceneClock()
-    val ink = SceneInk(ColorText, ColorMuted, ColorBrand, ColorTile, ColorSection, ColorHint)
+    val text = ColorText
+    val muted = ColorMuted
+    val brand = ColorBrand
+    val tile = ColorTile
+    val section = ColorSection
+    val hint = ColorHint
+    // Once per scheme, so the scene's draw cache isn't rebuilt on every recomposition.
+    val ink = remember(text, muted, brand, tile, section, hint) { SceneInk(text, muted, brand, tile, section, hint) }
     Spacer(
         modifier
             .fillMaxSize()

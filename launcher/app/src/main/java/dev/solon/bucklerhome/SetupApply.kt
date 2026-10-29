@@ -93,7 +93,6 @@ object SetupApply {
         val pins = SetupApps.applyDock(layout.appsPackages(), chosen)
         if (pins != layout.appsPackages()) {
             HomeLayout.save(context, layout.withAppsPackages(pins))
-            DockPrefs.savePins(context, pins)
         }
         if (to.iconPack.isBlank() || SetupApps.installed(context, to.iconPack)) {
             IconPackStore.setPack(context, to.iconPack.ifBlank { null })
@@ -137,10 +136,11 @@ object SetupApply {
             step("Giving Buckler its permissions…")
             if (ShieldOps.restartsOnGrant(context)) {
                 SetupState.saveForResume(context, to)
-                adb.shell(
+                val relaunch = adb.shell(
                     "nohup sh -c 'sleep 2; am start -n ${context.packageName}/.MainActivity --ez ${MainActivity.EXTRA_SETUP} true' " +
                         ">/dev/null 2>&1 &",
                 )
+                if (!relaunch.ok) done += "Buckler may not reopen by itself after its restart: open it from Home."
             }
             val failed = ops.grantBuckler()
             done += if (failed.isEmpty()) "Permissions given." else "Permissions not given: ${failed.joinToString()}"
@@ -192,10 +192,14 @@ object SetupApply {
                 step("Setting Buckler's screensaver…")
                 val dream = SetupState.dreamComponent(context)
                 val ok = runCatching {
-                    Settings.Secure.putString(resolver, "screensaver_components", dream)
-                    Settings.Secure.putString(resolver, "screensaver_default_component", dream)
-                    Settings.Secure.putInt(resolver, "screensaver_enabled", 1)
-                }.isSuccess || adb.shell("settings put secure screensaver_components $dream").ok
+                    check(Settings.Secure.putString(resolver, "screensaver_components", dream))
+                    check(Settings.Secure.putString(resolver, "screensaver_default_component", dream))
+                    check(Settings.Secure.putInt(resolver, "screensaver_enabled", 1))
+                }.isSuccess || adb.shell(
+                    "settings put secure screensaver_components $dream && " +
+                        "settings put secure screensaver_default_component $dream && " +
+                        "settings put secure screensaver_enabled 1",
+                ).ok
                 done += if (ok) "Buckler's screensaver is the TV's screensaver." else "The screensaver could not be set."
             }
             if (SetupState.backdropOn(context)) {

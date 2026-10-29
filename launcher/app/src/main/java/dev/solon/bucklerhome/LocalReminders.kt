@@ -33,18 +33,22 @@ object LocalReminders {
     fun open(context: Context, zone: ZoneId = ZoneId.systemDefault()): List<AgendaTask> =
         all(context).filter { !it.done }.map { AgendaTask(it.title, it.due?.atZone(zone), it.dueHasTime, "Buckler") }
 
+    @Synchronized
     fun add(context: Context, title: String, due: LocalDateTime?, dueHasTime: Boolean) {
         val text = title.trim()
         if (text.isEmpty()) return
         save(context, all(context) + LocalReminder(System.currentTimeMillis(), text, due, dueHasTime))
     }
 
+    @Synchronized
     fun setDone(context: Context, id: Long, done: Boolean, now: Long = System.currentTimeMillis()) =
         save(context, all(context).map { if (it.id == id) it.copy(doneAt = if (done) now else null) else it })
 
+    @Synchronized
     fun remove(context: Context, id: Long) = save(context, all(context).filterNot { it.id == id })
 
     /** Drops reminders ticked off more than a day ago. */
+    @Synchronized
     fun tidy(context: Context, now: Long = System.currentTimeMillis()) {
         val all = all(context)
         val keep = all.filterNot { r -> r.doneAt != null && now - r.doneAt > DAY_MS }

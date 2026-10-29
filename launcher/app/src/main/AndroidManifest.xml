@@ -66,6 +66,8 @@
     <application
         android:name=".BucklerApp"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:banner="@drawable/banner_buckler"
         android:icon="@drawable/ic_mark_buckler"
         android:roundIcon="@drawable/ic_mark_buckler"
@@ -77,8 +79,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"
-            android:screenOrientation="landscape">
+            android:launchMode="singleTask">
             <intent-filter android:priority="1">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
@@ -89,8 +90,7 @@
         <activity
             android:name=".BucklerSettingsActivity"
             android:exported="true"
-            android:label="@string/settings_activity_label"
-            android:screenOrientation="landscape" />
+            android:label="@string/settings_activity_label" />
 
         <!--
           App-list entries, one pair per colour scheme so the icon follows Settings → Appearance
@@ -269,8 +269,7 @@
 
         <activity
             android:name=".ScreensaverPreviewActivity"
-            android:exported="false"
-            android:screenOrientation="landscape" />
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

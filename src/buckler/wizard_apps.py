@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import shutil
 import urllib.request
 from collections.abc import Callable
@@ -11,14 +10,8 @@ from pathlib import Path
 from typing import Protocol
 
 from buckler.adb import Adb
-from buckler.app_catalog import CatalogEntry, CatalogError, apply_dock, load_catalog
-from buckler.home_layout import (
-    DEFAULT_DOCK,
-    default_home_layout,
-    default_layout_path,
-    push_home_layout,
-    write_home_layout,
-)
+from buckler.app_catalog import CatalogEntry, CatalogError, load_catalog
+from buckler.home_layout import push_pins_patch
 from buckler.paths import apk_cache_dir
 from buckler.wizard_phases import banner_for
 
@@ -197,6 +190,19 @@ def _install_entry(
     return True
 
 
+def dock_ops(chosen: list[CatalogEntry]) -> list[dict[str, str]]:
+    """The catalog's dock rules as pin operations, applied on the TV to the pins it has now."""
+    ops: list[dict[str, str]] = []
+    for entry in chosen:
+        if entry.dock == "replace-pin" and entry.package:
+            ops.append({"op": "replace", "from": entry.stock_package, "to": entry.package})
+        elif entry.dock == "unpin-only" and entry.stock_package:
+            ops.append({"op": "remove", "package": entry.stock_package})
+        elif entry.package:
+            ops.append({"op": "append", "package": entry.package})
+    return ops
+
+
 def _push_dock(
     adb: Adb,
     report: Reporter,
@@ -206,53 +212,24 @@ def _push_dock(
     push_layout: bool,
     echo: Echo | None,
 ) -> None:
-    if not chosen:
+    ops = dock_ops(chosen)
+    if not ops:
         return
-    updated = apply_dock(_base_dock(), chosen)
-    if updated == _base_dock():
-        return
-    shown = " ".join(updated)
+    shown = ", ".join(f"{o['op']} {o.get('package') or o.get('to')}" for o in ops)
     if dry_run or not push_layout:
         why = "dry-run" if dry_run else "home layout not pushed"
         report.add("home_layout_apps", True, f"skipped ({why}): {shown}", skipped=True)
         _echo(echo, f"  dock skipped ({why})")
         return
     try:
-        local = _write_dock(updated)
-        remote = push_home_layout(adb, local)
+        remote = push_pins_patch(adb, ops)
     except Exception as exc:  # noqa: BLE001
         report.add("home_layout_apps", False, str(exc))
         _echo(echo, f"  dock FAIL {exc}")
         return
-    report.add("home_layout_apps", True, remote)
-    _echo(echo, f"  dock → {remote}")
-
-
-def _base_dock() -> list[str]:
-    path = default_layout_path()
-    if not path.is_file():
-        return list(DEFAULT_DOCK)
-    try:
-        doc = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return list(DEFAULT_DOCK)
-    for shelf in doc.get("shelves", []):
-        if isinstance(shelf, dict) and shelf.get("id") == "apps":
-            packages = shelf.get("packages") or []
-            if isinstance(packages, list) and all(isinstance(pkg, str) for pkg in packages):
-                return list(packages)
-    return list(DEFAULT_DOCK)
-
-
-def _write_dock(packages: list[str]) -> Path:
-    path = default_layout_path()
-    if path.is_file():
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        for shelf in doc.get("shelves", []):
-            if isinstance(shelf, dict) and shelf.get("id") == "apps":
-                shelf["packages"] = packages
-        return write_home_layout(path, doc)
-    return write_home_layout(path, default_home_layout(packages=packages))
+    # Only the Apps pins change; the rest of the TV's Home stays as it is.
+    report.add("home_layout_apps", True, f"{shown} → {remote}")
+    _echo(echo, f"  dock: {shown}")
 
 
 def _sha256(path: Path) -> str:

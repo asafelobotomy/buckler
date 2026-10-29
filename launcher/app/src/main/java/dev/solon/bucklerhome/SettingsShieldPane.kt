@@ -50,14 +50,9 @@ fun ShieldPane() {
                     AdbSelf.connect(context) { status = "Allow debugging on the TV's prompt (tick Always allow)." }
                         .use { adb -> work(ShieldOps(context, adb)) }
                         .also { connected = true }
-                } catch (e: AdbSelf.Failure.NotListening) {
-                    connected = false
-                    "Network debugging is off. Turn it on in Developer options, then connect."
-                } catch (e: AdbSelf.Failure.NotAllowed) {
-                    connected = false
-                    "The TV did not allow Buckler. Connect again and choose Allow."
                 } catch (e: Exception) {
-                    "Stopped: ${e.message ?: e.javaClass.simpleName}"
+                    if (e is AdbSelf.Failure) connected = false
+                    AdbSelf.explain(e)
                 }
             }
             journal = ShieldJournal.all(context).size
@@ -98,13 +93,7 @@ fun ShieldPane() {
         SettingsAction(if (connected) "Check connection" else "Connect") {
             run("Connecting") { ops -> "Connected. Home is ${ops.homePackage() ?: "unknown"}." }
         }
-        SettingsAction("Developer options") {
-            launchFirstThatWorks(
-                context,
-                "Developer options",
-                listOf(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS), Intent(Settings.ACTION_SETTINGS)),
-            )
-        }
+        SettingsAction("Developer options") { openDeveloperOptions(context) }
     }
 
     Spacer(modifier = Modifier.height(18.dp))
@@ -145,7 +134,8 @@ fun ShieldPane() {
                 }
                 confirm = null
                 run("Turning off ${profile.name}") { ops ->
-                    val r = ops.disable(profile.packages, profile.description)
+                    // Not what a chosen stage needs (Google's calendar sync for the calendar widgets).
+                    val r = ops.disable(profile.packages - SetupState.keptOn(context), profile.description)
                     SetupState.setIntendedOff(context, SetupState.intendedOff(context) + r.changed + r.already)
                     listOfNotNull(
                         "Turned off ${r.changed.size}",

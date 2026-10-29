@@ -29,7 +29,7 @@ object GlanceRules {
         use24h: Boolean,
         fahrenheit: Boolean,
     ): List<GlanceLine> = buildList {
-        val clock = DateTimeFormatter.ofPattern(if (use24h) "HH:mm" else "h:mm a", Locale.getDefault())
+        val clock = DisplayFormat.clock(use24h)
         val today = now.toLocalDate()
 
         // Under way now, then the next timed event within the next hours.

@@ -165,7 +165,7 @@ def home_group() -> None:
     "layout_path",
     type=click.Path(path_type=Path),
     default=None,
-    help="Layout JSON (default: journals/home-layout.json or built-in default).",
+    help="Layout JSON (default: home-layout.json in the journals folder, or the built-in default).",
 )
 def home_show(layout_path: Path | None) -> None:
     """Print home-layout.v1 JSON."""
@@ -186,7 +186,7 @@ def home_show(layout_path: Path | None) -> None:
     "--out",
     type=click.Path(path_type=Path),
     default=None,
-    help="Output path (default: journals/home-layout.json).",
+    help="Output path (default: home-layout.json in the journals folder).",
 )
 @click.option(
     "--layout",
@@ -206,14 +206,18 @@ def home_write(out: Path | None, layout: str) -> None:
     "layout_path",
     type=click.Path(path_type=Path, exists=True),
     default=None,
-    help="Layout JSON to push (default: write journals/home-layout.json first).",
+    help="Layout JSON to push; it replaces the TV's layout (default: the journals folder's "
+    "home-layout.json, written with Buckler's defaults if missing).",
 )
 @click.pass_context
 def home_push(ctx: click.Context, layout_path: Path | None) -> None:
     """Push home-layout.json onto the Shield for buckler-home to import."""
     path = layout_path
     if path is None:
-        path = write_home_layout()
+        # Push the local file as it is; write the defaults only when there is none yet.
+        path = default_layout_path()
+        if not path.is_file():
+            path = write_home_layout()
     try:
         remote = push_home_layout(make_adb(ctx.obj["host"]), path)
     except (AdbError, HomeLayoutError) as exc:

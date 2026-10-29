@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lint warnings Buckler keeps on purpose, each with its reason. -->
+<lint>
+    <!-- Android TV banners are fixed 320x180 vector art; rasterising them is what the platform does. -->
+    <issue id="VectorRaster">
+        <ignore path="src/main/res/drawable/banner_*.xml" />
+    </issue>
+    <!-- The screensaver views are only ever built in code, never inflated from XML. -->
+    <issue id="ViewConstructor" severity="ignore" />
+    <!-- The maze allocates a new maze once per finished run, not per frame. -->
+    <issue id="DrawAllocation">
+        <ignore path="src/main/java/dev/solon/bucklerhome/MazeSaver.kt" />
+    </issue>
+</lint>

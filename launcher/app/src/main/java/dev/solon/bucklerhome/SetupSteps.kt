@@ -137,7 +137,10 @@ fun AppsStep(choices: SetupChoices, onChange: (SetupChoices) -> Unit) {
 fun CleanStep(choices: SetupChoices, onChange: (SetupChoices) -> Unit) {
     val context = LocalContext.current
     val data = remember { ShieldData.load(context) }
-    val present = remember { CleanGroup.entries.associateWith { SetupState.presentApps(context, it.packages(data)) } }
+    val present = remember {
+        val kept = SetupState.keptOn(context)
+        CleanGroup.entries.associateWith { SetupState.presentApps(context, it.packages(data), kept) }
+    }
     CleanGroup.entries.forEach { group ->
         val apps = present.getValue(group)
         if (apps.isEmpty()) return@forEach

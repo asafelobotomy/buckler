@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
 fun ShelvesPane() {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    val layout = remember(tick) { HomeLayout.load(context) }
+    val layout = remember(tick) { HomeLayout.stored(context) }
     var sourcesFor by remember { mutableStateOf<ShelfConfig?>(null) }
     val apps by produceState(emptyList<LaunchableApp>()) {
         value = withContext(Dispatchers.IO) { loadLaunchableApps(context, icons = false) }

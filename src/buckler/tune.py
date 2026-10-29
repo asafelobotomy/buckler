@@ -85,13 +85,15 @@ def disable_backdrop(adb: Adb) -> Journal:
     set_our_screensaver(adb)
     journal = Journal(host=adb.host, profile="screensaver")
     if adb.package_present(BACKDROP) and not adb.package_disabled(BACKDROP):
-        adb.disable_user(BACKDROP)
+        # Journal first: a stop between the two steps still leaves a way back.
         journal.add(
             BACKDROP,
             before_disabled=False,
             after_disabled=True,
             reason="replaced by buckler-home ClockDream",
         )
+        journal.save(journals_dir() / "screensaver.json", merge=True)
+        adb.disable_user(BACKDROP)
     elif adb.package_present(BACKDROP) and BACKDROP not in journaled_packages():
         journal.add(
             BACKDROP,
@@ -126,11 +128,12 @@ def doctor(adb: Adb) -> DoctorReport:
     # Force-stop sticky disabled packages that still show a process
     disabled = set(adb.list_packages("-d"))
     sticky = []
-    ps = adb.shell("ps", "-A", check=False)
-    for pkg in sorted(disabled):
-        if pkg in ps:
-            sticky.append(pkg)
-            adb.shell("am", "force-stop", pkg, check=False)
+    # The last column of `ps -A` is the process name: "pkg" or "pkg:service". A substring test
+    # would match com.nvidia.factory inside com.nvidia.factorybundling.
+    running = {line.split()[-1].split(":")[0] for line in adb.shell("ps", "-A", check=False).splitlines()[1:] if line.split()}
+    for pkg in sorted(disabled & running):
+        sticky.append(pkg)
+        adb.force_stop(pkg)
     if sticky:
         lines.append(f"force-stopped sticky disabled pkgs ({len(sticky)}):")
         for pkg in sticky:

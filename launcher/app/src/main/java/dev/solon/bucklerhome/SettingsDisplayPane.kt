@@ -28,7 +28,7 @@ fun HeaderPane() {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
     val cfg = remember(tick) { DisplayPrefs.load(context) }
-    val stage = remember(tick) { HomeLayout.load(context).mainStage }
+    val stage = remember(tick) { HomeLayout.stored(context).mainStage }
     val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle("Header")

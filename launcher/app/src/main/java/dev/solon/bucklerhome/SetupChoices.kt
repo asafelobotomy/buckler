@@ -1,5 +1,6 @@
 package dev.solon.bucklerhome
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -140,15 +141,14 @@ object SetupState {
      * Apps of [CleanGroup]s present on this TV (a missing app counts as off), less any that
      * [keptOn] needs: those are no longer the clean-up's to turn off.
      */
-    fun presentApps(context: Context, packages: List<String>): List<String> {
+    fun presentApps(context: Context, packages: List<String>, kept: Set<String> = keptOn(context)): List<String> {
         val pm = context.packageManager
-        val kept = keptOn(context)
         return packages.filter { it !in kept && runCatching { pm.getApplicationInfo(it, PackageManager.MATCH_DISABLED_COMPONENTS) }.isSuccess }
     }
 
     /** Clean-up apps a chosen widget needs: Google's calendar sync while a stage shows the calendar. */
     fun keptOn(context: Context): Set<String> {
-        val stage = HomeLayout.load(context).mainStage
+        val stage = HomeLayout.stored(context).mainStage
         val calendar = stage == MainStage.GLANCE || stage == MainStage.CALENDAR || StagePrefs.sideIdle(context) == SideIdle.GLANCE
         return if (calendar) setOf(GOOGLE_CALENDAR_SYNC) else emptySet()
     }
@@ -172,7 +172,8 @@ object SetupState {
             else -> disabled
         }
         // A group is on when every one of its apps here is off.
-        val groups = CleanGroup.entries.filter { g -> presentApps(context, g.packages(data)).let { it.isNotEmpty() && it.all(off::contains) } }
+        val kept = keptOn(context)
+        val groups = CleanGroup.entries.filter { g -> presentApps(context, g.packages(data), kept).let { it.isNotEmpty() && it.all(off::contains) } }
         val resolver = context.contentResolver
         val pins = layout.appsPackages()
         val apps = data.apps.filter { app ->
@@ -229,7 +230,8 @@ object SetupState {
     }
 
     fun setIntendedOff(context: Context, packages: Set<String>) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet(KEY_INTENDED_OFF, packages).apply()
+        val kept = keptOn(context)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet(KEY_INTENDED_OFF, packages - kept).apply()
     }
 
     /** Clean-up apps meant to be off that are on again, usually after a system update. */
@@ -263,8 +265,10 @@ object SetupState {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_RESUME, null)
             ?.let { runCatching { JSONObject(it) }.getOrNull() }?.let(SetupChoices::fromJson)
 
+    @SuppressLint("ApplySharedPref")
     fun saveForResume(context: Context, choices: SetupChoices) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_RESUME, choices.toJson().toString()).apply()
+        // commit(): the grant that follows can kill Buckler before an apply() reaches the disk.
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_RESUME, choices.toJson().toString()).commit()
     }
 
     fun clearResume(context: Context) {

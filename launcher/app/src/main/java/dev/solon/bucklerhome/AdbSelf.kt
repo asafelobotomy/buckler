@@ -56,7 +56,8 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
      */
     fun shell(command: String): Result {
         val local = nextLocalId++
-        send(OPEN, local, 0, "shell:$command; echo \"$EXIT_MARK\$?\"\u0000".toByteArray())
+        // A newline, not "; ", ends the command: "cmd &; echo" is a shell syntax error.
+        send(OPEN, local, 0, "shell:$command\necho \"$EXIT_MARK\$?\"\u0000".toByteArray())
         var remote = 0
         val out = StringBuilder()
         while (true) {
@@ -195,6 +196,13 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
         private const val AUTH_RSAPUBLICKEY = 3
         private const val PORT = 5555
         private const val EXIT_MARK = "__buckler_exit:"
+
+        /** What to tell the user when a connection or a step over it failed; [failed] leads anything else. */
+        fun explain(e: Throwable, failed: String = "Stopped"): String = when (e) {
+            is Failure.NotListening -> "Network debugging is off. Turn it on in Developer options, then try again."
+            is Failure.NotAllowed -> "The TV did not allow Buckler. Try again and choose Allow on the prompt."
+            else -> "$failed: ${e.message ?: e.javaClass.simpleName}"
+        }
 
         /** How long the TV's "Allow debugging?" prompt may wait for an answer. */
         private const val APPROVAL_MS = 90_000

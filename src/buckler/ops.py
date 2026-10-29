@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
-from buckler.adb import Adb, AdbError
+from buckler.adb import Adb
 from buckler.journal import Journal, iter_journals
 from buckler.policy import (
     KNOWN_STOCK_LAUNCHERS,
@@ -30,7 +30,6 @@ class ProbeResult:
     package_count: int
     disabled: list[str]
     ai_problems: list[str]
-    third_party: list[str] = field(default_factory=list)
 
 
 def probe(adb: Adb) -> ProbeResult:
@@ -48,7 +47,6 @@ def probe(adb: Adb) -> ProbeResult:
         package_count=len(adb.list_packages()),
         disabled=disabled,
         ai_problems=verify_ai_stack(adb),
-        third_party=adb.list_packages("-3"),
     )
 
 
@@ -120,10 +118,10 @@ def apply_packages(adb: Adb, profile: Profile, *, dry_run: bool = False) -> Appl
     try:
         _apply_packages(adb, allowed, home_pkg, profile, profile_name, dry_run, journal,
                         blocked, skipped_missing, skipped_already, changed)
-    except AdbError:
-        # Keep a record of what was already disabled before the failure, so restore works.
+    except BaseException:
+        # Any stop (adb error, Ctrl-C) keeps a record of what was already disabled, so restore works.
         if journal.entries and not dry_run:
-            journal.notes.append("apply stopped by an adb error; entries cover what changed")
+            journal.notes.append("apply stopped early; entries cover what changed")
             journal.save()
         raise
 
@@ -247,8 +245,21 @@ def check_drift(
     desired = {p for p in desired if restores.get(p, "") <= disables.get(p, "")}
 
     allowed, _ = filter_allowed(sorted(desired))
-    ours_is_home = None
     drifted: list[str] = []
+    # Some of these were off before any profile ran, so no journal holds them yet.
+    fixed = Journal(host=adb.host, profile="drift-fix")
+    try:
+        _fix_drift(adb, allowed, fix, drifted, fixed)
+    finally:
+        if fixed.entries:
+            fixed.save()
+
+    ai = verify_ai_stack(adb)
+    return drifted, ai
+
+
+def _fix_drift(adb: Adb, allowed: list[str], fix: bool, drifted: list[str], fixed: Journal) -> None:
+    ours_is_home = None
     for pkg in allowed:
         if not adb.package_present(pkg):
             continue
@@ -265,11 +276,9 @@ def check_drift(
                 )
             if not ours_is_home:
                 continue
+        fixed.add(pkg, before_disabled=False, after_disabled=True, reason="re-disabled after drift (OTA)")
         adb.disable_user(pkg)
         adb.force_stop(pkg)
-
-    ai = verify_ai_stack(adb)
-    return drifted, ai
 
 
 def _journal_events() -> tuple[dict[str, str], dict[str, str], set[str]]:

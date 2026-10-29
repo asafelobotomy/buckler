@@ -81,10 +81,10 @@ class ShieldOps(private val context: Context, private val adb: AdbSelf) {
         val pkg = context.packageName
         val failed = mutableListOf<String>()
         for (permission in missingPermissions(context, data)) {
-            if (!adb.shell("pm grant $pkg $permission").ok) failed += permission
+            if (!NAME.matches(permission) || !adb.shell("pm grant $pkg $permission").ok) failed += permission
         }
         for (appop in missingAppops(context, data).sortedBy { it == INSTALL_APPOP }) {
-            if (!adb.shell("appops set $pkg $appop allow").ok) failed += appop
+            if (!NAME.matches(appop) || !adb.shell("appops set $pkg $appop allow").ok) failed += appop
         }
         return failed
     }
@@ -184,6 +184,9 @@ class ShieldOps(private val context: Context, private val adb: AdbSelf) {
 
         /** Granting would restart Buckler: its install permission is among what is missing. */
         fun restartsOnGrant(context: Context): Boolean = INSTALL_APPOP in missingAppops(context)
+
+        /** Permission and app-op names: letters, digits, dots and underscores only. */
+        private val NAME = Regex("^[A-Za-z][A-Za-z0-9_.]*$")
 
         private val PACKAGE = Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+$")
 

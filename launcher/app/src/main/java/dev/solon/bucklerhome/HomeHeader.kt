@@ -225,7 +225,7 @@ private fun SideStage(config: DisplayConfig, nowPlaying: NowPlayingModel?, below
     val playing = config.showsNowPlaying && nowPlaying?.info != null
     when {
         playing -> NowPlayingPanel(nowPlaying!!, below, metrics)
-        config.sideIdle == SideIdle.GLANCE -> GlanceSide(config, refresh = null)
+        config.sideIdle == SideIdle.GLANCE -> GlanceSide(config)
         config.sideIdle == SideIdle.COMPANION -> {
             val weather by rememberGlanceWeather(config.place)
             CompanionScene(

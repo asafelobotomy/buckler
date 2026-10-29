@@ -25,10 +25,11 @@ enum class DateStyle(val pattern: String) {
 }
 
 object DisplayFormat {
-    fun time(time: LocalTime, use24h: Boolean, locale: Locale = Locale.getDefault()): String {
-        val pattern = if (use24h) "HH:mm" else "h:mm a"
-        return time.format(DateTimeFormatter.ofPattern(pattern, locale))
-    }
+    /** The clock as the header shows it: 24-hour or 12-hour with am/pm. */
+    fun clock(use24h: Boolean, locale: Locale = Locale.getDefault()): DateTimeFormatter =
+        DateTimeFormatter.ofPattern(if (use24h) "HH:mm" else "h:mm a", locale)
+
+    fun time(time: LocalTime, use24h: Boolean, locale: Locale = Locale.getDefault()): String = time.format(clock(use24h, locale))
 
     fun date(date: LocalDate, style: DateStyle, locale: Locale = Locale.getDefault()): String =
         date.format(DateTimeFormatter.ofPattern(style.pattern, locale))

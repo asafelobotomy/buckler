@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 fun MainStagePane() {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    val layout = remember(tick) { HomeLayout.load(context) }
+    val layout = remember(tick) { HomeLayout.stored(context) }
     val cfg = remember(tick) { DisplayPrefs.load(context) }
     val flow = Arrangement.spacedBy(12.dp)
 

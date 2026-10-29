@@ -12,7 +12,7 @@ data class GitHubRelease(
     val body: String,
     val apkUrl: String?,
     val apkName: String?,
-    /** API asset URL (works with PAT on private repos). */
+    /** API asset URL (used with a linked token, which raises GitHub's hourly limit). */
     val apkApiUrl: String? = null,
 ) {
     fun downloadUrl(preferApi: Boolean): String? =
@@ -77,30 +77,21 @@ object UpdateChecker {
     fun check(context: Context, force: Boolean = false): UpdateCheckResult {
         if (!force && UpdatePrefs.isSnoozed(context)) return UpdateCheckResult.Snoozed
         UpdatePrefs.setLastCheck(context)
+        val auth = CoverAccounts.githubAuthHeaders(context)
+        fun fetch(headers: Map<String, String>) = HttpJson.get(BuildConfig.GITHUB_RELEASES_URL, headers = headers)
         val response = runCatching {
-            HttpJson.get(
-                BuildConfig.GITHUB_RELEASES_URL,
-                headers = CoverAccounts.githubAuthHeaders(context),
-            )
+            // The repo is public: a rejected (expired) token is retried without it.
+            fetch(auth).let { first -> if (first.code in setOf(401, 403) && auth.isNotEmpty()) fetch(emptyMap()) else first }
         }.getOrElse {
             Log.w("UpdateChecker", "Release check failed", it)
             return UpdateCheckResult.Error(it.message ?: "Network error")
         }
         if (response.code == 404) {
-            // No releases, or private repo without a GitHub token.
-            val hint = if (CoverAccounts.githubToken(context).isNullOrBlank()) {
-                "No release (or private repo — add a GitHub token in Settings → Updates)"
-            } else {
-                "No GitHub releases yet — publish v${BuildConfig.VERSION_NAME} with an APK"
-            }
-            return if (force) {
-                UpdateCheckResult.Error(hint)
-            } else {
-                UpdateCheckResult.UpToDate
-            }
+            return if (force) UpdateCheckResult.Error("No release published yet") else UpdateCheckResult.UpToDate
         }
         if (response.code == 401 || response.code == 403) {
-            return UpdateCheckResult.Error("GitHub auth failed — check token in Settings → Updates")
+            // Without a token GitHub allows 60 requests an hour from this address.
+            return UpdateCheckResult.Error("GitHub is limiting requests right now; try again later")
         }
         if (response.code !in 200..299) {
             return UpdateCheckResult.Error("GitHub HTTP ${response.code}")

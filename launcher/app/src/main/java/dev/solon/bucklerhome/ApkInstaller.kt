@@ -16,7 +16,8 @@ object ApkInstaller {
 
     fun downloadApk(context: Context, url: String, fileName: String): File? {
         val dir = File(context.cacheDir, "updates").also { it.mkdirs() }
-        val dest = File(dir, fileName.ifBlank { "update.apk" })
+        // The name comes from GitHub: keep only its last path part, so it can't leave the folder.
+        val dest = File(dir, fileName.substringAfterLast('/').substringAfterLast('\\').ifBlank { "update.apk" })
         val headers = CoverAccounts.githubAuthHeaders(context).toMutableMap()
         if (url.contains("api.github.com/") && url.contains("/releases/assets/")) {
             headers["Accept"] = "application/octet-stream"
@@ -61,9 +62,15 @@ object ApkInstaller {
             }
             val sessionId = installer.createSession(params)
             val session = installer.openSession(sessionId)
-            session.openWrite("package", 0, apk.length()).use { out ->
-                apk.inputStream().use { inp -> inp.copyTo(out) }
-                session.fsync(out)
+            try {
+                session.openWrite("package", 0, apk.length()).use { out ->
+                    apk.inputStream().use { inp -> inp.copyTo(out) }
+                    session.fsync(out)
+                }
+            } catch (e: Exception) {
+                // A half-written session would stay behind; abandon it before falling back.
+                session.abandon()
+                throw e
             }
             val callback = Intent(context, InstallResultReceiver::class.java).apply {
                 action = InstallResultReceiver.ACTION
