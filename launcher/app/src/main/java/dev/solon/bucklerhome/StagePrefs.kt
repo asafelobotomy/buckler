@@ -19,6 +19,7 @@ object StagePrefs {
     private const val KEY_SIDE_IDLE = "side_stage_idle"
     private const val KEY_COMPANION = "stage_companion"
     private const val KEY_HIDDEN_CALENDARS = "stage_hidden_calendars"
+    private const val KEY_SCROLL_TITLES = "now_playing_scroll_titles"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -31,6 +32,11 @@ object StagePrefs {
     fun companion(context: Context): CompanionKind = CompanionKind.fromWire(prefs(context).getString(KEY_COMPANION, null))
 
     fun setCompanion(context: Context, kind: CompanionKind) = prefs(context).edit().putString(KEY_COMPANION, kind.wire()).apply()
+
+    /** Now Playing's song, artist and album scroll sideways when too long (else they are cut short). */
+    fun scrollTitles(context: Context): Boolean = prefs(context).getBoolean(KEY_SCROLL_TITLES, true)
+
+    fun setScrollTitles(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY_SCROLL_TITLES, on).apply()
 
     /** Calendars left off Home, by id (all are shown by default). */
     fun hiddenCalendars(context: Context): Set<Long> =

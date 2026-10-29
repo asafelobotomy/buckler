@@ -75,6 +75,8 @@ fun MainStagePane() {
         MainStage.NOW_PLAYING -> {
             SectionTitle("Now Playing")
             SettingsRow("The playing app with its controls. The header's Side Stage hides while this is on.")
+            ScrollTitlesToggle(cfg.scrollTitles) { tick++ }
+            Spacer(modifier = Modifier.height(12.dp))
             MediaAccessSection()
         }
         MainStage.LYRICS -> {

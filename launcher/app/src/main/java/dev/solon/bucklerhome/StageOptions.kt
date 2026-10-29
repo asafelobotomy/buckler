@@ -84,7 +84,10 @@ fun StageOptions(stage: MainStage, onChanged: () -> Unit) {
                 }
             }
         }
-        MainStage.NOW_PLAYING -> MediaAccessOption("Shows what is playing, with its controls.")
+        MainStage.NOW_PLAYING -> {
+            MediaAccessOption("Shows what is playing, with its controls.")
+            ScrollTitlesOption(cfg.scrollTitles) { changed() }
+        }
         MainStage.LYRICS -> LyricsTiming(tick) { changed() }
         MainStage.WEATHER -> FlowRow(horizontalArrangement = Flow, verticalArrangement = Flow) {
             WeatherSpan.entries.forEach { span ->
@@ -168,6 +171,25 @@ private fun CompanionChoice(current: CompanionKind, onChanged: () -> Unit) {
     }
 }
 
+/** Switches whether Now Playing's long song, artist and album lines scroll; off cuts them short. */
+@Composable
+fun ScrollTitlesToggle(on: Boolean, onChanged: () -> Unit) {
+    val context = LocalContext.current
+    SettingsAction("Scroll long titles", selected = on) {
+        StagePrefs.setScrollTitles(context, !on)
+        onChanged()
+    }
+}
+
+/** [ScrollTitlesToggle] on a line of its own, under a note. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ScrollTitlesOption(on: Boolean, onChanged: () -> Unit) {
+    FlowRow(horizontalArrangement = Flow, verticalArrangement = Flow, modifier = Modifier.padding(top = 10.dp)) {
+        ScrollTitlesToggle(on, onChanged)
+    }
+}
+
 /** A line about the widget, and a way to grant media access while it is missing. */
 @Composable
 private fun MediaAccessOption(about: String) {
@@ -209,6 +231,7 @@ fun SideStageDialog(onChanged: () -> Unit, onDismiss: () -> Unit) {
                         DisplayPrefs.setNowPlaying(context, !cfg.nowPlaying)
                         changed()
                     }
+                    if (cfg.nowPlaying) ScrollTitlesToggle(cfg.scrollTitles) { changed() }
                 }
                 HoldMenuHeading("While nothing plays")
                 FlowRow(horizontalArrangement = Flow, verticalArrangement = Flow) {

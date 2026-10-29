@@ -134,6 +134,8 @@ fun HeaderPane() {
             DisplayPrefs.setNowPlaying(context, !cfg.nowPlaying)
             tick++
         }
+        // Long song, artist and album lines scroll sideways; off, they are cut short.
+        if (cfg.nowPlaying) ScrollTitlesToggle(cfg.scrollTitles) { tick++ }
     }
     if (stage == MainStage.NOW_PLAYING && cfg.nowPlaying) {
         SettingsRow("Hidden while the Main Stage shows Now Playing, so it is not on screen twice.")

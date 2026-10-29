@@ -126,6 +126,8 @@ data class DisplayConfig(
     /** The Side Stage while nothing plays, and which companion the stages draw ([StagePrefs]). */
     val sideIdle: SideIdle = SideIdle.NOTHING,
     val companion: CompanionKind = CompanionKind.CAT,
+    /** Now Playing's long titles scroll sideways ([StagePrefs.scrollTitles]). */
+    val scrollTitles: Boolean = true,
 ) {
     /** What the News stage shows and the Weather stage uses: the header's when synced. */
     val stageNews: List<NewsSource> get() = if (newsSynced) newsSources else stageNewsSources
@@ -214,6 +216,7 @@ object DisplayPrefs {
             stageFahrenheit = if (p.contains(KEY_STAGE_FAHRENHEIT)) p.getBoolean(KEY_STAGE_FAHRENHEIT, false) else fahrenheit,
             sideIdle = StagePrefs.sideIdle(context),
             companion = StagePrefs.companion(context),
+            scrollTitles = StagePrefs.scrollTitles(context),
         )
     }
 

@@ -73,7 +73,6 @@ fun NowPlayingStage(
                         onDown = onDown,
                     ) { model.togglePlayPause() }
                     HeaderIconButton(R.drawable.ic_next, "Next", size = 52.dp, onDown = onDown) { model.next() }
-                    LoveButton(model, info, 52.dp, onDown = onDown)
                 }
             } else if (!model.accessGranted) {
                 Text(

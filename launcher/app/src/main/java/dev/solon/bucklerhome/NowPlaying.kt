@@ -4,7 +4,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadata
-import android.media.Rating
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
@@ -13,7 +12,6 @@ import android.service.notification.NotificationListenerService
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -93,14 +91,7 @@ data class NowPlayingInfo(
     val positionMs: Long = 0,
     val positionAt: Long = 0,
     val speed: Float = 1f,
-    /** The app takes a like from other apps (a "like" action of its own, or a rating). */
-    val canLove: Boolean = false,
-    /** Liked, as far as Buckler knows: the app's own rating, else what was pressed here. */
-    val loved: Boolean = false,
 ) {
-    /** Identifies the track, for remembering a like the app does not report back. */
-    val trackKey: String get() = "$packageName|$title|$artist|$album"
-
     /** Where playback is now, extrapolated from the last report while playing. */
     fun positionNow(nowElapsed: Long = SystemClock.elapsedRealtime()): Long {
         if (!playing) return positionMs
@@ -125,8 +116,6 @@ class NowPlayingModel(private val context: Context) {
     private val manager = context.getSystemService(MediaSessionManager::class.java)
     private var controllers: List<MediaController> = emptyList()
     private var selected: MediaController? = null
-    // Likes pressed here, by track: most apps take a like but never report it back.
-    private val pressedLove = mutableStateMapOf<String, Boolean>()
 
     private val controllerCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) = refresh()
@@ -213,12 +202,7 @@ class NowPlayingModel(private val context: Context) {
             positionMs = state?.position?.coerceAtLeast(0) ?: 0,
             positionAt = state?.lastPositionUpdateTime ?: SystemClock.elapsedRealtime(),
             speed = state?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
-            canLove = controller.loveAction() != null || controller.takesRating(),
-        ).let { info ->
-            val rated = meta.getRating(MediaMetadata.METADATA_KEY_USER_RATING)?.takeIf { it.isRated }
-            val appSays = rated?.let { it.hasHeart() || it.isThumbUp }
-            info.copy(loved = pressedLove[info.trackKey] ?: appSays ?: false)
-        }
+        )
     }
 
     private fun appLabel(pkg: String): String = runCatching {
@@ -234,61 +218,7 @@ class NowPlayingModel(private val context: Context) {
     fun next() { selected?.transportControls?.skipToNext() }
 
     fun previous() { selected?.transportControls?.skipToPrevious() }
-
-    /** What became of a like: not taken, sent and reported back, or sent with no word back. */
-    enum class LoveResult { NOT_TAKEN, SENT }
-
-    /**
-     * Like or unlike the track in the playing app: its own "like" action when it has one, else a
-     * heart or thumb rating. [LoveResult.NOT_TAKEN] when the app takes neither, so the caller can say so.
-     */
-    fun toggleLove(): LoveResult {
-        val c = selected ?: return LoveResult.NOT_TAKEN
-        val current = info ?: return LoveResult.NOT_TAKEN
-        val want = !current.loved
-        val custom = c.loveAction()
-        when {
-            custom != null -> c.transportControls.sendCustomAction(custom, custom.extras)
-            c.takesRating() -> c.transportControls.setRating(
-                when {
-                    !want -> Rating.newUnratedRating(c.ratingType.takeIf { it != Rating.RATING_NONE } ?: Rating.RATING_HEART)
-                    c.ratingType == Rating.RATING_THUMB_UP_DOWN -> Rating.newThumbRating(true)
-                    else -> Rating.newHeartRating(true)
-                },
-            )
-            else -> return LoveResult.NOT_TAKEN
-        }
-        pressedLove[current.trackKey] = want
-        refresh()
-        return LoveResult.SENT
-    }
-
-    /**
-     * Whether the playing app now reports the track as liked: from its own rating, or from its like
-     * action having turned into an "unlike"/"remove" one. Null when it says nothing either way.
-     */
-    fun appSaysLoved(): Boolean? {
-        val c = selected ?: return null
-        c.metadata?.getRating(MediaMetadata.METADATA_KEY_USER_RATING)?.takeIf { it.isRated }?.let { return it.hasHeart() || it.isThumbUp }
-        val action = c.loveAction() ?: return null
-        val words = "${action.action} ${action.name}"
-        return when {
-            UNLOVE_WORDS.containsMatchIn(words) -> true
-            else -> null
-        }
-    }
 }
-
-private val UNLOVE_WORDS = Regex("unlike|remove|unfavou?rite|unsave", RegexOption.IGNORE_CASE)
-
-private val LOVE_WORDS = Regex("like|love|heart|favou?rite|collection|thumbs?.?up", RegexOption.IGNORE_CASE)
-
-/** The app's own like action (Liked Songs, favourites, thumbs up), if its session offers one. */
-private fun MediaController.loveAction(): PlaybackState.CustomAction? =
-    playbackState?.customActions?.firstOrNull { LOVE_WORDS.containsMatchIn(it.action) || LOVE_WORDS.containsMatchIn(it.name) }
-
-private fun MediaController.takesRating(): Boolean =
-    (playbackState?.actions ?: 0L) and PlaybackState.ACTION_SET_RATING != 0L
 
 private fun MediaController.isPlaying(): Boolean {
     val s = playbackState?.state

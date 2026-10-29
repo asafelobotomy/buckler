@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -274,44 +275,47 @@ fun HomeScreen(
     }
 
     Box(Modifier.fillMaxSize().onFocusChanged { homeFocused = it.hasFocus }) {
-        HomeColumn(
-            config = config,
-            layout = layout,
-            clock = clock,
-            date = date,
-            weather = weather,
-            headlines = headlines,
-            stageHeadlines = stageHeadlines,
-            forecast = forecast,
-            net = net,
-            nowPlaying = nowPlaying,
-            actions = actions,
-            shelves = shelves,
-            shelvesLoaded = shelvesLoaded,
-            listState = listState,
-            scope = scope,
-            move = move,
-            shelfMove = shelfMove,
-            stageFocus = stageFocus,
-            firstFocus = firstFocus,
-            stageDown = stageDown,
-            shelfRequester = shelfRequester,
-            moveFocus = moveFocus,
-            focusShelfId = focusShelfId,
-            focusPkg = focusPkg,
-            onLaunch = { launch(it) },
-            onEdit = { editTarget = it },
-            onShelfMenu = { shelfMenu = it },
-            onOpenStory = { reading = it },
-            onHoldStage = { pickingStage = true },
-            onPickStage = ::pickStage,
-            onOptionsChanged = ::reloadConfig,
-            onResetHome = ::resetHome,
-            onStepMove = ::stepMove,
-            onPlaceMove = ::placeMove,
-            onStepShelf = ::stepShelf,
-            onPlaceShelf = ::placeShelf,
-        )
+        // Whether Now Playing's long titles scroll, for every one of them on Home.
+        CompositionLocalProvider(LocalScrollTitles provides config.scrollTitles) {
+            HomeColumn(
+                config = config,
+                layout = layout,
+                clock = clock,
+                date = date,
+                weather = weather,
+                headlines = headlines,
+                stageHeadlines = stageHeadlines,
+                forecast = forecast,
+                net = net,
+                nowPlaying = nowPlaying,
+                actions = actions,
+                shelves = shelves,
+                shelvesLoaded = shelvesLoaded,
+                listState = listState,
+                scope = scope,
+                move = move,
+                shelfMove = shelfMove,
+                stageFocus = stageFocus,
+                firstFocus = firstFocus,
+                stageDown = stageDown,
+                shelfRequester = shelfRequester,
+                moveFocus = moveFocus,
+                focusShelfId = focusShelfId,
+                focusPkg = focusPkg,
+                onLaunch = { launch(it) },
+                onEdit = { editTarget = it },
+                onShelfMenu = { shelfMenu = it },
+                onOpenStory = { reading = it },
+                onHoldStage = { pickingStage = true },
+                onPickStage = ::pickStage,
+                onOptionsChanged = ::reloadConfig,
+                onResetHome = ::resetHome,
+                onStepMove = ::stepMove,
+                onPlaceMove = ::placeMove,
+                onStepShelf = ::stepShelf,
+                onPlaceShelf = ::placeShelf,
+            )
+        }
     }
 
     if (pickingStage) {

@@ -138,7 +138,6 @@ fun NowPlayingPanel(
                         onLongPress = onHold,
                     ) { model.togglePlayPause() }
                     HeaderIconButton(R.drawable.ic_next, "Next", inControls, size = metrics.control, down = below, onLongPress = onHold) { model.next() }
-                    LoveButton(model, info, metrics.control, inControls, down = below, onLongPress = onHold)
                 }
             }
         }

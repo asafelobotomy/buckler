@@ -1,29 +1,27 @@
 package dev.solon.bucklerhome
 
 import android.os.SystemClock
-import android.widget.Toast
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-/** One line that scrolls sideways when it does not fit (cut short instead under reduced motion). */
+/** Whether [ScrollingLine]s scroll: Home provides the user's choice ([DisplayConfig.scrollTitles]). */
+val LocalScrollTitles = compositionLocalOf { true }
+
+/** One line that scrolls sideways when it does not fit; cut short instead when scrolling is off or under reduced motion. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ScrollingLine(
@@ -33,7 +31,7 @@ fun ScrollingLine(
     modifier: Modifier = Modifier,
     fontWeight: FontWeight? = null,
 ) {
-    val still = AppearanceStore.config.reduceMotion
+    val still = !LocalScrollTitles.current || AppearanceStore.config.reduceMotion
     Text(
         text = text,
         color = color,
@@ -67,47 +65,4 @@ fun PlayTime(info: NowPlayingInfo, color: Color, fontSize: TextUnit, modifier: M
 fun clockOf(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
-}
-
-/** Like or unlike the track in the playing app; dimmed, and says why, when the app takes no likes. */
-@Composable
-fun LoveButton(
-    model: NowPlayingModel,
-    info: NowPlayingInfo,
-    size: Dp,
-    modifier: Modifier = Modifier,
-    down: FocusRequester? = null,
-    onDown: (() -> Unit)? = null,
-    onLongPress: (() -> Unit)? = null,
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    HeaderIconButton(
-        icon = if (info.loved) R.drawable.ic_heart_filled else R.drawable.ic_heart,
-        description = if (info.loved) "Unlike" else "Like",
-        modifier = modifier,
-        size = size,
-        dim = !info.canLove,
-        down = down,
-        onDown = onDown,
-        onLongPress = onLongPress,
-    ) {
-        val app = info.appLabel.ifBlank { "The app" }
-        if (model.toggleLove() == NowPlayingModel.LoveResult.NOT_TAKEN) {
-            Toast.makeText(context, "$app does not take likes from other apps", Toast.LENGTH_SHORT).show()
-            return@HeaderIconButton
-        }
-        val want = model.info?.loved == true
-        // Only say it is done when the app reports it; many take the like and say nothing back.
-        scope.launch {
-            delay(1_500)
-            val said = model.appSaysLoved()
-            val text = when {
-                said == want -> if (want) "Liked in $app" else "Unliked in $app"
-                said != null -> "$app did not take it"
-                else -> "Sent to $app, which does not say whether it was saved. Check its liked list."
-            }
-            Toast.makeText(context, text, Toast.LENGTH_LONG).show()
-        }
-    }
 }
