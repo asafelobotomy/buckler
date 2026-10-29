@@ -32,21 +32,30 @@ fun appIcon(context: Context, component: ComponentName?, label: String, own: () 
 
 /**
  * Icons in the style of the line-drawn packs (Arcticons, Lawnicons) for apps a pack has no icon
- * for. The app's own logo is traced as an outline when it is a simple mark (a letter, a gear,
- * a few bars); a busy picture would trace as noise, so it gets the app's initials in an outlined
- * badge instead. Both are drawn in the theme's text colour, as a themed pack is.
+ * for. The app's own logo is traced as a thin, smooth outline; only when there is no mark to
+ * trace (nothing on the icon, or one solid block) does it get the app's initials in an outlined
+ * badge. Both are drawn in the theme's text colour, as a themed pack is.
+ *
+ * Tracing works on a soft (anti-aliased) copy of the logo at [WORK] px: blurred a little, the
+ * logo's edge becomes a ramp, and the line is the middle of that ramp, fading out to either side.
+ * The result is scaled down to [OUT] px with filtering, so curves and diagonals stay smooth.
  */
 object PackStyleIcons {
-    private const val SIZE = 192
+    private const val WORK = 512
+    private const val OUT = 256
 
     /** The traced mark's longest side, as a share of the icon: about what pack icons fill. */
     private const val MARK = 0.72f
 
-    /** Line width, matching the thin strokes of line packs at TV tile sizes. */
-    private const val STROKE = 2
+    /** Blur radius (px at [WORK]) that turns the logo's edge into a ramp; twice applied. */
+    private const val SOFTEN = 3
 
-    /** Pixels further than this from the background colour are part of the logo. */
-    private const val INK_DISTANCE = 90
+    /** Half the line's width, in how far along the edge ramp it reaches: thin, like line packs. */
+    private const val LINE = 0.38f
+
+    /** How far from the background colour (sum of RGB differences) a pixel starts and ends being logo. */
+    private const val INK_FROM = 50f
+    private const val INK_TO = 130f
 
     /** By package, its update time and label, so a new version is traced again. */
     private val cache = LruCache<String, Bitmap>(48)
@@ -57,51 +66,65 @@ object PackStyleIcons {
         val art = cache.get(key) ?: (traced(icon) ?: initials(label)).also { cache.put(key, it) }
         AppearanceStore.ensureLoaded(context)
         val colour = IconPackStore.tint(context) ?: Palettes.resolve(AppearanceStore.config).text.toArgb()
-        val drawable = BitmapDrawable(context.resources, art).apply { setTint(colour) }
+        val drawable = BitmapDrawable(context.resources, art).apply {
+            setTint(colour)
+            isFilterBitmap = true
+        }
         return PackIconDrawable(drawable, 0f, themed = true)
     }
 
-    /** The logo's outline, or null when there is no clear mark to trace. */
+    /** The logo's outline, or null when there is no mark to trace. */
     internal fun traced(icon: Drawable): Bitmap? {
         val layer = (icon as? AdaptiveIconDrawable)?.foreground ?: icon
         val background = (icon as? AdaptiveIconDrawable)?.background?.let(FittedArt::edgeColour)
             ?: FittedArt.edgeColour(icon)
         val pixels = render(layer)
-        val ink = BooleanArray(SIZE * SIZE) { i ->
+        // How much each pixel is logo, 0..1, with the icon's own anti-aliasing kept.
+        val ink = FloatArray(WORK * WORK) { i ->
             val p = pixels[i]
-            Color.alpha(p) >= 128 && (background == null || distance(p, background) > INK_DISTANCE)
+            val shown = ramp(Color.alpha(p) / 255f, 0.25f, 0.75f)
+            if (background == null) shown else shown * ramp(distance(p, background).toFloat(), INK_FROM, INK_TO)
         }
         val box = bounds(ink) ?: return null
-        val share = ink.count { it }.toFloat() / (SIZE * SIZE)
+        val share = ink.count { it >= 0.5f }.toFloat() / (WORK * WORK)
         // Next to nothing, or a solid block that is the whole icon: no mark to trace.
-        if (share < 0.01f || share > 0.6f) return null
-        if (busy(ink, box)) return null
-        return outline(fit(ink, box))
+        if (share < 0.005f || share > 0.6f) return null
+        val soft = blur(blur(fit(ink, box), SOFTEN), SOFTEN)
+        val line = IntArray(WORK * WORK) { i ->
+            val a = (1f - kotlin.math.abs(soft[i] - 0.5f) / LINE).coerceIn(0f, 1f)
+            // Smoothstep the falloff so the line's sides fade rather than step.
+            val alpha = a * a * (3f - 2f * a)
+            Color.argb((alpha * 255).roundToInt(), 255, 255, 255)
+        }
+        val full = Bitmap.createBitmap(line, WORK, WORK, Bitmap.Config.ARGB_8888)
+        return Bitmap.createScaledBitmap(full, OUT, OUT, true).also { if (it !== full) full.recycle() }
     }
 
     private fun render(drawable: Drawable): IntArray {
-        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(WORK, WORK, Bitmap.Config.ARGB_8888)
         val old = drawable.copyBounds()
-        drawable.setBounds(0, 0, SIZE, SIZE)
+        drawable.setBounds(0, 0, WORK, WORK)
         drawable.draw(Canvas(bitmap))
         drawable.bounds = old
-        val pixels = IntArray(SIZE * SIZE)
-        bitmap.getPixels(pixels, 0, SIZE, 0, 0, SIZE, SIZE)
+        val pixels = IntArray(WORK * WORK)
+        bitmap.getPixels(pixels, 0, WORK, 0, 0, WORK, WORK)
         bitmap.recycle()
         return pixels
     }
+
+    private fun ramp(v: Float, from: Float, to: Float): Float = ((v - from) / (to - from)).coerceIn(0f, 1f)
 
     private fun distance(a: Int, b: Int): Int =
         abs(Color.red(a) - Color.red(b)) + abs(Color.green(a) - Color.green(b)) + abs(Color.blue(a) - Color.blue(b))
 
     /** Left, top, right, bottom of the mark (inclusive), or null when there is none. */
-    private fun bounds(ink: BooleanArray): IntArray? {
-        var l = SIZE
-        var t = SIZE
+    private fun bounds(ink: FloatArray): IntArray? {
+        var l = WORK
+        var t = WORK
         var r = -1
         var b = -1
-        for (y in 0 until SIZE) for (x in 0 until SIZE) {
-            if (!ink[y * SIZE + x]) continue
+        for (y in 0 until WORK) for (x in 0 until WORK) {
+            if (ink[y * WORK + x] < 0.5f) continue
             l = min(l, x)
             t = min(t, y)
             r = max(r, x)
@@ -110,75 +133,71 @@ object PackStyleIcons {
         return if (r < 0) null else intArrayOf(l, t, r, b)
     }
 
-    /** Text, photos and gradients switch between mark and background many times per row. */
-    private fun busy(ink: BooleanArray, box: IntArray): Boolean {
-        var switches = 0
-        var rows = 0
-        for (y in box[1]..box[3]) {
-            var row = 0
-            for (x in box[0] + 1..box[2]) if (ink[y * SIZE + x] != ink[y * SIZE + x - 1]) row++
-            if (row > 0) {
-                switches += row
-                rows++
-            }
-        }
-        return rows == 0 || switches.toFloat() / rows > 6f
-    }
-
-    /** The mark scaled so its longest side is [MARK] of the icon, centred. */
-    private fun fit(ink: BooleanArray, box: IntArray): BooleanArray {
+    /** The mark scaled so its longest side is [MARK] of the icon, centred, sampled smoothly. */
+    private fun fit(ink: FloatArray, box: IntArray): FloatArray {
         val w = box[2] - box[0] + 1
         val h = box[3] - box[1] + 1
-        val scale = SIZE * MARK / max(w, h)
-        val ox = (SIZE - w * scale) / 2f
-        val oy = (SIZE - h * scale) / 2f
-        return BooleanArray(SIZE * SIZE) { i ->
-            val sx = ((i % SIZE - ox) / scale).roundToInt() + box[0]
-            val sy = ((i / SIZE - oy) / scale).roundToInt() + box[1]
-            sx in box[0]..box[2] && sy in box[1]..box[3] && ink[sy * SIZE + sx]
+        val scale = WORK * MARK / max(w, h)
+        val ox = (WORK - w * scale) / 2f
+        val oy = (WORK - h * scale) / 2f
+        fun at(x: Int, y: Int): Float =
+            if (x < box[0] || y < box[1] || x > box[2] || y > box[3]) 0f else ink[y * WORK + x]
+        return FloatArray(WORK * WORK) { i ->
+            val sx = (i % WORK - ox) / scale + box[0]
+            val sy = (i / WORK - oy) / scale + box[1]
+            val x0 = kotlin.math.floor(sx).toInt()
+            val y0 = kotlin.math.floor(sy).toInt()
+            val fx = sx - x0
+            val fy = sy - y0
+            val top = at(x0, y0) * (1 - fx) + at(x0 + 1, y0) * fx
+            val bottom = at(x0, y0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1) * fx
+            top * (1 - fy) + bottom * fy
         }
     }
 
-    /** The mark's edge as a line [STROKE] px either side, white on transparent (tinted when drawn). */
-    private fun outline(ink: BooleanArray): Bitmap {
-        val edge = BooleanArray(SIZE * SIZE)
-        for (y in 0 until SIZE) for (x in 0 until SIZE) {
-            if (!ink[y * SIZE + x]) continue
-            val border = x == 0 || y == 0 || x == SIZE - 1 || y == SIZE - 1 ||
-                !ink[y * SIZE + x - 1] || !ink[y * SIZE + x + 1] || !ink[(y - 1) * SIZE + x] || !ink[(y + 1) * SIZE + x]
-            if (border) edge[y * SIZE + x] = true
-        }
-        val pixels = IntArray(SIZE * SIZE)
-        for (y in 0 until SIZE) for (x in 0 until SIZE) {
-            if (!edge[y * SIZE + x]) continue
-            for (dy in -STROKE..STROKE) for (dx in -STROKE..STROKE) {
-                val nx = x + dx
-                val ny = y + dy
-                if (nx in 0 until SIZE && ny in 0 until SIZE) pixels[ny * SIZE + nx] = Color.WHITE
+    /** Box blur of radius [r], horizontal then vertical. */
+    private fun blur(src: FloatArray, r: Int): FloatArray {
+        val n = 2 * r + 1
+        val mid = FloatArray(WORK * WORK)
+        for (y in 0 until WORK) {
+            var sum = 0f
+            for (x in -r..r) sum += src[y * WORK + x.coerceIn(0, WORK - 1)]
+            for (x in 0 until WORK) {
+                mid[y * WORK + x] = sum / n
+                sum += src[y * WORK + (x + r + 1).coerceAtMost(WORK - 1)] - src[y * WORK + (x - r).coerceAtLeast(0)]
             }
         }
-        return Bitmap.createBitmap(pixels, SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        val out = FloatArray(WORK * WORK)
+        for (x in 0 until WORK) {
+            var sum = 0f
+            for (y in -r..r) sum += mid[y.coerceIn(0, WORK - 1) * WORK + x]
+            for (y in 0 until WORK) {
+                out[y * WORK + x] = sum / n
+                sum += mid[(y + r + 1).coerceAtMost(WORK - 1) * WORK + x] - mid[(y - r).coerceAtLeast(0) * WORK + x]
+            }
+        }
+        return out
     }
 
     /** One or two letters in a thin outlined rounded square. */
     internal fun initials(label: String): Bitmap {
-        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(OUT, OUT, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             style = Paint.Style.STROKE
-            strokeWidth = STROKE * 2.5f
+            strokeWidth = OUT * 0.016f
         }
-        val inset = SIZE * 0.16f
-        canvas.drawRoundRect(RectF(inset, inset, SIZE - inset, SIZE - inset), SIZE * 0.14f, SIZE * 0.14f, line)
+        val inset = OUT * 0.16f
+        canvas.drawRoundRect(RectF(inset, inset, OUT - inset, OUT - inset), OUT * 0.14f, OUT * 0.14f, line)
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             textAlign = Paint.Align.CENTER
-            textSize = SIZE * 0.26f
+            textSize = OUT * 0.26f
             typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
         }
-        val y = SIZE / 2f - (text.descent() + text.ascent()) / 2f
-        canvas.drawText(lettersOf(label), SIZE / 2f, y, text)
+        val y = OUT / 2f - (text.descent() + text.ascent()) / 2f
+        canvas.drawText(lettersOf(label), OUT / 2f, y, text)
         return bitmap
     }
 

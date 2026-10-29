@@ -101,7 +101,7 @@ fun IconPackSection() {
         Spacer(modifier = Modifier.height(14.dp))
         SettingsRow(
             "Single-colour packs (Arcticons, Lawnicons) look best in the theme's text colour. Apps the pack has no " +
-                "icon for can be drawn in its style: their logo traced as a line, or their initials.",
+                "icon for can be drawn in its style: their logo traced as a thin line.",
         )
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             SettingsAction("Fill missing icons", selected = fillGaps) {
