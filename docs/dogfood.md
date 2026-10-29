@@ -68,6 +68,10 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - Settings → Clean up → Apps lists apps unopened for the chosen period (never Settings, Play Store, the update service or Files); Keep removes one; `buckler unused` prints the same list
 - Settings → Remote: *Found* names the connected remote (2019: triangular); the drawing matches it; Netflix press / double / hold each run their choice (`adb logcat -s RemoteButtons`)
 - Force-stop buckler-home with remote buttons on: Home says they stopped; Settings → Remote → *Turn on again* brings them back (`dumpsys accessibility` shows it bound)
+- Settings → Clean up shows free space and app sizes; Cache and Largest apps list apps; *Clear Buckler's cache* drops it to a few kB; `buckler clean` reports MB freed
+- Every layout (Icon / Poster / Banner) and app size (Thin to Large): the focused shelf sits whole under the stage, its title showing, the next one fading in; no tile cut at a shelf's edge
+- Settings → Appearance → App Thumbnails: choose an icon pack; apps it lacks get icons drawn in its style (line packs) or its shape (full-colour packs); a newly installed app shows up and is styled without leaving Home
+- Appearance shows colour schemes and fonts three to a row; picking Slate … Saffron changes the app-list icon to match
 
 ## Known sticky processes
 

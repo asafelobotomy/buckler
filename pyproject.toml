@@ -1,6 +1,6 @@
 [project]
 name = "buckler"
-version = "0.14.0"
+version = "0.15.0"
 description = "Buckler — ADB CLI for NVIDIA SHIELD TV Pro cleanup, privacy profiles, and custom HOME launcher."
 readme = "README.md"
 requires-python = ">=3.12"
