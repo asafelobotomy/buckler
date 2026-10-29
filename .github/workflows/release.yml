@@ -63,12 +63,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
+      - name: Android SDK (preinstalled on the runner)
         if: steps.version.outputs.new == 'true'
-
-      - name: Build tools (apksigner)
-        if: steps.version.outputs.new == 'true'
-        run: sdkmanager "build-tools;36.0.0"
+        run: |
+          sdkmanager=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" "platforms;android-37.0" "build-tools;36.0.0" > /dev/null
 
       - uses: astral-sh/setup-uv@v5
         if: steps.version.outputs.new == 'true'
