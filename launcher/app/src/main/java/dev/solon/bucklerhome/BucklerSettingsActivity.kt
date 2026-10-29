@@ -81,7 +81,7 @@ enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val
     APPS("Apps", CLEAN_UP),
     CACHE("Cache", CLEAN_UP),
     LARGEST_APPS("Largest apps", CLEAN_UP),
-    SHIELD("SHIELD setup"),
+    SHIELD("Setup"),
     UPDATES("Updates"),
     ABOUT("About"),
 }

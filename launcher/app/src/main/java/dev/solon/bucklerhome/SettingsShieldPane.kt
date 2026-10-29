@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Settings → SHIELD setup: the changes `buckler setup` makes from a computer, made from the TV
+ * Settings → Setup: the changes `buckler setup` makes from a computer, made from the TV
  * itself over Network debugging ([AdbSelf], [ShieldOps]). The setup wizard builds on this; here
  * each step is a button, and a step that disables apps asks for a second press.
  */
@@ -65,7 +65,14 @@ fun ShieldPane() {
         }
     }
 
-    SectionTitle("SHIELD setup")
+    SectionTitle("Setup")
+    SettingsRow("The setup wizard walks through Buckler's look and, on a SHIELD, its clean-up, showing every change before making it.")
+    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        SettingsAction("Run setup wizard") { openSetupWizard(context) }
+    }
+    if (!SetupState.isShield()) return
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("SHIELD, step by step")
     SettingsRow(
         "Buckler can make its SHIELD changes from the TV itself, over Network debugging: no computer " +
             "needed. Every app it turns off is recorded and can be turned back on here.",

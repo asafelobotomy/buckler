@@ -28,7 +28,7 @@ fun AppearancePane() {
         SectionTitle("Appearance")
 
         PickerTitle("Colour scheme")
-        ThreeColumns { width ->
+        CardColumns { width ->
             AppTheme.entries.forEach { theme ->
                 PreviewCard(
                     label = theme.label,
@@ -41,7 +41,7 @@ fun AppearancePane() {
 
         Spacer(modifier = Modifier.height(20.dp))
         PickerTitle("Font")
-        ThreeColumns { width ->
+        CardColumns { width ->
             FontChoice.entries.forEach { font ->
                 PreviewCard(
                     label = font.label,
@@ -56,13 +56,13 @@ fun AppearancePane() {
 
 private val CardGap = 12.dp
 
-/** Cards three to a row, sized to share the page's width, so no empty band is left on the right. */
+/** Cards [columns] to a row, sized to share the page's width, so no empty band is left on the right. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ThreeColumns(content: @Composable (width: Dp) -> Unit) {
+fun CardColumns(columns: Int = 3, content: @Composable (width: Dp) -> Unit) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        // A little under a third: room for the focus zoom of an end card.
-        val width = (maxWidth - CardGap * 2) / 3 - 2.dp
+        // A little under a share each: room for the focus zoom of an end card.
+        val width = (maxWidth - CardGap * (columns - 1)) / columns - 2.dp
         FlowRow(horizontalArrangement = Arrangement.spacedBy(CardGap), verticalArrangement = Arrangement.spacedBy(CardGap)) {
             content(width)
         }

@@ -140,6 +140,17 @@ class ShieldOps(private val context: Context, private val adb: AdbSelf) {
         return restored
     }
 
+    /**
+     * Turns [packages] back on, whoever turned them off (the CLI or the TV), but only apps from the
+     * clean-up lists: the wizard never enables anything else. Returns those enabled.
+     */
+    fun enable(packages: Collection<String>): List<String> {
+        val listed = data.profiles.values.flatMap { it.packages }.toSet()
+        return packages.filter { pkg ->
+            pkg in listed && isPackageName(pkg) && adb.shell("pm enable $pkg").ok
+        }.onEach { ShieldJournal.remove(context, it) }
+    }
+
     /** Packages currently disabled for the TV's user. */
     fun disabledPackages(): Set<String> = packageSet("pm list packages -d")
 

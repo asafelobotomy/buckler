@@ -23,18 +23,22 @@ class MainActivity : ComponentActivity() {
     /** Bumped when Settings asks for Edit Home; singleTask delivers that to [onNewIntent]. */
     private val editRequests = mutableIntStateOf(0)
 
+    /** Whether the setup wizard shows: first run, asked for from Settings, or resumed after a grant restart. */
+    private val showSetup = mutableStateOf(false)
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(EXTRA_EDIT_HOME, false)) editRequests.intValue++
+        if (intent.getBooleanExtra(EXTRA_SETUP, false)) showSetup.value = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (intent.getBooleanExtra(EXTRA_EDIT_HOME, false)) editRequests.intValue++
         AppearanceStore.ensureLoaded(this)
+        showSetup.value = isFirstRunPending(this) || intent.getBooleanExtra(EXTRA_SETUP, false) || SetupState.resume(this) != null
         setContent {
             BucklerHomeTheme {
-                var showFirstRun by remember { mutableStateOf(isFirstRunPending(this)) }
                 var resumeTick by remember { mutableIntStateOf(0) }
                 var layoutVersion by remember { mutableIntStateOf(0) }
                 var screen by remember { mutableStateOf(RootScreen.HOME) }
@@ -51,16 +55,13 @@ class MainActivity : ComponentActivity() {
                     onDispose { lifecycle.removeObserver(observer) }
                 }
 
-                val openSettings = {
-                    startActivity(Intent(this@MainActivity, BucklerSettingsActivity::class.java))
-                }
                 when {
-                    showFirstRun -> FirstRunScreen(
-                        onContinue = {
-                            showFirstRun = false
+                    showSetup.value -> SetupWizard(
+                        resumed = remember { SetupState.resume(this@MainActivity) },
+                        onDone = {
+                            showSetup.value = false
                             layoutVersion += 1
                         },
-                        onOpenSettings = openSettings,
                     )
                     screen == RootScreen.EDIT -> EditHomeScreen(
                         onDone = {
@@ -80,5 +81,6 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_EDIT_HOME = "dev.solon.bucklerhome.EDIT_HOME"
+        const val EXTRA_SETUP = "dev.solon.bucklerhome.SETUP"
     }
 }
