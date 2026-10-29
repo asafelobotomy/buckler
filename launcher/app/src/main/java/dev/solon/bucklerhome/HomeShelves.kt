@@ -2,6 +2,7 @@ package dev.solon.bucklerhome
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +39,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -246,9 +249,16 @@ private fun EmptyShelfHint(
     focusRequester: FocusRequester?,
     onLeft: () -> Unit,
 ) {
-    // A D-pad stop like any shelf: Left opens the shelf circle, OK does nothing.
+    // A D-pad stop like any shelf: Left opens the shelf circle, OK does nothing. Framed when focused,
+    // so focus is never somewhere you cannot see.
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = RoundedCornerShape(8.dp)
     val modifier = Modifier
-        .padding(top = 18.dp)
+        .padding(top = 10.dp)
+        .border(2.dp, if (focused) ColorBrand else Color.Transparent, shape)
+        .strongFocusRing(focused, shape)
+        .padding(horizontal = 10.dp, vertical = 8.dp)
         .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
         .then(if (up != null) Modifier.focusProperties { this.up = up } else Modifier)
         .onPreviewKeyEvent { event ->
@@ -256,10 +266,10 @@ private fun EmptyShelfHint(
             if (event.type == KeyEventType.KeyDown && !event.isKeyRepeat()) onLeft()
             true
         }
-        .focusable()
+        .focusable(interactionSource = interaction)
     Text(
         text = emptyShelfHint(type),
-        color = ColorHint,
+        color = if (focused) ColorText else ColorHint,
         fontSize = 14.sp,
         modifier = modifier,
     )

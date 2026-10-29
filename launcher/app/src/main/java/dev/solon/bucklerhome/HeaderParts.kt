@@ -55,9 +55,12 @@ fun HeaderIconButton(
     /** Down handled in code, so a shelf that is not composed yet cannot crash the activity. */
     onDown: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
+    /** Hold OK (or Menu); without it a hold is just a press. */
+    onLongPress: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val menu = rememberTvMenuInteraction(onOpen = onClick, onMenu = { onLongPress?.invoke() })
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(10.dp)
     AnnounceOnFocus(focused, description)
@@ -89,8 +92,10 @@ fun HeaderIconButton(
             )
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .focusable(interactionSource = interaction)
-            .onSelectKeyUp(onClick)
-            .pointerInput(onClick) { detectTapGestures(onTap = { onClick() }) },
+            .then(if (onLongPress != null) Modifier.tvMenuKeys(menu) else Modifier.onSelectKeyUp(onClick))
+            .pointerInput(onClick, onLongPress) {
+                detectTapGestures(onLongPress = onLongPress?.let { { _ -> menu.openMenu() } }, onTap = { menu.open() })
+            },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Image(

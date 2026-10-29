@@ -20,6 +20,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -321,7 +322,14 @@ fun HomeScreen(
             onPickStage = ::pickStage,
             onPickSpan = ::pickSpan,
             onPin = null,
-            onDismiss = { pickingStage = false },
+            onDismiss = {
+                pickingStage = false
+                // A new stage replaces the target that held focus; without this it falls to the header.
+                scope.launch {
+                    delay(100)
+                    runCatching { stageFocus.requestFocus() }
+                }
+            },
         )
     }
 

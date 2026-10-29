@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,7 @@ fun CalendarStage(
     onHold: () -> Unit,
     metrics: StageMetrics,
 ) {
+    val context = LocalContext.current
     val agenda by rememberAgenda(days = 7)
     val now by rememberNow()
     val tight = metrics.cardHeight < 150.dp
@@ -57,7 +59,8 @@ fun CalendarStage(
         StageHeading("Calendar")
         Row(
             modifier = Modifier
-                .stageTarget(stageFocus, onDown, "Calendar", onLongPress = onHold) { onHold() }
+                // OK opens the calendar app; with none installed, the stage menu as before.
+                .stageTarget(stageFocus, onDown, "Calendar", onLongPress = onHold) { if (!openCalendarApp(context)) onHold() }
                 .fillMaxWidth()
                 .height(metrics.cardHeight)
                 .clip(RoundedCornerShape(12.dp))

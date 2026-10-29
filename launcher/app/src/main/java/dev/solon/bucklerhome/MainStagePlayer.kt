@@ -81,7 +81,7 @@ fun NowPlayingStage(
                     fontSize = 16.sp,
                     modifier = Modifier.weight(1f),
                 )
-                GrantMediaAccess(stageFocus, onDown)
+                GrantMediaAccess(stageFocus, onDown, onHold)
             } else {
                 Text(
                     text = "Nothing playing.",
@@ -172,14 +172,16 @@ private fun StageArt(info: NowPlayingInfo?, artSize: Dp) {
 }
 
 @Composable
-private fun GrantMediaAccess(stageFocus: FocusRequester, onDown: () -> Unit) {
+private fun GrantMediaAccess(stageFocus: FocusRequester, onDown: () -> Unit, onHold: () -> Unit) {
     val context = LocalContext.current
+    // The stage's only target until access is granted, so it carries the stage's hold too.
     HeaderIconButton(
         icon = R.drawable.ic_music,
         description = "Allow media access to show Now Playing",
         size = 52.dp,
         onDown = onDown,
         focusRequester = stageFocus,
+        onLongPress = onHold,
     ) {
         launchFirstThatWorks(
             context,

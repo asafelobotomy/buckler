@@ -41,10 +41,11 @@ fun WeatherStage(
     Column(modifier = Modifier.fillMaxWidth()) {
         StageHeading("Weather", place?.name)
         // The focus frame goes round the forecast, not the heading, and keeps clear of its text.
+        // OK opens the weather app; with none installed, the stage menu.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .stageTarget(stageFocus, onDown, "Open weather", onLongPress = onHold) { launchWeatherApp(context) }
+                .stageTarget(stageFocus, onDown, "Open weather", onLongPress = onHold) { if (!openWeatherApp(context)) onHold() }
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
             when {

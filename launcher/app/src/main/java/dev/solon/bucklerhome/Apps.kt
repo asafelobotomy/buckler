@@ -127,8 +127,18 @@ fun launchPackage(context: Context, packageName: String, label: String) {
     safeLaunch(context, intent, label)
 }
 
-/** Opens the installed weather app: an app named Weather, otherwise the first whose name says so. */
-fun launchWeatherApp(context: Context) {
+/** Opens the calendar app, if one is installed; false when there is none. */
+fun openCalendarApp(context: Context): Boolean {
+    val intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALENDAR)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    return runCatching { context.startActivity(intent) }.isSuccess
+}
+
+/**
+ * Opens the installed weather app: an app named Weather, otherwise the first whose name says so.
+ * False when there is none.
+ */
+fun openWeatherApp(context: Context): Boolean {
     // Names only: this runs on the OK press, where drawing every icon would stall Home.
     val match = loadLaunchableApps(context, icons = false)
         .filter { app ->
@@ -136,11 +146,9 @@ fun launchWeatherApp(context: Context) {
             "weather" in label || "weather" in app.packageName.lowercase()
         }
         .minWithOrNull(compareBy({ app -> weatherRank(app.label) }, { app -> app.label.lowercase() }))
-    if (match == null) {
-        Toast.makeText(context, "No weather app installed", Toast.LENGTH_SHORT).show()
-        return
-    }
+        ?: return false
     launchPackage(context, match.packageName, match.label)
+    return true
 }
 
 private fun weatherRank(label: String): Int = when (label.lowercase()) {

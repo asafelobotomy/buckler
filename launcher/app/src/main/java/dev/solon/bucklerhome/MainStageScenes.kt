@@ -20,6 +20,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,7 @@ private const val MAP_RETRY_MS = 5 * 60_000L
  */
 @Composable
 fun WeatherMapStage(place: Place?, stageFocus: FocusRequester, onDown: () -> Unit, onHold: () -> Unit, metrics: StageMetrics) {
+    val context = LocalContext.current
     val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
     val grid by produceState<WeatherGrid?>(null, place, visible) {
         if (place == null || !visible) return@produceState
@@ -60,7 +62,8 @@ fun WeatherMapStage(place: Place?, stageFocus: FocusRequester, onDown: () -> Uni
                     if (event.type == KeyEventType.KeyDown && hours > 1) hour = (hour + step).coerceIn(0, hours - 1)
                     true
                 }
-                .stageTarget(stageFocus, onDown, "Weather map", onLongPress = onHold) { onHold() }
+                // OK opens the weather app; with none installed, the stage menu.
+                .stageTarget(stageFocus, onDown, "Weather map", onLongPress = onHold) { if (!openWeatherApp(context)) onHold() }
                 .fillMaxWidth()
                 .height(metrics.cardHeight)
                 .clip(RoundedCornerShape(12.dp))
