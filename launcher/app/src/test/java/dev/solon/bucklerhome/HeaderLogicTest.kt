@@ -336,4 +336,33 @@ class HeaderLogicTest {
         assertEquals(HeaderElement.EDIT, headerEndElement(noSettings, hasStore = false))
         assertNull(headerEndElement(DisplayConfig(headerVisible = false), hasStore = true))
     }
+
+    @Test
+    fun feedDatesParseInRssAndAtomForms() {
+        val t = 1_793_279_964_000L // 2026-10-29T13:19:24Z
+        assertEquals(t, NewsFeed.parseDate("Thu, 29 Oct 2026 13:19:24 GMT"))
+        assertEquals(t, NewsFeed.parseDate("Thu, 29 Oct 2026 09:19:24 -0400"))
+        assertEquals(t, NewsFeed.parseDate("2026-10-29T13:19:24Z"))
+        assertEquals(t, NewsFeed.parseDate("2026-10-29T15:19:24+02:00"))
+        assertNull(NewsFeed.parseDate("yesterday"))
+    }
+
+    @Test
+    fun storiesComeNewestFirstAndOldOnesDropWhileEnoughRemain() {
+        val now = 1_800_000_000_000L
+        val hour = 3_600_000L
+        fun story(title: String, hoursAgo: Long?) = NewsStory(title, published = hoursAgo?.let { now - it * hour })
+        val feed = listOf(story("old", 72), story("b", 5), story("undated", null), story("a", 1), story("c", 10), story("d", 20))
+        // Importance order in, newest first out; undated stories stay, after the dated ones.
+        assertEquals(listOf("a", "b", "c", "d", "undated"), NewsFeed.freshest(feed, now).map { it.title })
+        // Too few recent stories: the newest few are kept whatever their age.
+        val stale = listOf(story("x", 100), story("y", 80), story("z", 90))
+        assertEquals(listOf("y", "z", "x"), NewsFeed.freshest(stale, now).map { it.title })
+    }
+
+    @Test
+    fun parsedStoriesCarryTheirDate() {
+        val xml = "<rss><channel><item><title>Hi</title><pubDate>Thu, 29 Oct 2026 13:19:24 GMT</pubDate></item></channel></rss>"
+        assertEquals(1_793_279_964_000L, NewsFeed.parseStories(xml, 5).single().published)
+    }
 }

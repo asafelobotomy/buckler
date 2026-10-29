@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import coil.imageLoader
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 
@@ -128,8 +130,14 @@ private fun NewsStage(
     onHold: () -> Unit,
     metrics: StageMetrics,
 ) {
+    val context = LocalContext.current
     val pool = remember(headlines) { NewsFeed.stagePool(headlines) }
-    var index by remember(pool) { mutableIntStateOf(0) }
+    var index by remember { mutableIntStateOf(0) }
+    // New headlines keep the story on screen (wherever it now sits) rather than jumping to the first.
+    var shownTitle by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(pool) {
+        index = pool.indexOfFirst { it.title == shownTitle }.coerceAtLeast(0)
+    }
     // Bumped by ◀ ▶ so the rotation timer restarts and a picked story stays its full time.
     var stepped by remember { mutableIntStateOf(0) }
     LaunchedEffect(pool, pace, stepped) {
@@ -140,6 +148,12 @@ private fun NewsStage(
         }
     }
     val story = pool.getOrNull(index.coerceIn(0, (pool.size - 1).coerceAtLeast(0)))
+    LaunchedEffect(story?.title) {
+        shownTitle = story?.title
+        // The next story's picture, loaded now so it shows the moment the story turns.
+        val next = pool.getOrNull((index + 1) % pool.size.coerceAtLeast(1))?.imageUrl ?: return@LaunchedEffect
+        context.imageLoader.enqueue(ImageRequest.Builder(context).data(next).size(NewsFeed.NEWS_IMAGE_PX, NewsFeed.NEWS_IMAGE_PX).build())
+    }
     Column(modifier = Modifier.fillMaxWidth()) {
         StageHeading("News")
         Row(
@@ -218,7 +232,6 @@ private fun NewsStage(
             }
             val image = story?.imageUrl
             if (image != null) {
-                val context = LocalContext.current
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(image)

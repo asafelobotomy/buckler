@@ -71,6 +71,20 @@ enum class NewsPace(val label: String, val millis: Long) {
 }
 
 /** Scroll speed of the news ticker, and how long each story stays when motion is reduced. */
+/** How often news feeds are checked for new stories, while Home is on screen. */
+enum class NewsRefresh(val label: String, val millis: Long) {
+    H1("1 hour", 3_600_000L),
+    H2("2 hours", 2 * 3_600_000L),
+    H5("5 hours", 5 * 3_600_000L),
+    H12("12 hours", 12 * 3_600_000L),
+    H24("24 hours", 24 * 3_600_000L),
+    ;
+
+    companion object {
+        fun fromName(raw: String?): NewsRefresh = entries.firstOrNull { it.name == raw } ?: H1
+    }
+}
+
 enum class TickerSpeed(val label: String, val velocityDp: Float, val rotateMs: Long) {
     SLOW("Slow", 20f, 14_000),
     NORMAL("Normal", 42f, 9_000),
@@ -108,6 +122,8 @@ data class DisplayConfig(
     /** Hours or ten days, for the Weather stage only. */
     val weatherSpan: WeatherSpan = WeatherSpan.HOURS,
     val tickerSpeed: TickerSpeed = TickerSpeed.NORMAL,
+    /** For the ticker and the News stage alike. */
+    val newsRefresh: NewsRefresh = NewsRefresh.H1,
     val headerSize: HeaderSize = HeaderSize.MEDIUM,
     val nowPlaying: Boolean = true,
     /** Off: no header at all, only shelves. */
@@ -169,6 +185,7 @@ object DisplayPrefs {
     private const val KEY_WEATHER_SPAN = "weather_span"
     private const val KEY_NEWS_PACE = "news_stage_pace"
     private const val KEY_TICKER_SPEED = "news_ticker_speed"
+    private const val KEY_NEWS_REFRESH = "news_refresh"
     private const val KEY_HEADER_SIZE = "header_size"
     private const val KEY_NOW_PLAYING = "now_playing_enabled"
     private const val KEY_HEADER_VISIBLE = "header_visible"
@@ -200,6 +217,7 @@ object DisplayPrefs {
             newsPace = NewsPace.fromName(p.getString(KEY_NEWS_PACE, null)),
             weatherSpan = WeatherSpan.fromName(p.getString(KEY_WEATHER_SPAN, null)),
             tickerSpeed = TickerSpeed.fromName(p.getString(KEY_TICKER_SPEED, null)),
+            newsRefresh = NewsRefresh.fromName(p.getString(KEY_NEWS_REFRESH, null)),
             headerSize = HeaderSize.fromName(p.getString(KEY_HEADER_SIZE, null)),
             nowPlaying = p.getBoolean(KEY_NOW_PLAYING, true),
             headerVisible = p.getBoolean(KEY_HEADER_VISIBLE, true),
@@ -274,6 +292,9 @@ object DisplayPrefs {
 
     fun setNewsPace(context: Context, pace: NewsPace) =
         prefs(context).edit().putString(KEY_NEWS_PACE, pace.name).apply()
+
+    fun setNewsRefresh(context: Context, refresh: NewsRefresh) =
+        prefs(context).edit().putString(KEY_NEWS_REFRESH, refresh.name).apply()
 
     fun setTickerSpeed(context: Context, speed: TickerSpeed) =
         prefs(context).edit().putString(KEY_TICKER_SPEED, speed.name).apply()

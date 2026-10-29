@@ -15,7 +15,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private const val REFRESH_OK_MS = 30 * 60_000L
-private const val REFRESH_NEWS_MS = 20 * 60_000L
 private const val REFRESH_RETRY_MS = 2 * 60_000L
 
 /** Process-wide last results so returning to Home shows content immediately instead of a blank. */
@@ -92,23 +91,32 @@ fun rememberForecast(place: Place?): State<Forecast?> {
 }
 
 @Composable
-fun rememberHeadlines(query: NewsQuery?): State<List<Headline>> {
+fun rememberHeadlines(query: NewsQuery?, everyMs: Long): State<List<Headline>> {
     val context = LocalContext.current
     val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
     return produceState(
         initialValue = query?.cacheKey?.let { HeaderCache.news[it] }.orEmpty(),
         query?.cacheKey,
         visible,
+        everyMs,
     ) {
         val key = query?.cacheKey
+        val pollKey = "news:$key"
         // produceState keeps the last key's headlines: start from this key's own.
         value = key?.let { HeaderCache.news[it] }.orEmpty()
         if (query == null || key == null) return@produceState
-        if (value.isEmpty()) value = withContext(Dispatchers.IO) { HeadlineStore.load(context, key) }
-        poll("news:$key", visible, REFRESH_NEWS_MS, value.isNotEmpty(), { NewsFeed.load(query).ifEmpty { null } }) { fresh ->
+        if (value.isEmpty()) {
+            // After Android closed Home: the saved stories at once, and their age, so fresh ones are not fetched again.
+            val saved = withContext(Dispatchers.IO) { HeadlineStore.load(context, key) }
+            value = saved.headlines
+            if (saved.fetchedAt > 0) HeaderCache.fetchedAt.putIfAbsent(pollKey, saved.fetchedAt)
+        }
+        // A feed that fails this time keeps the stories it had.
+        poll(pollKey, visible, everyMs, value.isNotEmpty(), { NewsFeed.load(query, value).ifEmpty { null } }) { fresh ->
             HeaderCache.news[key] = fresh
             value = fresh
-            withContext(Dispatchers.IO) { HeadlineStore.save(context, key, fresh) }
+            val at = HeaderCache.fetchedAt[pollKey] ?: System.currentTimeMillis()
+            withContext(Dispatchers.IO) { HeadlineStore.save(context, key, fresh, at) }
         }
     }
 }
@@ -122,8 +130,9 @@ fun rememberHomeHeadlines(config: DisplayConfig, stage: MainStage): Pair<List<He
     val headerQuery = config.newsQuery()
     val stageQuery = stageNewsQuery(config, stage)
     val shared = stageQuery == null || stageQuery.cacheKey == headerQuery?.cacheKey
-    val header by rememberHeadlines(if (shared) headerQuery ?: stageQuery else headerQuery)
-    val own by rememberHeadlines(if (shared) null else stageQuery)
+    val every = config.newsRefresh.millis
+    val header by rememberHeadlines(if (shared) headerQuery ?: stageQuery else headerQuery, every)
+    val own by rememberHeadlines(if (shared) null else stageQuery, every)
     return header to if (shared) header else own
 }
 

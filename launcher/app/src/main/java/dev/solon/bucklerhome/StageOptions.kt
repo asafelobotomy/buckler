@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -83,6 +85,8 @@ fun StageOptions(stage: MainStage, onChanged: () -> Unit) {
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(14.dp))
+            NewsRefreshPicker(cfg.newsRefresh) { changed() }
         }
         MainStage.NOW_PLAYING -> {
             MediaAccessOption("Shows what is playing, with its controls.")

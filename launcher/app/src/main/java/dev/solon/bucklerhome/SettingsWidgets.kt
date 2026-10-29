@@ -92,7 +92,28 @@ fun NewsSection(section: HomeSection, cfg: DisplayConfig, onChanged: () -> Unit)
         }
         if (sources.isNotEmpty()) {
             Spacer(modifier = Modifier.height(14.dp))
+            NewsRefreshPicker(cfg.newsRefresh, onChanged)
+            Spacer(modifier = Modifier.height(14.dp))
             SettingsAction("Turn news off here") { setSources(emptyList()) }
+        }
+    }
+}
+
+/**
+ * How often the feeds are checked for new stories (for the ticker and the News stage alike). Only
+ * while Home is on screen; an unchanged feed costs a short "not modified" reply, not a download.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun NewsRefreshPicker(current: NewsRefresh, onChanged: () -> Unit) {
+    val context = LocalContext.current
+    PickerTitle("Check for new stories every")
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        NewsRefresh.entries.forEach { option ->
+            SettingsAction(option.label, selected = option == current) {
+                DisplayPrefs.setNewsRefresh(context, option)
+                onChanged()
+            }
         }
     }
 }

@@ -1,5 +1,11 @@
 package dev.solon.bucklerhome
 
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+
 /** One headline plus the feed it came from, so the ticker can show that source's mark. */
 data class Headline(
     val source: NewsSource,
@@ -8,14 +14,17 @@ data class Headline(
     val imageUrl: String? = null,
     /** Article URL. The News stage opens this in the reading overlay. */
     val link: String? = null,
+    /** When the feed says it was published or updated (epoch ms), if it says. */
+    val published: Long? = null,
 )
 
-/** Title, short text, picture and article link parsed from one RSS item. */
+/** Title, short text, picture, article link and date parsed from one RSS item. */
 data class NewsStory(
     val title: String,
     val summary: String? = null,
     val imageUrl: String? = null,
     val link: String? = null,
+    val published: Long? = null,
 )
 
 /** Feeds to fetch, in catalog order. More than one is mixed so neighbouring stories differ. */
@@ -95,24 +104,62 @@ fun sourcesForRegion(region: NewsRegion, current: List<NewsSource>): List<NewsSo
 object NewsFeed {
     private const val MAX_HEADLINES = 14
     private const val MAX_MIXED = 28
+    /** Items read from a feed before sorting: enough to find the newest in feeds ordered by importance (BBC). */
+    private const val PARSE_LIMIT = 40
+    /** Stories older than this are left out, as long as a source keeps at least [MIN_STORIES]. */
+    private const val MAX_AGE_MS = 48 * 3_600_000L
+    private const val MIN_STORIES = 4
     private val RSS_ACCEPT = mapOf("Accept" to "application/rss+xml, application/atom+xml, application/xml, text/xml")
 
-    fun fetch(source: NewsSource): List<String> = fetchStories(source).map { it.title }
+    /** Each feed's last stories and its ETag / Last-Modified, so an unchanged feed is not downloaded again. */
+    private class Memo(val etag: String?, val lastModified: String?, val stories: List<NewsStory>)
+    private val memos = ConcurrentHashMap<NewsSource, Memo>()
 
-    private fun fetchStories(source: NewsSource): List<NewsStory> {
-        val res = runCatching { HttpJson.get(source.url, headers = RSS_ACCEPT) }.getOrNull()
-            ?: return emptyList()
-        return if (res.code in 200..299) parseStories(res.body, MAX_HEADLINES) else emptyList()
+    /** Feeds are fetched side by side, so one slow site does not hold up the rest. */
+    private val pool by lazy {
+        Executors.newFixedThreadPool(6) { r -> Thread(r, "news-feed").apply { isDaemon = true } }
     }
 
-    /** One source's headlines, or the chosen sources mixed so each story is followed by another source. */
-    fun load(query: NewsQuery): List<Headline> {
+    fun fetch(source: NewsSource): List<String> = fetchStories(source).orEmpty().map { it.title }
+
+    /** The source's freshest stories; the last ones when the feed has not changed; null when it fails. */
+    private fun fetchStories(source: NewsSource): List<NewsStory>? {
+        val memo = memos[source]
+        val headers = RSS_ACCEPT + listOfNotNull(
+            memo?.etag?.let { "If-None-Match" to it },
+            memo?.lastModified?.let { "If-Modified-Since" to it },
+        )
+        val res = runCatching { HttpJson.get(source.url, headers = headers) }.getOrNull() ?: return null
+        if (res.code == 304 && memo != null) return freshest(memo.stories)
+        if (res.code !in 200..299) return null
+        val stories = parseStories(res.body, PARSE_LIMIT)
+        if (stories.isEmpty()) return null
+        memos[source] = Memo(res.etag, res.lastModified, stories)
+        return freshest(stories)
+    }
+
+    /** Newest first; stories past [MAX_AGE_MS] dropped unless that would leave fewer than [MIN_STORIES]. */
+    fun freshest(stories: List<NewsStory>, now: Long = System.currentTimeMillis()): List<NewsStory> {
+        val sorted = stories.sortedByDescending { it.published ?: Long.MIN_VALUE }
+        val recent = sorted.filter { it.published == null || now - it.published <= MAX_AGE_MS }
+        return (if (recent.size >= MIN_STORIES) recent else sorted.take(MIN_STORIES)).take(MAX_HEADLINES)
+    }
+
+    /**
+     * The chosen sources' headlines, mixed so each story is followed by another source, the source
+     * with the newest story first. A feed that fails keeps its stories from [previous]; when every
+     * feed fails the result is empty, so the caller tries again soon.
+     */
+    fun load(query: NewsQuery, previous: List<Headline> = emptyList()): List<Headline> {
         if (query.sources.isEmpty()) return emptyList()
-        val groups = query.sources.map { source ->
-            fetchStories(source).map { story ->
-                Headline(source, story.title, story.summary, story.imageUrl, story.link)
-            }
+        val results = query.sources.map { source -> source to pool.submit<List<NewsStory>?> { fetchStories(source) } }
+            .map { (source, job) -> source to runCatching { job.get() }.getOrNull() }
+        if (results.all { it.second == null }) return emptyList()
+        val groups = results.map { (source, stories) ->
+            stories?.map { Headline(source, it.title, it.summary, it.imageUrl, it.link, it.published) }
+                ?: previous.filter { it.source == source }
         }.filter { it.isNotEmpty() }
+            .sortedByDescending { group -> group.maxOf { it.published ?: Long.MIN_VALUE } }
         val mixed = if (groups.size > 1) interleaveHeadlines(groups) else groups.flatten()
         return mixed.take(MAX_MIXED)
     }
@@ -158,6 +205,7 @@ object NewsFeed {
         "<(description|summary|content)\\b[^>]*>(.*?)</\\1>",
         setOf(RegexOption.DOT_MATCHES_ALL),
     )
+    private val dateRe = Regex("<(pubDate|dc:date|published|updated)\\b[^>]*>(.*?)</\\1>", setOf(RegexOption.DOT_MATCHES_ALL))
     private val imgSrc = Regex("""<img\b[^>]*\bsrc=["']([^"']+)["']""", setOf(RegexOption.DOT_MATCHES_ALL))
     private val cdataRe = Regex("<!\\[CDATA\\[(.*?)]]>", setOf(RegexOption.DOT_MATCHES_ALL))
     private val tagRe = Regex("<[^>]+>")
@@ -177,8 +225,14 @@ object NewsFeed {
         val title = titleRe.find(item)?.groupValues?.get(1)?.let(::clean)?.takeIf { it.isNotEmpty() } ?: return null
         val summary = descRe.find(item)?.groupValues?.get(2)?.let(::clean)?.let(::clip)
             ?.takeIf { it.isNotEmpty() && !it.equals(title, ignoreCase = true) }
-        return NewsStory(title, summary, imageFrom(item), linkFrom(item))
+        val published = dateRe.find(item)?.groupValues?.get(2)?.let(::clean)?.let(::parseDate)
+        return NewsStory(title, summary, imageFrom(item), linkFrom(item), published)
     }
+
+    /** RSS's RFC 1123 dates ("Thu, 29 Oct 2026 13:19:24 GMT") and Atom / Dublin Core ISO 8601 ones. */
+    fun parseDate(text: String): Long? =
+        runCatching { ZonedDateTime.parse(text, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() }.getOrNull()
+            ?: runCatching { OffsetDateTime.parse(text).toInstant().toEpochMilli() }.getOrNull()
 
     private val rssLink = Regex("""<link\b[^>]*>([^<]+)</link>""", RegexOption.IGNORE_CASE)
     private val atomLink = Regex("""<link\b([^>]*)/?>""", RegexOption.IGNORE_CASE)

@@ -10,7 +10,8 @@ import java.nio.charset.StandardCharsets
 import org.json.JSONObject
 
 object HttpJson {
-    data class Response(val code: Int, val body: String)
+    /** [etag] and [lastModified] let a caller ask next time for the body only if it changed (304). */
+    data class Response(val code: Int, val body: String, val etag: String? = null, val lastModified: String? = null)
 
     fun get(
         url: String,
@@ -123,8 +124,10 @@ object HttpJson {
             }
             out.toString()
         }.orEmpty()
+        val etag = conn.getHeaderField("ETag")
+        val lastModified = conn.getHeaderField("Last-Modified")
         conn.disconnect()
-        return Response(code, text)
+        return Response(code, text, etag, lastModified)
     }
 
     private const val MAX_BODY_CHARS = 2_000_000
