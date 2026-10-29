@@ -7,6 +7,9 @@
     </issue>
     <!-- The screensaver views are only ever built in code, never inflated from XML. -->
     <issue id="ViewConstructor" severity="ignore" />
+    <!-- targetSdk is 36 on purpose: API 37 needs ACCESS_LOCAL_NETWORK for LAN traffic, to be
+         tested on an Android 17 TV before moving (see build.gradle.kts). -->
+    <issue id="OldTargetApi" severity="ignore" />
     <!-- The maze allocates a new maze once per finished run, not per frame. -->
     <issue id="DrawAllocation">
         <ignore path="src/main/java/dev/solon/bucklerhome/MazeSaver.kt" />

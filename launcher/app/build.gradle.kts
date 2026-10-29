@@ -23,7 +23,9 @@ android {
     defaultConfig {
         applicationId = "dev.solon.bucklerhome"
         minSdk = 28
-        targetSdk = 34
+        // 36, not 37: Android 17 puts LAN traffic (the phone upload page, maybe the loopback adb
+        // link) behind a runtime permission that needs testing on an Android 17 TV first.
+        targetSdk = 36
         versionCode = 18
         versionName = "0.18.0"
         // Public Twitch Client ID for IGDB device-code login (no secret in APK).
