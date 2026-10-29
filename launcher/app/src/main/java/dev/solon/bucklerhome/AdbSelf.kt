@@ -214,9 +214,10 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
 
         /**
          * Connects and signs in. [onApprovalNeeded] runs (on this thread) when the TV is showing its
-         * "Allow debugging?" prompt, so the caller can say so on screen.
+         * "Allow debugging?" prompt, so the caller can say so on screen. With [quiet], an unknown
+         * key gives up instead of raising the prompt: for work no one asked for on screen.
          */
-        fun connect(context: Context, onApprovalNeeded: () -> Unit = {}): AdbSelf {
+        fun connect(context: Context, quiet: Boolean = false, onApprovalNeeded: () -> Unit = {}): AdbSelf {
             val socket = Socket()
             try {
                 socket.connect(InetSocketAddress("127.0.0.1", PORT), 3_000)
@@ -227,7 +228,7 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
             socket.soTimeout = 15_000
             val adb = AdbSelf(socket)
             try {
-                adb.handshake(context, onApprovalNeeded)
+                adb.handshake(context, onApprovalNeeded, quiet)
             } catch (e: IOException) {
                 adb.close()
                 throw if (e is Failure) e else Failure.NotAllowed()
@@ -236,7 +237,7 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
             return adb
         }
 
-        private fun AdbSelf.handshake(context: Context, onApprovalNeeded: () -> Unit) {
+        private fun AdbSelf.handshake(context: Context, onApprovalNeeded: () -> Unit, quiet: Boolean) {
             val keys = AdbKey.load(context)
             send(CNXN, VERSION, MAX_PAYLOAD, "host::buckler\u0000".toByteArray())
             var signed = false
@@ -252,6 +253,8 @@ class AdbSelf private constructor(private val socket: Socket) : Closeable {
                             // Known key: the signature is enough.
                             signed = true
                             send(AUTH, AUTH_SIGNATURE, 0, sign(keys, m.data))
+                        } else if (quiet) {
+                            throw Failure.NotAllowed()
                         } else {
                             // Unknown key: offer it, and wait while the TV asks.
                             send(AUTH, AUTH_RSAPUBLICKEY, 0, AdbKey.publicKeyBlob(keys))

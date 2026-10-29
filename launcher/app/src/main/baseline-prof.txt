@@ -1,0 +1,4 @@
+# Buckler's own code, all of it: Home draws from most of it at once, and the app is small, so
+# compiling the lot ahead of time is cheap. Libraries (Compose, Media3, Coil) bring their own.
+HSPLdev/solon/bucklerhome/**->**(**)**
+Ldev/solon/bucklerhome/**;

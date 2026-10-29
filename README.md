@@ -119,7 +119,14 @@ GitHub updates. The full reference is [docs/launcher.md](docs/launcher.md).
 pytest -q && ruff check src tests scripts   # Python
 python scripts/check_loc.py                 # every source file <= 400 lines
 (cd launcher && ./gradlew :app:testDebugUnitTest)   # Kotlin unit tests
+(cd launcher && ./gradlew :app:assembleOptimized)   # release-fast build, signed with the debug key
 ```
+
+For a TV used day to day, install the **optimized** build rather than debug: it is the release
+build (shrunk, optimised, not debuggable; about 8.7 MB against 50 MB) signed with this machine's
+debug key, so it installs over a debug install without losing settings. On SHIELD it holds about
+40% less memory. It stays profileable, so CPU and frames can still be measured; use the debug
+build when you need `run-as` or a debugger.
 
 Most `scripts/` run with the project's own dependencies. `gen_fonts.py` also needs `fontTools`, and
 `scripts/lyrics_bench/` (a retired benchmark, kept for its results) needs `torch` and `demucs`.

@@ -28,6 +28,12 @@ class MainActivity : ComponentActivity() {
     /** Whether the setup wizard shows: first run, asked for from Settings, or resumed after a grant restart. */
     private val showSetup = mutableStateOf(false)
 
+    // Every press on Home: idle-only motion (the ticker's scroll) rests after a while without one.
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        UserActivity.touched()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(EXTRA_EDIT_HOME, false)) editRequests.intValue++

@@ -25,6 +25,7 @@ class BucklerApp : Application(), ImageLoaderFactory {
         super.onCreate()
         // Feeds and weather send ETag / Last-Modified: unchanged ones then come back as a short 304.
         installHttpCache(this)
+        SelfCompile.afterUpdate(this)
     }
 
     override fun onTrimMemory(level: Int) {

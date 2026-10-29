@@ -32,7 +32,7 @@ import kotlinx.coroutines.delay
 
 /**
  * One dim line under the header. Each story is preceded by its source mark. Scrolls at the chosen
- * speed, or steps story by story when reduced motion is on.
+ * speed, or steps story by story when reduced motion is on or after three minutes without a press.
  *
  * The scroll runs only while Home is resumed, and restarts after the marquee's initial pause. Home
  * redraws the whole screen for every scroll step and SHIELD takes just over a frame to do it, so a
@@ -44,7 +44,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun NewsTicker(headlines: List<Headline>, metrics: HeaderMetrics, speed: TickerSpeed) {
     if (headlines.isEmpty()) return
-    if (AppearanceStore.config.reduceMotion) {
+    // Idle (no press for a while): one story at a time, which repaints only as each story changes.
+    if (AppearanceStore.config.reduceMotion || rememberIdle(IDLE_MS)) {
         SteppingTicker(headlines, metrics, speed)
         return
     }
@@ -70,6 +71,8 @@ fun NewsTicker(headlines: List<Headline>, metrics: HeaderMetrics, speed: TickerS
         }
     }
 }
+
+private const val IDLE_MS = 3 * 60_000L
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

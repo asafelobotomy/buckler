@@ -65,6 +65,14 @@ android {
             )
             signingConfig = signingConfigs.getByName(if (hasReleaseKeystore) "release" else "debug")
         }
+        // The release build, signed with this machine's debug key: it installs over a debug install
+        // (keeping its settings) and runs as fast as a release. For a TV used day to day, and for
+        // catching anything shrinking breaks before a release does. Profileable, not debuggable.
+        create("optimized") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
@@ -107,6 +115,9 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("androidx.security:security-crypto:1.1.0")
     implementation("com.google.zxing:core:3.5.4")
+    // Installs the startup profile (src/main/baseline-prof.txt and the libraries' own) when Buckler
+    // is installed or updated outside the Play Store, so Android compiles the code Home needs first.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     // Multiview: up to three streams on the Main Stage (HLS from Jellyfin and IPTV, RTSP cameras).
     implementation("androidx.media3:media3-exoplayer:1.11.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
