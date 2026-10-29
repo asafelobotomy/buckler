@@ -109,7 +109,7 @@ def launcher_media_access(ctx: click.Context) -> None:
 @launcher_group.command("grant-settings")
 @click.pass_context
 def launcher_grant_settings(ctx: click.Context) -> None:
-    """One-time grants: screensaver and audio settings, self-updates, and app usage (Unused apps)."""
+    """One-time grants: screensaver and audio settings, self-updates, and app usage (Settings → Clean up)."""
     try:
         for command in grant_settings_access(make_adb(ctx.obj["host"])):
             click.echo(f"ok: {command}")

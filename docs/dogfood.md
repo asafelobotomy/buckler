@@ -55,7 +55,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - Settings → Appearance: each colour scheme, font, layout and app size changes Home immediately
 - Settings → Accessibility: high contrast, strong focus outline, text size, reduce motion, speak focused item
 - ◀ on the first tile of a shelf reveals the shelf button. OK opens Move shelf (▲ ▼ / OK / Back) and Hide shelf. Up Next also offers Sources (at most three cards per app)
-- Long-press / Menu: Open, Change cover, Remove, Uninstall (user apps), Info
+- Long-press / Menu: Open, Change cover, Remove, Move, Pin to Apps, Uninstall (user apps), Info
 - Change cover works **without** linking accounts (icon / banner / curated)
 - Settings → Appearance → App Thumbnails: Connect SteamGridDB (QR) / Connect IGDB (device code when `TWITCH_CLIENT_ID` set)
 - Refresh curated pack succeeds via **bundled asset** even if GitHub raw 404s (private repo)

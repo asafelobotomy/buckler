@@ -50,3 +50,49 @@ def test_unused_apps_never_flags_the_never_list() -> None:
     assert block, "ALWAYS_KEEP not found"
     kotlin = set(re.findall(r'"([^"]+)"', block.group(1)))
     assert kotlin == {"dev.solon.bucklerhome", *never}
+
+
+def _kotlin_enum(name: str) -> list[str]:
+    text = (KOTLIN / "AppearancePrefs.kt").read_text(encoding="utf-8")
+    block = re.search(rf"enum class {name}\(.*?\{{(.*?);", text, re.DOTALL)
+    assert block, f"{name} not found"
+    return re.findall(r"^\s+([A-Z_]+)\(", block.group(1), re.MULTILINE)
+
+
+def test_icon_schemes_match_themes_and_manifest() -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("gen_icons", ROOT / "scripts" / "gen_icons.py")
+    assert spec and spec.loader
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    themes = _kotlin_enum("AppTheme")
+    assert sorted(gen.SCHEMES) == sorted(t.lower() for t in themes)
+    manifest = (ROOT / "launcher" / "app" / "src" / "main" / "AndroidManifest.xml").read_text(encoding="utf-8")
+    for theme in themes:
+        suffix = "".join(part.capitalize() for part in theme.split("_"))
+        for kind in ("Launcher", "Settings"):
+            assert f'android:name=".{kind}{suffix}"' in manifest, f"{kind}{suffix} alias missing"
+        assert (ROOT / "launcher/app/src/main/res/drawable" / f"ic_mark_{theme.lower()}.xml").is_file()
+
+
+def test_bundled_fonts_match_font_choices() -> None:
+    text = (ROOT / "scripts" / "gen_fonts.py").read_text(encoding="utf-8")
+    block = re.search(r"FAMILIES = \{(.*?)\n\}", text, re.DOTALL)
+    assert block
+    script = re.findall(r'^\s+"(\w+)": \(', block.group(1), re.MULTILINE)
+    fonts = (KOTLIN / "Fonts.kt").read_text(encoding="utf-8")
+    bundled = re.findall(r"R\.font\.(\w+)_regular to R\.font\.\w+_bold", fonts)
+    assert sorted(script) == sorted(bundled)
+    for name in script:
+        for style in ("regular", "bold"):
+            assert (ROOT / "launcher/app/src/main/res/font" / f"{name}_{style}.ttf").is_file()
+
+
+def test_cli_and_launcher_share_a_version() -> None:
+    from buckler import __version__
+
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    gradle = (ROOT / "launcher" / "app" / "build.gradle.kts").read_text(encoding="utf-8")
+    assert re.search(r'^version = "([^"]+)"', pyproject, re.MULTILINE).group(1) == __version__
+    assert re.search(r'versionName = "([^"]+)"', gradle).group(1) == __version__

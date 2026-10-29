@@ -2,7 +2,7 @@
 
 **Buckler** (`buckler`) is designed so a bad list or a partial failure cannot soft-brick a SHIELD TV Pro.
 
-**buckler-home** may use `INTERNET` for Watch Next artwork and an optional suggested feed URL. It still does not ship ads, analytics SDKs, or account login. Turn Network debugging off when finished with host tooling.
+**buckler-home** uses `INTERNET` for artwork, the curated cover pack, GitHub updates, header weather and news, online screensaver photos and lyrics, and the optional SteamGridDB / IGDB / GitHub links you choose to make. It does not ship ads or analytics SDKs, and needs no account. Turn Network debugging off when finished with host tooling.
 
 ## Hard rules
 

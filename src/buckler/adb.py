@@ -8,6 +8,9 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 
+# Every adb call ends: a dropped Wi-Fi link must not hang the CLI (installs of large APKs included).
+DEFAULT_TIMEOUT = 600.0
+
 
 class AdbError(RuntimeError):
     """Raised when an adb command fails."""
@@ -56,16 +59,10 @@ class Adb:
             raise AdbError(f"{self.host} is not reachable over adb ({detail or 'no device'})")
         return out.stdout.strip()
 
-    def serial(self) -> str:
-        return self.host
-
     def shell(self, *args: str, check: bool = True) -> str:
         cmd = [self.adb_bin, "-s", self.host, "shell", *args]
         result = self._run(cmd, check=check)
         return result.stdout.replace("\r", "").strip()
-
-    def shell_raw(self, command: str, check: bool = True) -> str:
-        return self.shell(command, check=check)
 
     def getprop(self, key: str) -> str:
         return self.shell("getprop", key, check=False)
@@ -155,7 +152,7 @@ class Adb:
         cmd: list[str],
         *,
         check: bool,
-        timeout: float | None = None,
+        timeout: float | None = DEFAULT_TIMEOUT,
     ) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         try:

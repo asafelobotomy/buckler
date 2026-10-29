@@ -159,13 +159,13 @@ def _created_at(path: Path) -> str:
         return ""
 
 
-def latest_journal(profile: str | None = None) -> Path | None:
+def latest_journal() -> Path | None:
     """Most recent disable run by ``created_at``, not by filename.
 
     Sorting names put ``screensaver.json`` and ``home-clean-handover.json`` above every
     timestamped journal, so a bare ``restore`` picked one of those.
     """
-    files = [p for p in iter_journals() if profile is None or profile in p.stem]
+    files = list(iter_journals())
     if not files:
         return None
     return max(files, key=lambda p: (_created_at(p), p.name))
@@ -180,20 +180,3 @@ def journaled_packages() -> set[str]:
         except (OSError, ValueError):
             continue
     return out
-
-
-def seed_privacy_core_journal(host: str) -> Path:
-    """Record disables already applied manually before the CLI existed."""
-    j = Journal(host=host, profile="privacy-core")
-    j.notes.append("Seeded from pre-CLI session (2026-10-26)")
-    for pkg, reason in [
-        ("com.google.android.katniss", "user: remove Google Assistant"),
-        ("com.google.android.tvrecommendations", "user: no phone remote"),
-    ]:
-        j.add(
-            pkg,
-            before_disabled=False,
-            after_disabled=True,
-            reason=reason,
-        )
-    return j.save(journals_dir() / "20261026-seed-privacy-core.json")

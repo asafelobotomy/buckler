@@ -21,7 +21,6 @@ from buckler.policy import (
 @dataclass
 class BuildResult:
     apk: Path
-    log_tail: str
 
 
 def _android_home() -> str:
@@ -68,7 +67,7 @@ def build_launcher() -> BuildResult:
         if not candidates:
             raise RuntimeError(f"APK not found after build. Log:\n{log[-2000:]}")
         apk = candidates[0]
-    return BuildResult(apk=apk, log_tail=log[-1500:])
+    return BuildResult(apk=apk)
 
 
 def install_launcher(adb: Adb, apk: Path | None = None) -> str:
@@ -129,7 +128,7 @@ def grant_media_access(adb: Adb) -> str:
 
 SECURE_SETTINGS_PERMISSION = "android.permission.WRITE_SECURE_SETTINGS"
 # WRITE_SETTINGS: screensaver delay and mono audio. REQUEST_INSTALL_PACKAGES: Buckler's own
-# updates install without Android stopping to ask. GET_USAGE_STATS: Settings → Unused apps.
+# updates install without Android stopping to ask. GET_USAGE_STATS: Settings → Clean up (unused apps, app sizes).
 GRANTED_APPOPS = ("WRITE_SETTINGS", "REQUEST_INSTALL_PACKAGES", "GET_USAGE_STATS")
 
 

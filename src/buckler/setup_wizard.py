@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -65,16 +65,6 @@ class WizardReport:
     def ok(self) -> bool:
         return all(s.ok for s in self.steps)
 
-    def to_dict(self) -> dict:
-        return {
-            "host": self.host,
-            "mode": self.mode,
-            "runtime": self.runtime,
-            "started_at": self.started_at,
-            "ok": self.ok,
-            "steps": [asdict(s) for s in self.steps],
-            "snapshot_path": str(self.snapshot_path) if self.snapshot_path else None,
-        }
 
 
 def _echo(echo: Echo | None, msg: str) -> None:

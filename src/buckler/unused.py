@@ -43,7 +43,13 @@ class UnusedReport:
 
 
 def parse_report(text: str) -> UnusedReport:
-    data = json.loads(text)
+    """The report Buckler writes on the TV; a missing or damaged one is an AdbError to show, not a crash."""
+    try:
+        data = json.loads(text)
+    except ValueError as exc:
+        raise AdbError(f"The unused-apps list on the TV is unreadable ({exc}); open Settings → Clean up → Apps again") from exc
+    if not isinstance(data, dict) or "days" not in data:
+        raise AdbError("The unused-apps list on the TV is incomplete; open Settings → Clean up → Apps again")
     apps = [
         UnusedApp(
             package=a["package"],
@@ -55,6 +61,7 @@ def parse_report(text: str) -> UnusedReport:
             background_bytes=int(a.get("background_bytes") or 0),
         )
         for a in data.get("apps", [])
+        if isinstance(a, dict) and a.get("package")
     ]
     return UnusedReport(generated_at=str(data.get("generated_at", "")), days=int(data["days"]), apps=apps)
 

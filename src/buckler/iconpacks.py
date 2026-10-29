@@ -27,10 +27,19 @@ class IconPackEntry:
 
 def load_iconpacks(path: Path | None = None) -> list[IconPackEntry]:
     raw = yaml.safe_load((path or catalog_dir() / "iconpacks.yaml").read_text(encoding="utf-8")) or {}
-    packs = [IconPackEntry(**{key: str(value) for key, value in item.items()}) for item in raw.get("entries", [])]
-    for pack in packs:
-        if not pack.url.startswith("https://") or len(pack.sha256) != 64:
-            raise CatalogError(f"icon pack {pack.id}: needs an https url and a sha256")
+    items = raw.get("entries", []) if isinstance(raw, dict) else None
+    if not isinstance(items, list):
+        raise CatalogError("iconpacks.yaml: expected a mapping with an `entries` list")
+    fields = set(IconPackEntry.__dataclass_fields__)
+    packs = []
+    for item in items:
+        if not isinstance(item, dict) or set(item) != fields:
+            raise CatalogError(f"iconpacks.yaml: each entry needs exactly {sorted(fields)}")
+        pack = IconPackEntry(**{key: str(value) for key, value in item.items()})
+        sha = pack.sha256.lower()
+        if not pack.url.startswith("https://") or len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha):
+            raise CatalogError(f"icon pack {pack.id}: needs an https url and a hex sha256")
+        packs.append(IconPackEntry(**{**pack.__dict__, "sha256": sha}))
     return packs
 
 

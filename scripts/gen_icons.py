@@ -3,8 +3,8 @@
 
 The mark is a disc with a ring at its centre. Each scheme gets its own pair of vector drawables
 (`ic_mark_<scheme>.xml`, `banner_<scheme>.xml`); the launcher switches between them with
-activity-aliases when the user changes scheme. Colours must match `iconDisc` / `iconRing` in
-`Palette.kt`.
+activity-aliases when the user changes scheme. Each scheme here needs an `AppTheme` entry, a
+`markRes` case in LauncherIcon.kt and a manifest alias pair (test_parity checks the names).
 
 Usage: python scripts/gen_icons.py
 """

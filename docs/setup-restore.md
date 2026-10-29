@@ -52,21 +52,13 @@ JSON with device identity, policy flags (keep AI / Chromecast, disable mics), pr
 
 ## On-TV first-run
 
-`buckler-home` shows a one-time welcome (SharedPreferences `first_run_done`). It is **informational only** — it does not apply host profiles or talk to `buckler`.
+`buckler-home` runs a short setup the first time it starts (SharedPreferences `first_run_done`), in four steps: **Welcome**, **Cover layout** (Icon / Poster / Banner and app size), **Shelves** (which ones show), **Done**. It writes Home's layout; it does not apply host profiles or talk to `buckler`. Everything it sets can be changed later in Edit Home or Buckler Settings. No account, no registration telemetry.
 
-- Explains dock / library / screensaver / host tooling  
-- **Continue to Home** or **Open Android TV Settings**  
-- No network permission; no registration telemetry  
-
-Clear the flag to see it again:
+To see it again, clear Buckler's data (this resets all of its settings):
 
 ```bash
-adb shell run-as dev.solon.bucklerhome true 2>/dev/null || true
-# debug builds / until run-as works, uninstall+reinstall or:
-adb shell pm clear dev.solon.bucklerhome   # clears prefs (re-triggers welcome)
+adb shell pm clear dev.solon.bucklerhome
 ```
-
-Prefer after install: launch HOME once to see the welcome.
 
 ## Disaster path
 

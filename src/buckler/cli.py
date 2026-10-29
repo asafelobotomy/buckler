@@ -9,7 +9,7 @@ import click
 from buckler import cli_device, cli_launcher, cli_unused  # registers commands on `cli`
 from buckler.adb import AdbError
 from buckler.cli_common import cli, make_adb
-from buckler.journal import latest_journal, seed_privacy_core_journal
+from buckler.journal import latest_journal
 from buckler.ops import (
     apply_profile,
     audit,
@@ -171,14 +171,6 @@ def check_cmd(ctx: click.Context, profile_name: str | None, do_fix: bool) -> Non
             click.echo(f"  ! {item}")
         raise SystemExit(2)
     click.echo("AI stack: OK")
-
-
-@cli.command("seed-journal")
-@click.pass_context
-def seed_journal_cmd(ctx: click.Context) -> None:
-    """Write a journal for privacy-core disables applied before the CLI."""
-    path = seed_privacy_core_journal(ctx.obj["host"])
-    click.echo(f"wrote {path}")
 
 
 @cli.command("profiles")
