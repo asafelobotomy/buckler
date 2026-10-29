@@ -105,9 +105,16 @@ object PackStyleIcons {
         val fitted = fit(ink, box, style.mark).also { f ->
             for (i in f.indices) f[i] = ((f[i] - 0.5f) * 6f + 0.5f).coerceIn(0f, 1f)
         }
-        var width = style.line * WORK
-        var art = draw(fitted, style, width)
-        if (style.filled) return art
+        val line = style.line * WORK
+        // How thick the logo's own parts are. Parts not clearly thicker than two of the pack's
+        // lines would outline into each other (thin bars, a busy logo under heavy lines): draw
+        // them solid instead, as strokes, thickened to the pack's line width if they are thinner.
+        val parts = PackStyle.strokeWidth(BooleanArray(WORK * WORK) { fitted[it] >= 0.5f }, WORK)
+        if (style.filled || parts < line * 2.5f) {
+            return draw(fitted, line, solid = true, grow = max(0f, (line - parts) / 2f))
+        }
+        var width = line
+        var art = draw(fitted, width, solid = false)
         // Measure the result as the pack's icons were measured, and correct until it matches.
         repeat(3) {
             val got = PackStyle.measure(listOf(BitmapDrawable(null, art)))?.line ?: return art
@@ -115,21 +122,25 @@ object PackStyleIcons {
             if (got <= 0f || kotlin.math.abs(got - style.line) <= style.line * 0.06f) return art
             width *= style.line / got
             art.recycle()
-            art = draw(fitted, style, width)
+            art = draw(fitted, width, solid = false)
         }
         return art
     }
 
-    /** The traced line ([width] px at [WORK]) or, for a filled pack, the solid shape, at [OUT] px. */
-    private fun draw(fitted: FloatArray, style: PackStyle, width: Float): Bitmap {
+    /**
+     * The traced line ([width] px at [WORK]) or, [solid], the shape itself grown by [grow] px,
+     * at [OUT] px.
+     */
+    private fun draw(fitted: FloatArray, width: Float, solid: Boolean, grow: Float = 0f): Bitmap {
         val half = width / 2f
-        val r = kotlin.math.ceil(half).toInt() + 2
+        // Solid shapes blur only as far as they grow, so the logo's narrow gaps stay open.
+        val r = kotlin.math.ceil(if (solid) grow else half).toInt() + 2
         val n = 2 * r + 1
         // After two box blurs a hard edge ramps with slope 1/n at its middle: distance ≈ |s - ½|·n.
         val soft = blur(blur(fitted, r), r)
         val pixels = IntArray(WORK * WORK) { i ->
-            val alpha = if (style.filled) {
-                ((soft[i] - 0.5f) * n + 0.5f).coerceIn(0f, 1f)
+            val alpha = if (solid) {
+                ((soft[i] - 0.5f) * n + 0.5f + grow).coerceIn(0f, 1f)
             } else {
                 (half - kotlin.math.abs(soft[i] - 0.5f) * n + 0.5f).coerceIn(0f, 1f)
             }
