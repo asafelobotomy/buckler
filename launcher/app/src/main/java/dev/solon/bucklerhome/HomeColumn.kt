@@ -81,7 +81,7 @@ fun HomeColumn(
     onOpenStory: (Headline) -> Unit,
     onHoldStage: () -> Unit,
     onPickStage: (MainStage) -> Unit,
-    onPickSpan: (WeatherSpan) -> Unit,
+    onOptionsChanged: () -> Unit,
     onResetHome: () -> Unit,
     onStepMove: (Int) -> Unit,
     onPlaceMove: () -> Unit,
@@ -146,6 +146,7 @@ fun HomeColumn(
                 actions = actions,
                 below = stageFocus,
                 endFocus = headerEnd,
+                onSideChanged = onOptionsChanged,
                 modifier = Modifier
                     .wrapFocus(FocusDirection.Up, focusManager, ::wrapToBottom)
                     .onSizeChanged { headerHeight = with(density) { it.height.toDp() } },
@@ -178,7 +179,7 @@ fun HomeColumn(
                 onOpenStory = onOpenStory,
                 onHold = onHoldStage,
                 onPickStage = onPickStage,
-                onPickSpan = onPickSpan,
+                onOptionsChanged = onOptionsChanged,
                 metrics = metrics,
                 weatherSpan = config.weatherSpan,
                 companion = config.companion,

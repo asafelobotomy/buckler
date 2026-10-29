@@ -41,6 +41,8 @@ fun NowPlayingPanel(
     below: FocusRequester?,
     metrics: HeaderMetrics,
     modifier: Modifier = Modifier,
+    /** Hold OK on any of its buttons: the Side Stage's menu. */
+    onHold: (() -> Unit)? = null,
 ) {
     val info = model.info
     when {
@@ -73,17 +75,18 @@ fun NowPlayingPanel(
             }
             Spacer(modifier = Modifier.size(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                HeaderIconButton(R.drawable.ic_prev, "Previous", size = metrics.control, down = below) { model.previous() }
+                HeaderIconButton(R.drawable.ic_prev, "Previous", size = metrics.control, down = below, onLongPress = onHold) { model.previous() }
                 HeaderIconButton(
                     icon = if (info.playing) R.drawable.ic_pause else R.drawable.ic_play,
                     description = if (info.playing) "Pause" else "Play",
                     size = metrics.control,
                     down = below,
+                    onLongPress = onHold,
                 ) { model.togglePlayPause() }
-                HeaderIconButton(R.drawable.ic_next, "Next", size = metrics.control, down = below) { model.next() }
+                HeaderIconButton(R.drawable.ic_next, "Next", size = metrics.control, down = below, onLongPress = onHold) { model.next() }
             }
         }
-        !model.accessGranted -> AccessPrompt(below, metrics, modifier)
+        !model.accessGranted -> AccessPrompt(below, metrics, modifier, onHold)
         else -> Unit
     }
 }
@@ -117,7 +120,7 @@ private fun Artwork(info: NowPlayingInfo, metrics: HeaderMetrics) {
 }
 
 @Composable
-private fun AccessPrompt(below: FocusRequester?, metrics: HeaderMetrics, modifier: Modifier) {
+private fun AccessPrompt(below: FocusRequester?, metrics: HeaderMetrics, modifier: Modifier, onHold: (() -> Unit)?) {
     val context = LocalContext.current
     Box(modifier = modifier) {
         HeaderIconButton(
@@ -126,6 +129,7 @@ private fun AccessPrompt(below: FocusRequester?, metrics: HeaderMetrics, modifie
             size = metrics.icon,
             dim = true,
             down = below,
+            onLongPress = onHold,
         ) {
             launchFirstThatWorks(
                 context,

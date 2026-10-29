@@ -268,9 +268,9 @@ fun HomeScreen(
         Toast.makeText(context, "Home reset", Toast.LENGTH_SHORT).show()
     }
 
-    fun pickSpan(span: WeatherSpan) {
-        DisplayPrefs.setWeatherSpan(context, span)
-        config = config.copy(weatherSpan = span)
+    // A hold menu changed a widget's option: show it behind the menu at once.
+    fun reloadConfig() {
+        config = DisplayPrefs.load(context)
     }
 
     Box(Modifier.fillMaxSize().onFocusChanged { homeFocused = it.hasFocus }) {
@@ -305,7 +305,7 @@ fun HomeScreen(
             onOpenStory = { reading = it },
             onHoldStage = { pickingStage = true },
             onPickStage = ::pickStage,
-            onPickSpan = ::pickSpan,
+            onOptionsChanged = ::reloadConfig,
             onResetHome = ::resetHome,
             onStepMove = ::stepMove,
             onPlaceMove = ::placeMove,
@@ -317,10 +317,9 @@ fun HomeScreen(
     if (pickingStage) {
         StageSwitchDialog(
             current = layout.mainStage,
-            span = config.weatherSpan,
             pinLabel = null,
             onPickStage = ::pickStage,
-            onPickSpan = ::pickSpan,
+            onOptionsChanged = ::reloadConfig,
             onPin = null,
             onDismiss = {
                 pickingStage = false

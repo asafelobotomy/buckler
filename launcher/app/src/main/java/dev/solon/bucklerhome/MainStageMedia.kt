@@ -58,8 +58,7 @@ fun SuggestedStage(
     stageFocus: FocusRequester,
     onDown: () -> Unit,
     onPickStage: (MainStage) -> Unit,
-    weatherSpan: WeatherSpan,
-    onPickSpan: (WeatherSpan) -> Unit,
+    onOptionsChanged: () -> Unit,
     metrics: StageMetrics,
 ) {
     val context = LocalContext.current
@@ -112,10 +111,9 @@ fun SuggestedStage(
     if (card != null || holdEmpty) {
         StageSwitchDialog(
             current = MainStage.SUGGESTED,
-            span = weatherSpan,
             pinLabel = card?.let { if (it.pinned) "Unpin" else "Pin" },
             onPickStage = onPickStage,
-            onPickSpan = onPickSpan,
+            onOptionsChanged = onOptionsChanged,
             onPin = card?.let { picked ->
                 {
                     cards = MediaCards.togglePin(context, picked)

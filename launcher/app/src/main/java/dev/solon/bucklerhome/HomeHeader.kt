@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -23,6 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class HeaderActions(
     val onNetwork: (LinkType) -> Unit,
@@ -55,6 +61,8 @@ fun HomeHeader(
     modifier: Modifier = Modifier,
     /** Rightmost icon, where Down from the bottom of Home wraps to. */
     endFocus: FocusRequester? = null,
+    /** The Side Stage's hold menu changed a setting: reload so it shows. */
+    onSideChanged: () -> Unit = {},
 ) {
     val metrics = HeaderMetrics(config.headerSize)
     Column(modifier = modifier.fillMaxWidth()) {
@@ -64,7 +72,7 @@ fun HomeHeader(
         ) {
             ClockBlock(clock, date, config, weather, metrics)
             Box(modifier = Modifier.weight(1f).padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
-                SideStage(config, nowPlaying, below, metrics)
+                SideStage(config, nowPlaying, below, metrics, onSideChanged)
             }
             StatusAndActions(net, config, actions, below, endFocus, metrics)
         }
@@ -219,13 +227,28 @@ private fun networkDescription(link: LinkType): String = when (link) {
 /**
  * The header's Side Stage: what is playing, with its controls; while nothing plays, the idle
  * choice (At a Glance or the companion) if one is set, else Now Playing's own hint as before.
+ * Hold OK on it (on any of Now Playing's buttons) for its menu ([SideStageDialog]); the idle
+ * widgets are a D-pad stop of their own, where OK opens it too.
  */
 @Composable
-private fun SideStage(config: DisplayConfig, nowPlaying: NowPlayingModel?, below: FocusRequester?, metrics: HeaderMetrics) {
+private fun SideStage(
+    config: DisplayConfig,
+    nowPlaying: NowPlayingModel?,
+    below: FocusRequester?,
+    metrics: HeaderMetrics,
+    onChanged: () -> Unit,
+) {
+    var holding by remember { mutableStateOf(false) }
+    val idleFocus = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
+    val hold = { holding = true }
     val playing = config.showsNowPlaying && nowPlaying?.info != null
+    val idleTarget = Modifier
+        .stageTarget(idleFocus, onDown = { runCatching { below?.requestFocus() } }, "Side Stage", onLongPress = hold) { hold() }
+        .padding(horizontal = 10.dp, vertical = 6.dp)
     when {
-        playing -> NowPlayingPanel(nowPlaying!!, below, metrics)
-        config.sideIdle == SideIdle.GLANCE -> GlanceSide(config)
+        playing -> NowPlayingPanel(nowPlaying!!, below, metrics, onHold = hold)
+        config.sideIdle == SideIdle.GLANCE -> GlanceSide(config, idleTarget)
         config.sideIdle == SideIdle.COMPANION -> {
             val weather by rememberGlanceWeather(config.place)
             CompanionScene(
@@ -233,9 +256,22 @@ private fun SideStage(config: DisplayConfig, nowPlaying: NowPlayingModel?, below
                 weatherCode = weather?.now?.code,
                 isDay = weather?.now?.isDay ?: true,
                 // About as wide as the Now Playing panel it stands in for.
-                modifier = Modifier.height(metrics.art + 24.dp).width(metrics.titleMax * 2),
+                modifier = idleTarget.height(metrics.art + 24.dp).width(metrics.titleMax * 2),
             )
         }
-        config.showsNowPlaying && nowPlaying != null -> NowPlayingPanel(nowPlaying, below, metrics)
+        config.showsNowPlaying && nowPlaying != null -> NowPlayingPanel(nowPlaying, below, metrics, onHold = hold)
+    }
+    if (holding) {
+        SideStageDialog(
+            onChanged = onChanged,
+            onDismiss = {
+                holding = false
+                // A new idle widget replaces the target that held focus; keep focus on the Side Stage.
+                scope.launch {
+                    delay(100)
+                    if (runCatching { idleFocus.requestFocus() }.isFailure) runCatching { below?.requestFocus() }
+                }
+            },
+        )
     }
 }

@@ -77,7 +77,7 @@ fun MainStage(
     onOpenStory: (Headline) -> Unit,
     onHold: () -> Unit,
     onPickStage: (MainStage) -> Unit,
-    onPickSpan: (WeatherSpan) -> Unit,
+    onOptionsChanged: () -> Unit,
     metrics: StageMetrics,
     weatherSpan: WeatherSpan,
     companion: CompanionKind,
@@ -88,7 +88,7 @@ fun MainStage(
         MainStage.LYRICS -> LyricsStage(nowPlaying, stageFocus, onDown, onHold, metrics)
         MainStage.WEATHER -> WeatherStage(forecast, place, fahrenheit, use24h, stageFocus, onDown, weatherSpan, onHold)
         MainStage.SUGGESTED -> SuggestedStage(
-            nowPlaying, stageFocus, onDown, onPickStage, weatherSpan, onPickSpan, metrics,
+            nowPlaying, stageFocus, onDown, onPickStage, onOptionsChanged, metrics,
         )
         MainStage.GLANCE -> GlanceStage(place, fahrenheit, use24h, stageFocus, onDown, onHold, metrics)
         MainStage.CALENDAR -> CalendarStage(use24h, stageFocus, onDown, onHold, metrics)

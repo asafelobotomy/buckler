@@ -4,29 +4,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 
-/** Hold OK on the Main Stage: pick the widget, and the weather row when that widget is Weather. */
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
+/** Hold OK on the Main Stage: pick the widget, then the options of the one showing ([StageOptions]). */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StageSwitchDialog(
     current: MainStage,
-    span: WeatherSpan,
     pinLabel: String?,
     onPickStage: (MainStage) -> Unit,
-    onPickSpan: (WeatherSpan) -> Unit,
+    onOptionsChanged: () -> Unit,
     onPin: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -40,19 +36,8 @@ fun StageSwitchDialog(
     Dialog(onDismissRequest = onDismiss) {
         // Opened by a hold: the held OK's repeats and release must not pick whatever has focus.
         DialogPanel(modifier = Modifier.swallowOrphanSelect(), minWidth = 460.dp) {
-            Column {
-                Text(
-                    text = "Main stage",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ColorText,
-                )
-                Text(
-                    text = "Hold OK on the stage to open this again.",
-                    fontSize = 13.sp,
-                    color = ColorMuted,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
-                )
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                HoldMenuTitle("Main stage", "Hold OK on the stage to open this again.")
                 FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
                     MainStage.entries.forEach { mode ->
                         SettingsAction(
@@ -62,26 +47,9 @@ fun StageSwitchDialog(
                         ) { onPickStage(mode) }
                     }
                 }
-                Text(
-                    text = "Weather",
-                    fontSize = 14.sp,
-                    color = ColorSection,
-                    modifier = Modifier.padding(top = 18.dp, bottom = 10.dp),
-                )
-                FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-                    WeatherSpan.entries.forEach { option ->
-                        SettingsAction(option.label, selected = option == span) { onPickSpan(option) }
-                    }
-                }
-                FlowRow(
-                    horizontalArrangement = flow,
-                    verticalArrangement = flow,
-                    modifier = Modifier.padding(top = 18.dp),
-                ) {
-                    if (pinLabel != null && onPin != null) {
-                        SettingsAction(pinLabel, onClick = onPin)
-                    }
-                    SettingsAction("Close", onClick = onDismiss)
+                StageOptions(current, onOptionsChanged)
+                HoldMenuFooter(SettingsPane.MAIN_STAGE, onDismiss) {
+                    if (pinLabel != null && onPin != null) SettingsAction(pinLabel, onClick = onPin)
                 }
             }
         }

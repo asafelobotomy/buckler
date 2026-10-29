@@ -1,5 +1,7 @@
 package dev.solon.bucklerhome
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
@@ -45,11 +47,23 @@ class BucklerSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppearanceStore.ensureLoaded(this)
+        val start = intent.getStringExtra(EXTRA_PANE)?.let { raw -> SettingsPane.entries.firstOrNull { it.name == raw } }
         setContent {
             BucklerHomeTheme {
-                BucklerSettingsScreen(onClose = { finish() })
+                BucklerSettingsScreen(onClose = { finish() }, start = start ?: SettingsPane.APPEARANCE)
             }
         }
+    }
+
+    companion object {
+        /** A [SettingsPane] name to open at, for "More in Settings" on Home's hold menus. */
+        const val EXTRA_PANE = "dev.solon.bucklerhome.PANE"
+
+        fun open(context: Context, pane: SettingsPane) = safeLaunch(
+            context,
+            Intent(context, BucklerSettingsActivity::class.java).putExtra(EXTRA_PANE, pane.name),
+            "Buckler Settings",
+        )
     }
 }
 
@@ -88,9 +102,9 @@ enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun BucklerSettingsScreen(onClose: () -> Unit) {
+fun BucklerSettingsScreen(onClose: () -> Unit, start: SettingsPane = SettingsPane.APPEARANCE) {
     val context = LocalContext.current
-    var pane by remember { mutableStateOf(SettingsPane.APPEARANCE) }
+    var pane by remember { mutableStateOf(start) }
     var connectIgdb by remember { mutableStateOf(false) }
     var connectSgdb by remember { mutableStateOf(false) }
     var connectGithub by remember { mutableStateOf(false) }
