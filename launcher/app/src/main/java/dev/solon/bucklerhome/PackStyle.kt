@@ -17,7 +17,8 @@ import kotlin.math.roundToInt
  * draws for an app the pack lacks matches the real ones: line width and the mark's size as shares
  * of the icon (or, for a layered pack, of its foreground layer), the line colour, and the backing
  * plate's colour when the pack's icons are layered (Lawnicons). [colourful] packs are drawn in many
- * colours; a traced line would not match them.
+ * colours; a traced line would not match them, so their icons' common outline ([shape], when they
+ * share one: a circle, a squircle, a rounded square) is kept instead, to fit an app's own icon into.
  */
 data class PackStyle(
     val line: Float,
@@ -26,8 +27,13 @@ data class PackStyle(
     val plate: Int?,
     val filled: Boolean,
     val colourful: Boolean,
+    /** The pack icons' shared outline, [MASK]² alpha 0..1 over the whole icon, or null. */
+    val shape: FloatArray? = null,
 ) {
     companion object {
+        /** Resolution of [shape]. */
+        const val MASK = 128
+
         /** Large enough that a pack's thin lines are many pixels wide, for a precise width. */
         private const val SIZE = 512
 
@@ -36,14 +42,37 @@ data class PackStyle(
             val samples = icons.take(12).mapNotNull(::sample)
             if (samples.isEmpty()) return null
             val plates = samples.mapNotNull { it.plate }
+            val colourful = samples.count { it.colourful } * 2 > samples.size
             return PackStyle(
                 line = samples.map { it.line }.median(),
                 mark = samples.map { it.mark }.median(),
                 ink = samples.map { it.ink }.mostCommonColour(),
                 plate = if (plates.size * 2 > samples.size) plates.mostCommonColour() else null,
                 filled = samples.count { it.filled } * 2 > samples.size,
-                colourful = samples.count { it.colourful } * 2 > samples.size,
+                colourful = colourful,
+                shape = if (colourful) sharedShape(samples.map { it.outline }) else null,
             )
+        }
+
+        /**
+         * The outline most of the icons share (the average of their silhouettes), when they do:
+         * each must overlap it by at least 85%, or the pack has free-form icons and no shape.
+         */
+        private fun sharedShape(outlines: List<FloatArray>): FloatArray? {
+            if (outlines.size < 3) return null
+            val mean = FloatArray(MASK * MASK) { i -> outlines.sumOf { it[i].toDouble() }.toFloat() / outlines.size }
+            fun overlap(a: FloatArray): Float {
+                var both = 0
+                var either = 0
+                for (i in a.indices) {
+                    val x = a[i] >= 0.5f
+                    val y = mean[i] >= 0.5f
+                    if (x && y) both++
+                    if (x || y) either++
+                }
+                return if (either == 0) 0f else both.toFloat() / either
+            }
+            return mean.takeIf { outlines.count { overlap(it) >= 0.85f } * 4 >= outlines.size * 3 }
         }
 
         private class Sample(
@@ -53,6 +82,7 @@ data class PackStyle(
             val plate: Int?,
             val filled: Boolean,
             val colourful: Boolean,
+            val outline: FloatArray,
         )
 
         private fun sample(icon: Drawable): Sample? {
@@ -101,7 +131,21 @@ data class PackStyle(
                 // Solid shapes are much wider than any line relative to their size.
                 filled = width / SIZE > mark * 0.12f,
                 colourful = spread / area > 60,
+                outline = silhouette(icon),
             )
+        }
+
+        /** The whole icon's alpha at [MASK] px, 0..1: its outline, whatever is drawn inside. */
+        private fun silhouette(icon: Drawable): FloatArray {
+            val bitmap = Bitmap.createBitmap(MASK, MASK, Bitmap.Config.ARGB_8888)
+            val old = icon.copyBounds()
+            icon.setBounds(0, 0, MASK, MASK)
+            icon.draw(Canvas(bitmap))
+            icon.bounds = old
+            val pixels = IntArray(MASK * MASK)
+            bitmap.getPixels(pixels, 0, MASK, 0, 0, MASK, MASK)
+            bitmap.recycle()
+            return FloatArray(MASK * MASK) { Color.alpha(pixels[it]) / 255f }
         }
 
         /**

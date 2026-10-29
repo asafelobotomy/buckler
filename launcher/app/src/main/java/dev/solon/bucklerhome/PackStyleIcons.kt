@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.AdaptiveIconDrawable
@@ -67,7 +69,11 @@ object PackStyleIcons {
             return PackIconDrawable(BitmapDrawable(context.resources, rule.apply(icon)), 0f, themed = false)
         }
         val style = IconPacks.style(context, packages) ?: FALLBACK_STYLE
-        if (style.colourful) return icon
+        // A full-colour pack: the app's own icon, in the pack's shape and size.
+        if (style.colourful) {
+            val margin = if (style.plate != null) 0f else IconPacks.FLAT_MARGIN
+            return PackIconDrawable(BitmapDrawable(context.resources, reshaped(icon, style)), margin, themed = false)
+        }
         val version = runCatching { context.packageManager.getPackageInfo(pkg, 0).lastUpdateTime }.getOrDefault(0L)
         val key = "$pkg:$version:$label:$style"
         val art = cache.get(key) ?: (traced(icon, style) ?: initials(label, style)).also { cache.put(key, it) }
@@ -83,6 +89,71 @@ object PackStyleIcons {
             plate != null -> PackIconDrawable(AdaptiveIconDrawable(ColorDrawable(plate), glyph), 0f, themed = false)
             else -> PackIconDrawable(glyph, IconPacks.FLAT_MARGIN, themed = tint != null)
         }
+    }
+
+    /**
+     * The app's own icon in a full-colour pack's look: filling the pack's shared outline (an
+     * adaptive icon's layers drawn whole, so the pack's shape replaces the system's), or, for a
+     * pack with free-form icons, simply at the size its icons are drawn.
+     */
+    internal fun reshaped(icon: Drawable, style: PackStyle): Bitmap {
+        val bitmap = Bitmap.createBitmap(OUT, OUT, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val shape = style.shape
+        if (shape == null) {
+            val side = (OUT * style.mark).roundToInt()
+            val at = (OUT - side) / 2
+            drawInto(icon, canvas, at, at, at + side, at + side)
+            return bitmap
+        }
+        val box = shapeBounds(shape)
+        val adaptive = icon as? AdaptiveIconDrawable
+        if (adaptive != null) {
+            // Layers are 108 units with the art in the middle 72: grow the box so that part fills it.
+            val grow = ((box[2] - box[0]) * (108f / 72f - 1f) / 2f).roundToInt()
+            listOfNotNull(adaptive.background, adaptive.foreground).forEach {
+                drawInto(it, canvas, box[0] - grow, box[1] - grow, box[2] + grow, box[3] + grow)
+            }
+        } else {
+            drawInto(icon, canvas, box[0], box[1], box[2], box[3])
+        }
+        val mask = Bitmap.createBitmap(
+            IntArray(PackStyle.MASK * PackStyle.MASK) { Color.argb((shape[it] * 255).roundToInt(), 255, 255, 255) },
+            PackStyle.MASK, PackStyle.MASK, Bitmap.Config.ARGB_8888,
+        )
+        val scaled = Bitmap.createScaledBitmap(mask, OUT, OUT, true)
+        canvas.drawBitmap(scaled, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG).apply {
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        })
+        if (scaled !== mask) scaled.recycle()
+        mask.recycle()
+        return bitmap
+    }
+
+    /** The shape's left, top, right, bottom at [OUT] px. */
+    private fun shapeBounds(shape: FloatArray): IntArray {
+        val m = PackStyle.MASK
+        var l = m
+        var t = m
+        var r = -1
+        var b = -1
+        for (y in 0 until m) for (x in 0 until m) {
+            if (shape[y * m + x] < 0.5f) continue
+            l = min(l, x)
+            t = min(t, y)
+            r = max(r, x)
+            b = max(b, y)
+        }
+        if (r < 0) return intArrayOf(0, 0, OUT, OUT)
+        val k = OUT.toFloat() / m
+        return intArrayOf((l * k).roundToInt(), (t * k).roundToInt(), ((r + 1) * k).roundToInt(), ((b + 1) * k).roundToInt())
+    }
+
+    private fun drawInto(drawable: Drawable, canvas: Canvas, l: Int, t: Int, r: Int, b: Int) {
+        val old = drawable.copyBounds()
+        drawable.setBounds(l, t, r, b)
+        drawable.draw(canvas)
+        drawable.bounds = old
     }
 
     /** The logo's outline, or null when there is no mark to trace. */

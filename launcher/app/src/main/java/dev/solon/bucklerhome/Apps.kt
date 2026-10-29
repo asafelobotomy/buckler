@@ -3,10 +3,21 @@ package dev.solon.bucklerhome
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
+import android.os.UserHandle
 import android.widget.Toast
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 
 const val OUR_PACKAGE = "dev.solon.bucklerhome"
 const val PLAY_STORE_PACKAGE = "com.android.vending"
@@ -130,4 +141,27 @@ private fun weatherRank(label: String): Int = when (label.lowercase()) {
 fun playStoreLaunchIntent(pm: PackageManager): Intent? {
     return pm.getLeanbackLaunchIntentForPackage(PLAY_STORE_PACKAGE)
         ?: pm.getLaunchIntentForPackage(PLAY_STORE_PACKAGE)
+}
+
+/**
+ * Goes up whenever an app is installed, updated or removed while Home is on screen, so Home
+ * reloads its apps then (with their pack or drawn icons) rather than on its next return.
+ */
+@Composable
+fun rememberPackageChanges(): Int {
+    val context = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    DisposableEffect(context) {
+        val launcher = context.getSystemService(LauncherApps::class.java)
+        val callback = object : LauncherApps.Callback() {
+            override fun onPackageAdded(packageName: String, user: UserHandle) { tick++ }
+            override fun onPackageRemoved(packageName: String, user: UserHandle) { tick++ }
+            override fun onPackageChanged(packageName: String, user: UserHandle) { tick++ }
+            override fun onPackagesAvailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) { tick++ }
+            override fun onPackagesUnavailable(packageNames: Array<out String>, user: UserHandle, replacing: Boolean) { tick++ }
+        }
+        runCatching { launcher?.registerCallback(callback, Handler(Looper.getMainLooper())) }
+        onDispose { runCatching { launcher?.unregisterCallback(callback) } }
+    }
+    return tick
 }

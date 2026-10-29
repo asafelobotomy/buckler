@@ -79,7 +79,8 @@ fun HomeScreen(
     }
     UnusedAppsNotice(resumeTick)
     RemoteButtonsNotice(resumeTick)
-    LaunchedEffect(resumeTick) {
+    val packageChanges = rememberPackageChanges()
+    LaunchedEffect(resumeTick, packageChanges) {
         config = DisplayPrefs.load(context)
         apps = withContext(Dispatchers.IO) { loadLaunchableApps(context) }
     }
