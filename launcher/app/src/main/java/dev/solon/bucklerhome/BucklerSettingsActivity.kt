@@ -81,6 +81,7 @@ enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val
     APPS("Apps", CLEAN_UP),
     CACHE("Cache", CLEAN_UP),
     LARGEST_APPS("Largest apps", CLEAN_UP),
+    SHIELD("SHIELD setup"),
     UPDATES("Updates"),
     ABOUT("About"),
 }
@@ -181,6 +182,7 @@ fun BucklerSettingsScreen(onClose: () -> Unit) {
                         SettingsPane.SAVER_UPLOADED, SettingsPane.SAVER_NOW_PLAYING, SettingsPane.SAVER_MAZE,
                         SettingsPane.SAVER_PIPES, SettingsPane.SAVER_MYSTIFY, SettingsPane.SAVER_STARFIELD,
                         -> ScreensaverModePane(pane.saver ?: ScreensaverMode.CLOCK)
+                        SettingsPane.SHIELD -> ShieldPane()
                         SettingsPane.UPDATES -> UpdatesPane(
                             accountTick = accountTick,
                             updateResult = updateResult,

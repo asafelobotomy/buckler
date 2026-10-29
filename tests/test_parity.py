@@ -96,3 +96,14 @@ def test_cli_and_launcher_share_a_version() -> None:
     gradle = (ROOT / "launcher" / "app" / "build.gradle.kts").read_text(encoding="utf-8")
     assert re.search(r'^version = "([^"]+)"', pyproject, re.MULTILINE).group(1) == __version__
     assert re.search(r'versionName = "([^"]+)"', gradle).group(1) == __version__
+
+
+def test_bundled_shield_profiles_are_current() -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("gen_profiles", ROOT / "scripts" / "gen_profiles.py")
+    assert spec and spec.loader
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    bundled = (ROOT / "launcher/app/src/main/assets/shield_profiles.json").read_text(encoding="utf-8")
+    assert bundled == gen.render(), "run: python scripts/gen_profiles.py"

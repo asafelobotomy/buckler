@@ -1,0 +1,112 @@
+{
+  "generated_by": "scripts/gen_profiles.py",
+  "profiles": {
+    "extras": {
+      "description": "Factory/setup leftovers, SMB/NAS share, OSC overlay, registration/welcome/beta",
+      "packages": [
+        "com.nvidia.factory",
+        "com.nvidia.factorybundling",
+        "com.nvidia.factorysyschecker",
+        "com.nvidia.developerwidget",
+        "com.nvidia.shield.registration",
+        "com.nvidia.shield.welcome",
+        "com.nvidia.shieldbeta",
+        "com.nvidia.shield.beta",
+        "com.nvidia.shield.smbserver",
+        "com.nvidia.shield.smbauth",
+        "com.nvidia.shield.nas",
+        "com.nvidia.osc",
+        "com.nvidia.shield.nvcustomize",
+        "com.nvidia.shieldtech.hooks",
+        "com.nvidia.shieldtech.proxy",
+        "com.nvidia.NvCPLUpdater",
+        "com.nvidia.inputviewer",
+        "com.nvidia.tegraprofiler.security",
+        "com.nvidia.app.messaging",
+        "com.nvidia.shield.appselector",
+        "com.google.android.partnersetup",
+        "com.google.android.syncadapters.calendar",
+        "com.google.android.tv.frameworkpackagestubs",
+        "com.android.dreams.basic"
+      ]
+    },
+    "minimal": {
+      "description": "Tier A telemetry, partner auto-installs, GameStream leftovers, trivial bloat",
+      "packages": [
+        "com.nvidia.stats",
+        "com.nvidia.feedback",
+        "com.nvidia.diagtools",
+        "com.google.android.feedback",
+        "android.autoinstalls.config.nvidia",
+        "com.nvidia.nvgamecast",
+        "com.nvidia.tegrazone3",
+        "com.nvidia.benchmarkblocker",
+        "com.android.gallery3d",
+        "com.android.printspooler"
+      ]
+    },
+    "privacy-core": {
+      "description": "Disable Google Assistant, recommendations, and phone Smart Connect",
+      "packages": [
+        "com.google.android.katniss",
+        "com.google.android.tvrecommendations",
+        "com.google.android.apps.nbu.smartconnect.tv"
+      ]
+    },
+    "speech": {
+      "description": "Disable mic / voice stacks (keep Chromecast mediashell)",
+      "packages": [
+        "com.google.android.speech.pumpkin",
+        "com.nvidia.hotwordsetup",
+        "com.nvidia.shield.ask",
+        "com.android.hotwordenrollment.okgoogle",
+        "com.android.hotwordenrollment.xgoogle",
+        "com.google.android.katniss"
+      ]
+    }
+  },
+  "never": [
+    "com.android.bluetooth",
+    "com.android.documentsui",
+    "com.android.keychain",
+    "com.android.providers.tv",
+    "com.android.se",
+    "com.android.systemui",
+    "com.android.tv.settings",
+    "com.android.vending",
+    "com.dolby.android.audio.service",
+    "com.google.android.apps.mediashell",
+    "com.google.android.gms",
+    "com.google.android.gsf",
+    "com.google.android.tungsten.setupwraith",
+    "com.google.android.tv.remote.service",
+    "com.nvidia.ControllerMapper",
+    "com.nvidia.KeyComboOta",
+    "com.nvidia.NvCPLSvc",
+    "com.nvidia.avsync",
+    "com.nvidia.blakepairing",
+    "com.nvidia.bluetooth.ShieldBluetoothManager",
+    "com.nvidia.bluetooth.ps3usbpairer",
+    "com.nvidia.irtuner",
+    "com.nvidia.nvaudiosvc",
+    "com.nvidia.ota",
+    "com.nvidia.packagemanagerservice",
+    "com.nvidia.remotelocator",
+    "com.nvidia.shieldservice",
+    "com.nvidia.shieldtech.accessoryui"
+  ],
+  "stock_launchers": [
+    "com.google.android.apps.tv.launcherx",
+    "com.google.android.leanbacklauncher",
+    "com.google.android.tvlauncher",
+    "com.mitv.tvhome"
+  ],
+  "appops": [
+    "WRITE_SETTINGS",
+    "REQUEST_INSTALL_PACKAGES",
+    "GET_USAGE_STATS"
+  ],
+  "permissions": [
+    "android.permission.WRITE_SECURE_SETTINGS"
+  ]
+}
