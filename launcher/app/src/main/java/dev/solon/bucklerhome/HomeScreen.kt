@@ -75,7 +75,10 @@ fun HomeScreen(
         resumeTick,
     )
 
-    LaunchedEffect(resumeTick, layoutVersion) {
+    // Settings changed behind the panel: show them now, not only once Home resumes.
+    val prefsTick = rememberPrefsChanges()
+    LaunchedEffect(prefsTick) { if (prefsTick > 0) config = DisplayPrefs.load(context) }
+    LaunchedEffect(resumeTick, layoutVersion, prefsTick) {
         homeLayout = withContext(Dispatchers.IO) { HomeLayout.load(context) }
     }
     UnusedAppsNotice(resumeTick)

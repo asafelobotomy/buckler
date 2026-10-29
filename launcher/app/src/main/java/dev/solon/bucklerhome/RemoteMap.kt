@@ -170,11 +170,17 @@ object RemoteMap {
 
 /**
  * The ≡ button, through SHIELD's own "Customize menu button" setting (global settings; the values
- * are SHIELD's). Buckler writes them with WRITE_SECURE_SETTINGS.
+ * are SHIELD's). Buckler writes them with WRITE_SECURE_SETTINGS. "Buckler Settings" is SHIELD's
+ * "Start any app" ([START_APP]) with Buckler's package: SHIELD opens the package's first TV entry
+ * (getLeanbackLaunchIntentForPackage), which the manifest makes Buckler Settings.
  */
 object ShieldMenuButton {
+    /** SHIELD's "Start any app": opens the package in the matching *_start_any_apps_item setting. */
+    const val START_APP = 10
+
     /** SHIELD's action values and their names. */
     val CHOICES = listOf(
+        START_APP to "Buckler Settings",
         0 to "Settings",
         1 to "Recent apps",
         2 to "All apps",
@@ -191,12 +197,36 @@ object ShieldMenuButton {
         PressKind.HOLD -> "customize_menu_hold_option"
     }
 
+    private fun appSetting(kind: PressKind) = when (kind) {
+        PressKind.PRESS -> "customize_menu_start_any_apps_item"
+        PressKind.DOUBLE -> "customize_menu_double_press_start_any_apps_item"
+        PressKind.HOLD -> "customize_menu_hold_start_any_apps_item"
+    }
+
     fun value(context: Context, kind: PressKind): Int =
         Settings.Global.getInt(context.contentResolver, setting(kind), 0)
 
-    fun label(context: Context, kind: PressKind): String =
-        value(context, kind).let { v -> CHOICES.firstOrNull { it.first == v }?.second ?: "SHIELD option $v" }
+    private fun app(context: Context, kind: PressKind): String? =
+        Settings.Global.getString(context.contentResolver, appSetting(kind))
 
-    fun set(context: Context, kind: PressKind, value: Int): Boolean =
-        runCatching { Settings.Global.putInt(context.contentResolver, setting(kind), value) }.isSuccess
+    /** Whether [kind] is set to [choice]; "Start any app" counts only with Buckler's package. */
+    fun isChosen(context: Context, kind: PressKind, choice: Int): Boolean {
+        val v = value(context, kind)
+        return v == choice && (choice != START_APP || app(context, kind) == context.packageName)
+    }
+
+    fun label(context: Context, kind: PressKind): String {
+        val v = value(context, kind)
+        if (v == START_APP) {
+            val pkg = app(context, kind)
+            return if (pkg == context.packageName) "Buckler Settings" else "Open ${pkg?.let { appName(context, it) } ?: "an app"}"
+        }
+        return CHOICES.firstOrNull { it.first == v }?.second ?: "SHIELD option $v"
+    }
+
+    fun set(context: Context, kind: PressKind, value: Int): Boolean = runCatching {
+        // The app first, so SHIELD never sees "Start any app" without Buckler's package.
+        if (value == START_APP) Settings.Global.putString(context.contentResolver, appSetting(kind), context.packageName)
+        Settings.Global.putInt(context.contentResolver, setting(kind), value)
+    }.isSuccess
 }

@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Settings → Appearance → Global: colour scheme and font, each shown as a picture. Each part of
- * Home (Header, Main Stage, Shelves) has its own page in Appearance's sidebar.
+ * Home (Header, Main Stage, Shelves) has its own page in Appearance's list.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -60,9 +60,11 @@ private val CardGap = 12.dp
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CardColumns(columns: Int = 3, content: @Composable (width: Dp) -> Unit) {
+    // Two to a row at most in the narrow Settings panel.
+    val perRow = if (LocalSettingsPanel.current) minOf(columns, 2) else columns
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         // A little under a share each: room for the focus zoom of an end card.
-        val width = (maxWidth - CardGap * (columns - 1)) / columns - 2.dp
+        val width = (maxWidth - CardGap * (perRow - 1)) / perRow - 2.dp
         FlowRow(horizontalArrangement = Arrangement.spacedBy(CardGap), verticalArrangement = Arrangement.spacedBy(CardGap)) {
             content(width)
         }

@@ -201,9 +201,8 @@ private fun ActionChoices(button: RemoteButton, kind: PressKind, onDone: () -> U
     val flow = Arrangement.spacedBy(10.dp)
     if (button.mapping == RemoteButton.Mapping.SHIELD) {
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            val current = ShieldMenuButton.value(context, kind)
             ShieldMenuButton.CHOICES.forEach { (value, label) ->
-                SettingsAction(label, selected = value == current) {
+                SettingsAction(label, selected = ShieldMenuButton.isChosen(context, kind, value)) {
                     if (!ShieldMenuButton.set(context, kind, value)) {
                         Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
                     }

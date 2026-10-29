@@ -1,11 +1,16 @@
 package dev.solon.bucklerhome
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import java.time.LocalDate
@@ -134,6 +139,23 @@ fun rememberHomeHeadlines(config: DisplayConfig, stage: MainStage): Pair<List<He
     val header by rememberHeadlines(if (shared) headerQuery ?: stageQuery else headerQuery, every)
     val own by rememberHeadlines(if (shared) null else stageQuery, every)
     return header to if (shared) header else own
+}
+
+/**
+ * Bumped whenever Buckler's settings change, so Home redraws behind the Settings panel as you
+ * change things there (Home is paused, not stopped, while the panel is over it).
+ */
+@Composable
+fun rememberPrefsChanges(): Int {
+    val context = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    DisposableEffect(Unit) {
+        val prefs = context.getSharedPreferences("bucklerhome", Context.MODE_PRIVATE)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> tick++ }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    return tick
 }
 
 /** Clock and date strings for the header, refreshed every 15 seconds. */

@@ -77,6 +77,15 @@
         android:usesCleartextTraffic="false">
 
         <activity
+            android:name=".BucklerSettingsActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="@string/settings_activity_label"
+            android:launchMode="singleTask"
+            android:taskAffinity="dev.solon.bucklerhome.settings"
+            android:theme="@style/Theme.BucklerHome.Panel" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask">
@@ -87,14 +96,12 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".BucklerSettingsActivity"
-            android:exported="true"
-            android:label="@string/settings_activity_label" />
-
         <!--
           App-list entries, one pair per colour scheme so the icon follows Settings → Appearance
           (LauncherIcon enables exactly one pair). Keep in step with AppTheme and gen_icons.py.
+          Opening the package by name (SHIELD's ≡ button set to start Buckler) takes its first TV
+          entry, and Android lists a package's entries in the order of the activities they open:
+          BucklerSettingsActivity is declared before MainActivity, so that is Buckler Settings.
         -->
         <activity-alias android:name=".LauncherBuckler" android:enabled="true" android:exported="true"
             android:banner="@drawable/banner_buckler" android:icon="@drawable/ic_mark_buckler" android:targetActivity=".MainActivity">

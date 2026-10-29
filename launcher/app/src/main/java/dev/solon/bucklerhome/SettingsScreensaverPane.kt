@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Settings → Screensaver → Global: which screensaver is in use and the shared "Start after". Each
- * screensaver has its own page in Screensaver's sidebar.
+ * screensaver has its own page in Screensaver's list.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -34,7 +34,7 @@ fun ScreensaverPane() {
     val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle("Screensaver")
-    SettingsRow("Each screensaver has its own page with its own options, in the list beside this one. The highlighted card runs.")
+    SettingsRow("Each screensaver has its own page with its own options, in the Screensaver list (Back). The highlighted card runs.")
     PickerTitle("In use")
     ScreensaverPicker(cfg.mode) {
         ScreensaverPrefs.setMode(context, it)

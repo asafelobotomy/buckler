@@ -4,4 +4,11 @@
         <item name="android:windowBackground">#FF0B0E14</item>
         <item name="android:colorPrimary">#FFD4A84B</item>
     </style>
+    <!-- Buckler Settings: a panel sliding in over whatever is on screen, as SHIELD's own settings do. -->
+    <style name="Theme.BucklerHome.Panel">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>

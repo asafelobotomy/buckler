@@ -96,7 +96,7 @@ fun CleanUpPane() {
         else -> SettingsRow(
             "Apps take ${StorageUse.size(context, list.sumOf { it.totalBytes })}, of which " +
                 "${StorageUse.size(context, list.sumOf { it.cacheBytes })} is cache they can rebuild. Apps, Cache " +
-                "and Largest apps beside this page go through them one by one.",
+                "and Largest apps, in the Clean up list, go through them one by one.",
         )
     }
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {

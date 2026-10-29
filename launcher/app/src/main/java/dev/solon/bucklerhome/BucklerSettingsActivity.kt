@@ -3,57 +3,51 @@ package dev.solon.bucklerhome
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Surface
-import androidx.tv.material3.Text
 
+/**
+ * Buckler Settings: a panel that slides in from the right over whatever is on screen, like
+ * SHIELD's own settings ([BucklerSettingsPanel]). It has its own task, so it opens over an app as
+ * well as over Home, from the gear, a remapped button, or SHIELD's ≡ set to start Buckler.
+ */
 class BucklerSettingsActivity : ComponentActivity() {
+    private var start by mutableStateOf<SettingsPane?>(null)
+    private var opened by mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppearanceStore.ensureLoaded(this)
-        val start = intent.getStringExtra(EXTRA_PANE)?.let { raw -> SettingsPane.entries.firstOrNull { it.name == raw } }
+        start = paneOf(intent)
         setContent {
             BucklerHomeTheme {
-                BucklerSettingsScreen(onClose = { finish() }, start = start ?: SettingsPane.APPEARANCE)
+                BucklerSettingsPanel(start = start, opened = opened, onClose = { finish() })
             }
         }
     }
+
+    /** Opened again while showing: at a page when one is asked for, otherwise it closes, as SHIELD's does. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val pane = paneOf(intent)
+        if (pane == null) {
+            finish()
+        } else {
+            start = pane
+            opened++
+        }
+    }
+
+    private fun paneOf(intent: Intent?): SettingsPane? =
+        intent?.getStringExtra(EXTRA_PANE)?.let { raw -> SettingsPane.entries.firstOrNull { it.name == raw } }
 
     companion object {
         /** A [SettingsPane] name to open at, for "More in Settings" on Home's hold menus. */
@@ -70,8 +64,8 @@ class BucklerSettingsActivity : ComponentActivity() {
 /**
  * Appearance first, with a page for each part of Home top to bottom (Header, Main Stage,
  * Shelves) and App Thumbnails, then Screensaver with a page for each screensaver ([saver]), then the rest, then
- * upkeep. An entry with a [parent] is not in the main sidebar: choosing the parent opens a second
- * sidebar beside it, with the parent's own page first as "Global" and then its children.
+ * upkeep. An entry with a [parent] is not in the panel's first list: choosing the parent opens a list
+ * of its own, with the parent's own page first as "Global" and then its children.
  */
 enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val saver: ScreensaverMode? = null) {
     APPEARANCE("Appearance"),
@@ -100,127 +94,48 @@ enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val
     ABOUT("About"),
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+/** One Settings page's content, with the dialogs its account links open. */
 @Composable
-fun BucklerSettingsScreen(onClose: () -> Unit, start: SettingsPane = SettingsPane.APPEARANCE) {
+fun SettingsPageContent(pane: SettingsPane) {
     val context = LocalContext.current
-    var pane by remember { mutableStateOf(start) }
     var connectIgdb by remember { mutableStateOf(false) }
     var connectSgdb by remember { mutableStateOf(false) }
     var connectGithub by remember { mutableStateOf(false) }
     var accountTick by remember { mutableIntStateOf(0) }
     var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
     var availableRelease by remember { mutableStateOf<GitHubRelease?>(null) }
-    // Pressing Left steps back one column to the entry for what is shown, not whichever is nearest.
-    val navFocus = remember { SettingsPane.entries.associateWith { FocusRequester() } }
-    val subFocus = remember { SettingsPane.entries.associateWith { FocusRequester() } }
-    val section = pane.parent ?: pane
-    val children = SettingsPane.entries.filter { it.parent == section }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(HomeBgBrush)
-            // Android TV's safe margins (5%): 48 dp at the sides, 27 dp top and bottom.
-            .padding(horizontal = 48.dp, vertical = 27.dp)
-            // Re-focus after account changes rebuild the pane and drop the focused button.
-            .autoFocus(accountTick),
-    ) {
-        // One short line, so the sidebars and pages start near the top of the screen.
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 14.dp)) {
-            Text(
-                text = "Buckler Settings",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = ColorText,
-            )
-            Text(
-                text = "buckler-home ${BuildConfig.VERSION_NAME}",
-                fontSize = 14.sp,
-                color = ColorMuted,
-                modifier = Modifier.padding(start = 14.dp, bottom = 3.dp),
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.weight(1f)) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                // As wide as the longest label (every pill matches it), not a fixed width.
-                modifier = Modifier
-                    .width(IntrinsicSize.Max)
-                    .verticalScroll(rememberScrollState())
-                    .trapVerticalFocus(),
-            ) {
-                SettingsPane.entries.filter { it.parent == null }.forEach { entry ->
-                    SettingsNav(entry.label, section == entry, navFocus.getValue(entry)) { pane = entry }
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                SettingsAction("Close", onClick = onClose)
-            }
-            // One width for every section, kept even where a section has no sub-pages, so the page
-            // never shifts sideways when switching: the invisible labels size it to the longest.
-            Box(modifier = Modifier.width(IntrinsicSize.Max)) {
-                Column(modifier = Modifier.height(0.dp).alpha(0f)) {
-                    (listOf("Global") + SettingsPane.entries.filter { it.parent != null }.map { it.label }).forEach {
-                        Text(it, modifier = Modifier.padding(start = SubNavStart, end = SubNavEnd), fontSize = SubNavFont, maxLines = 1)
-                    }
-                }
-                if (children.isNotEmpty()) Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .trapVerticalFocus(onLeft = { navFocus.getValue(section) }),
-                ) {
-                    SettingsNav("Global", pane == section, subFocus.getValue(section), sub = true) { pane = section }
-                    children.forEach { child ->
-                        SettingsNav(child.label, pane == child, subFocus.getValue(child), sub = true) { pane = child }
-                    }
-                }
-            }
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .trapVerticalFocus(onLeft = { if (children.isNotEmpty()) subFocus.getValue(pane) else navFocus.getValue(pane) }),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 24.dp),
-            ) {
-                item {
-                    when (pane) {
-                        SettingsPane.APPEARANCE -> AppearancePane()
-                        SettingsPane.HEADER -> HeaderPane()
-                        SettingsPane.MAIN_STAGE -> MainStagePane()
-                        SettingsPane.SHELVES -> ShelvesPane()
-                        SettingsPane.ACCESSIBILITY -> AccessibilityPane()
-                        SettingsPane.SCREENSAVER -> ScreensaverPane()
-                        SettingsPane.SAVER_CLOCK, SettingsPane.SAVER_DVD, SettingsPane.SAVER_PHOTOS,
-                        SettingsPane.SAVER_UPLOADED, SettingsPane.SAVER_NOW_PLAYING, SettingsPane.SAVER_MAZE,
-                        SettingsPane.SAVER_PIPES, SettingsPane.SAVER_MYSTIFY, SettingsPane.SAVER_STARFIELD,
-                        -> ScreensaverModePane(pane.saver ?: ScreensaverMode.CLOCK)
-                        SettingsPane.SHIELD -> ShieldPane()
-                        SettingsPane.UPDATES -> UpdatesPane(
-                            accountTick = accountTick,
-                            updateResult = updateResult,
-                            onResult = { updateResult = it },
-                            onAvailable = { availableRelease = it },
-                            onConnectGithub = { connectGithub = true },
-                            onAccountChanged = { accountTick++ },
-                        )
-                        SettingsPane.COVERS -> CoversPane(
-                            accountTick = accountTick,
-                            onConnectSgdb = { connectSgdb = true },
-                            onConnectIgdb = { connectIgdb = true },
-                            onAccountChanged = { accountTick++ },
-                        )
-                        SettingsPane.REMOTE -> RemotePane()
-                        SettingsPane.CLEAN_UP -> CleanUpPane()
-                        SettingsPane.APPS -> AppsPane()
-                        SettingsPane.CACHE -> CachePane()
-                        SettingsPane.LARGEST_APPS -> LargestAppsPane()
-                        SettingsPane.ABOUT -> AboutPane()
-                    }
-                }
-            }
-        }
+    when (pane) {
+        SettingsPane.APPEARANCE -> AppearancePane()
+        SettingsPane.HEADER -> HeaderPane()
+        SettingsPane.MAIN_STAGE -> MainStagePane()
+        SettingsPane.SHELVES -> ShelvesPane()
+        SettingsPane.ACCESSIBILITY -> AccessibilityPane()
+        SettingsPane.SCREENSAVER -> ScreensaverPane()
+        SettingsPane.SAVER_CLOCK, SettingsPane.SAVER_DVD, SettingsPane.SAVER_PHOTOS,
+        SettingsPane.SAVER_UPLOADED, SettingsPane.SAVER_NOW_PLAYING, SettingsPane.SAVER_MAZE,
+        SettingsPane.SAVER_PIPES, SettingsPane.SAVER_MYSTIFY, SettingsPane.SAVER_STARFIELD,
+        -> ScreensaverModePane(pane.saver ?: ScreensaverMode.CLOCK)
+        SettingsPane.SHIELD -> ShieldPane()
+        SettingsPane.UPDATES -> UpdatesPane(
+            accountTick = accountTick,
+            updateResult = updateResult,
+            onResult = { updateResult = it },
+            onAvailable = { availableRelease = it },
+            onConnectGithub = { connectGithub = true },
+            onAccountChanged = { accountTick++ },
+        )
+        SettingsPane.COVERS -> CoversPane(
+            accountTick = accountTick,
+            onConnectSgdb = { connectSgdb = true },
+            onConnectIgdb = { connectIgdb = true },
+            onAccountChanged = { accountTick++ },
+        )
+        SettingsPane.REMOTE -> RemotePane()
+        SettingsPane.CLEAN_UP -> CleanUpPane()
+        SettingsPane.APPS -> AppsPane()
+        SettingsPane.CACHE -> CachePane()
+        SettingsPane.LARGEST_APPS -> LargestAppsPane()
+        SettingsPane.ABOUT -> AboutPane()
     }
 
     if (connectIgdb) {
@@ -255,47 +170,5 @@ fun BucklerSettingsScreen(onClose: () -> Unit, start: SettingsPane = SettingsPan
     }
     availableRelease?.let { release ->
         UpdateAvailableDialog(release = release, onDismiss = { availableRelease = null })
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-private val NavStart = 16.dp
-private val NavEnd = 28.dp
-
-// Sub-pages are a size down from the main list, so they read as part of the chosen section.
-private val SubNavStart = 14.dp
-private val SubNavEnd = 24.dp
-private val SubNavFont = 14.sp
-
-@Composable
-private fun SettingsNav(
-    label: String,
-    selected: Boolean,
-    focusRequester: FocusRequester,
-    sub: Boolean = false,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) ColorBrand else ColorTile,
-            focusedContainerColor = ColorBrand,
-            contentColor = if (selected) ColorOnBrand else ColorText,
-            focusedContentColor = ColorOnBrand,
-        ),
-    ) {
-        Text(
-            text = label,
-            // A little more room after the label than before it.
-            modifier = if (sub) {
-                Modifier.padding(start = SubNavStart, end = SubNavEnd, top = 6.dp, bottom = 6.dp)
-            } else {
-                Modifier.padding(start = NavStart, end = NavEnd, top = 8.dp, bottom = 8.dp)
-            },
-            fontSize = if (sub) SubNavFont else 16.sp,
-            maxLines = 1,
-        )
     }
 }
