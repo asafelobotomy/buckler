@@ -66,10 +66,11 @@ fun NowPlayingPanel(
     val panel = remember { FocusRequester() }
     val firstControl = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
+    // Fallback only: going in normally moves focus to Play at once (see the panel's OK below).
     LaunchedEffect(inside) {
         if (!inside) return@LaunchedEffect
         delay(30)
-        runCatching { firstControl.requestFocus() }
+        if (!rowFocused) runCatching { firstControl.requestFocus() }
     }
     // Out of the controls (Up, Down, past either end): one stop again. Debounced, as moving between
     // the buttons, or going in, briefly reports the row unfocused.
@@ -99,6 +100,8 @@ fun NowPlayingPanel(
                     .focusProperties { canFocus = !inside }
                     .stageTarget(panel, onDown = { runCatching { below?.requestFocus() } }, "Now Playing: ${info.title}", onLongPress = { onHold?.invoke() }) {
                         inside = true
+                        // Straight to Play: left to itself, focus would land on Previous first and jump.
+                        runCatching { firstControl.requestFocus() }
                     },
             )
             Row(

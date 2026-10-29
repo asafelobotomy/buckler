@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** One line that scrolls sideways when it does not fit (cut short instead under reduced motion). */
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -79,6 +81,7 @@ fun LoveButton(
     onLongPress: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     HeaderIconButton(
         icon = if (info.loved) R.drawable.ic_heart_filled else R.drawable.ic_heart,
         description = if (info.loved) "Unlike" else "Like",
@@ -89,10 +92,22 @@ fun LoveButton(
         onDown = onDown,
         onLongPress = onLongPress,
     ) {
-        if (!model.toggleLove()) {
-            Toast.makeText(context, "${info.appLabel} does not take likes from other apps", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(context, if (model.info?.loved == true) "Liked" else "Unliked", Toast.LENGTH_SHORT).show()
+        val app = info.appLabel.ifBlank { "The app" }
+        if (model.toggleLove() == NowPlayingModel.LoveResult.NOT_TAKEN) {
+            Toast.makeText(context, "$app does not take likes from other apps", Toast.LENGTH_SHORT).show()
+            return@HeaderIconButton
+        }
+        val want = model.info?.loved == true
+        // Only say it is done when the app reports it; many take the like and say nothing back.
+        scope.launch {
+            delay(1_500)
+            val said = model.appSaysLoved()
+            val text = when {
+                said == want -> if (want) "Liked in $app" else "Unliked in $app"
+                said != null -> "$app did not take it"
+                else -> "Sent to $app, which does not say whether it was saved. Check its liked list."
+            }
+            Toast.makeText(context, text, Toast.LENGTH_LONG).show()
         }
     }
 }

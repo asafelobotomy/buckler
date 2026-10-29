@@ -235,13 +235,16 @@ class NowPlayingModel(private val context: Context) {
 
     fun previous() { selected?.transportControls?.skipToPrevious() }
 
+    /** What became of a like: not taken, sent and reported back, or sent with no word back. */
+    enum class LoveResult { NOT_TAKEN, SENT }
+
     /**
      * Like or unlike the track in the playing app: its own "like" action when it has one, else a
-     * heart or thumb rating. False when the app takes neither, so the caller can say so.
+     * heart or thumb rating. [LoveResult.NOT_TAKEN] when the app takes neither, so the caller can say so.
      */
-    fun toggleLove(): Boolean {
-        val c = selected ?: return false
-        val current = info ?: return false
+    fun toggleLove(): LoveResult {
+        val c = selected ?: return LoveResult.NOT_TAKEN
+        val current = info ?: return LoveResult.NOT_TAKEN
         val want = !current.loved
         val custom = c.loveAction()
         when {
@@ -253,13 +256,30 @@ class NowPlayingModel(private val context: Context) {
                     else -> Rating.newHeartRating(true)
                 },
             )
-            else -> return false
+            else -> return LoveResult.NOT_TAKEN
         }
         pressedLove[current.trackKey] = want
         refresh()
-        return true
+        return LoveResult.SENT
+    }
+
+    /**
+     * Whether the playing app now reports the track as liked: from its own rating, or from its like
+     * action having turned into an "unlike"/"remove" one. Null when it says nothing either way.
+     */
+    fun appSaysLoved(): Boolean? {
+        val c = selected ?: return null
+        c.metadata?.getRating(MediaMetadata.METADATA_KEY_USER_RATING)?.takeIf { it.isRated }?.let { return it.hasHeart() || it.isThumbUp }
+        val action = c.loveAction() ?: return null
+        val words = "${action.action} ${action.name}"
+        return when {
+            UNLOVE_WORDS.containsMatchIn(words) -> true
+            else -> null
+        }
     }
 }
+
+private val UNLOVE_WORDS = Regex("unlike|remove|unfavou?rite|unsave", RegexOption.IGNORE_CASE)
 
 private val LOVE_WORDS = Regex("like|love|heart|favou?rite|collection|thumbs?.?up", RegexOption.IGNORE_CASE)
 
