@@ -12,11 +12,15 @@ enum class MultiviewKind(val label: String) {
     JELLYFIN("Jellyfin"),
     IPTV("IPTV"),
     CAMERA("Camera"),
+    STREMIO("Stremio"),
 }
 
+/** What a tile plays: its address, or why it has none. */
+data class TileSource(val url: String?, val problem: String?)
+
 /**
- * One tile on the Multiview stage. [ref] is the Jellyfin item id, or the stream's address for IPTV
- * and cameras; [startMs] is where a Jellyfin video was left off.
+ * One tile on the Multiview stage. [ref] is the Jellyfin item id, Stremio's "type|video id", or the
+ * stream's address for IPTV and cameras; [startMs] is where a Jellyfin or Stremio video was left off.
  */
 data class MultiviewTile(val kind: MultiviewKind, val title: String, val ref: String, val startMs: Long = 0) {
     fun toJson(): JSONObject = JSONObject().put("kind", kind.name).put("title", title).put("ref", ref).put("start", startMs)
@@ -113,9 +117,23 @@ object MultiviewStore {
         return p.getString(KEY_DEVICE, null) ?: java.util.UUID.randomUUID().toString().also { p.edit().putString(KEY_DEVICE, it).apply() }
     }
 
-    /** The address a tile plays: Jellyfin's direct stream (no transcoding, so three are light on the server). */
-    fun streamUrl(context: Context, tile: MultiviewTile): String? = when (tile.kind) {
-        MultiviewKind.JELLYFIN -> jellyfin(context)?.let { JellyfinClient.streamUrl(it, tile.ref) }
-        MultiviewKind.IPTV, MultiviewKind.CAMERA -> tile.ref
+    /**
+     * What a tile plays, asking the network where it must (call off the main thread): Jellyfin's
+     * direct stream (no transcoding, so three are light on the server), or for Stremio the first
+     * direct link an installed add-on gives, looked up each time as such links expire.
+     */
+    fun resolve(context: Context, tile: MultiviewTile): TileSource = when (tile.kind) {
+        MultiviewKind.JELLYFIN -> jellyfin(context)?.let { TileSource(JellyfinClient.streamUrl(it, tile.ref), null) }
+            ?: TileSource(null, "Sign in to Jellyfin in Settings.")
+        MultiviewKind.IPTV, MultiviewKind.CAMERA -> TileSource(tile.ref, null)
+        MultiviewKind.STREMIO -> {
+            val auth = StremioAccount.authKey(context)
+            val (type, id) = tile.ref.split('|', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+            if (auth == null) {
+                TileSource(null, "Sign in to Stremio in Settings.")
+            } else {
+                StremioClient.stream(auth, type, id).let { TileSource(it.url, it.problem) }
+            }
+        }
     }
 }

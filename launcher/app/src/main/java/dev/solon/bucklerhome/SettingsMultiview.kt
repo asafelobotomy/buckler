@@ -49,7 +49,7 @@ fun MultiviewSettings() {
     SectionTitle("Multiview")
     SettingsRow(
         "Up to three videos on the Main Stage, all playing; the highlighted one has sound. OK on a tile plays it " +
-            "full screen. From Jellyfin, an IPTV playlist or cameras on your network.",
+            "full screen. From Jellyfin, Stremio, an IPTV playlist or cameras on your network.",
     )
     PickerTitle("Tiles")
     MultiviewStore.tiles.forEachIndexed { i, tile ->
@@ -69,6 +69,8 @@ fun MultiviewSettings() {
     }
     Spacer(Modifier.height(12.dp))
     JellyfinSection { tick++ }
+    Spacer(Modifier.height(16.dp))
+    StremioSection { tick++ }
     Spacer(Modifier.height(16.dp))
     PlaylistSection { tick++ }
     Spacer(Modifier.height(16.dp))
@@ -103,6 +105,7 @@ private fun TileChooser(tick: Int, onChoose: (MultiviewTile?) -> Unit) {
                 }
             }
         }
+        StremioChoices(tick, onChoose)
         if (channels.isNotEmpty()) {
             PickerTitle("IPTV · ${channels.size} channels")
             FocusableTextField(value = query, onValueChange = { query = it }, hint = "Search channels", onDone = {})

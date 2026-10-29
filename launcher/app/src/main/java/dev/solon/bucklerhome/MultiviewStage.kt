@@ -18,6 +18,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,6 +44,8 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * The Multiview stage: up to three videos side by side, all playing, muted but for the one that is
@@ -64,9 +67,14 @@ fun MultiviewStage(stageFocus: FocusRequester, onDown: () -> Unit, onHold: () ->
         StageHeading("Multiview", "The highlighted video has sound. OK: full screen. Hold OK: options.")
         Row(Modifier.fillMaxWidth().height(metrics.cardHeight), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             tiles.forEachIndexed { i, tile ->
-                val url = tile?.let { MultiviewStore.streamUrl(context, it) }
-                // A Jellyfin video carries on where it was; IPTV and cameras are live, so they rejoin live.
-                val resumeAt = if (tile?.kind == MultiviewKind.JELLYFIN) positions[i].takeIf { it > 0 } ?: tile.startMs else 0L
+                // Looked up off the main thread: Stremio asks its add-ons each time.
+                val source by produceState<TileSource?>(null, tile) {
+                    value = tile?.let { withContext(Dispatchers.IO) { MultiviewStore.resolve(context, it) } }
+                }
+                val url = source?.url
+                // A film or episode carries on where it was; IPTV and cameras are live, so they rejoin live.
+                val onDemand = tile?.kind == MultiviewKind.JELLYFIN || tile?.kind == MultiviewKind.STREMIO
+                val resumeAt = if (onDemand) positions[i].takeIf { it > 0 } ?: tile.startMs else 0L
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -89,7 +97,8 @@ fun MultiviewStage(stageFocus: FocusRequester, onDown: () -> Unit, onHold: () ->
                 ) {
                     when {
                         tile == null -> TileNote("Tile ${i + 1} is empty. OK to choose a video.")
-                        url == null -> TileNote("${tile.title}: sign in to ${tile.kind.label} in Settings.")
+                        source == null -> TileNote("${tile.title}…")
+                        url == null -> TileNote("${tile.title}: ${source?.problem}")
                         visible -> TilePlayer(url, resumeAt, audible = heard == i) { positions[i] = it }
                         else -> TileNote(tile.title)
                     }
