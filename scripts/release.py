@@ -7,9 +7,10 @@ Builds the signed launcher APK and the CLI wheel into dist/release/:
   buckler-home.apk.sha256   checked by `buckler launcher install` before installing
   buckler-<v>-py3-none-any.whl, buckler-<v>.tar.gz
 
-The release key never leaves this machine: the APK is signed here (launcher/keystore.properties)
-and its certificate is checked against RELEASE_CERT before anything is published, so a build that
-fell back to the debug key cannot ship.
+The APK is signed with launcher/keystore.properties (written from secrets by
+.github/workflows/release.yml, which runs this on every new version) and its certificate is
+checked against RELEASE_CERT before anything is published, so a build that fell back to the debug
+key cannot ship.
 
 Usage:
   python scripts/release.py              build and check only

@@ -44,10 +44,13 @@ export BUCKLER_HOST=<tv-ip>:5555   # optional; or SHIELD_HOST, or --host once
 
 ## Releasing
 
-`python scripts/release.py` builds the signed `buckler-home.apk`, its `.sha256` and the CLI
-wheel into `dist/release/`, and refuses an APK not signed by the release key (its certificate
-SHA-256 is pinned in the script). `--publish` then tags `v<version>` and creates the GitHub
-release. The key stays on the release machine (`launcher/keystore.properties`); CI never signs.
+Bump the version in `pyproject.toml`, `src/buckler/__init__.py` and `launcher/app/build.gradle.kts`
+(`versionCode` and `versionName`) and push to main. The `release` workflow sees a version with no
+tag yet and runs `scripts/release.py --publish`: it builds `buckler-home.apk`, its `.sha256` and the
+CLI wheel, refuses an APK not signed by the release key (its certificate SHA-256 is pinned in the
+script), tags `v<version>` and creates the GitHub release. It needs two repository secrets,
+`BUCKLER_KEYSTORE_B64` (the keystore, base64) and `BUCKLER_KEYSTORE_PASSWORD`. Running
+`python scripts/release.py` locally builds and checks the same files without publishing.
 
 ## Typical flow
 
