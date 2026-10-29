@@ -7,7 +7,7 @@ Use this after profile or launcher changes, and after SHIELD Experience OTAs.
 | Field | Value |
 |---|---|
 | Device | SHIELD TV Pro (`mdarcy`) |
-| Host | `BUCKLER_HOST` / `SHIELD_HOST` (default `192.168.178.23:5555`) |
+| Host | `BUCKLER_HOST` / `SHIELD_HOST` (else the remembered `--host`) |
 | HOME | `dev.solon.bucklerhome/.MainActivity` |
 | Screensaver | `dev.solon.bucklerhome/.ClockDream` |
 | Profiles | `privacy-core`, `speech`, `minimal`, `extras` + handover + screensaver |

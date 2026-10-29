@@ -44,7 +44,7 @@ def test_curated_covers_are_bundled_assets() -> None:
 def test_unused_apps_never_flags_the_never_list() -> None:
     import yaml
 
-    never = yaml.safe_load((ROOT / "profiles" / "never.yaml").read_text(encoding="utf-8"))["packages"]
+    never = yaml.safe_load((ROOT / "src/buckler/data/profiles/never.yaml").read_text(encoding="utf-8"))["packages"]
     text = (KOTLIN / "UnusedApps.kt").read_text(encoding="utf-8")
     block = re.search(r"ALWAYS_KEEP = setOf\((.*?)\)", text, re.DOTALL)
     assert block, "ALWAYS_KEEP not found"

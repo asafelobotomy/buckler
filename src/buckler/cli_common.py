@@ -3,16 +3,43 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import click
 
 from buckler import __version__
 from buckler.adb import Adb
 
-DEFAULT_HOST = "192.168.178.23"
+
+def host_file() -> Path:
+    base = os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config"
+    return Path(base) / "buckler" / "host"
 
 
-def make_adb(host: str) -> Adb:
+def saved_host() -> str | None:
+    try:
+        return host_file().read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
+def save_host(host: str) -> None:
+    """Remembers the TV given with --host (or the env), so later commands need not repeat it."""
+    try:
+        path = host_file()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if saved_host() != host:
+            path.write_text(host + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def make_adb(host: str | None) -> Adb:
+    if not host:
+        raise click.ClickException(
+            "Which TV? Pass --host <tv-ip> once (it is remembered) or set BUCKLER_HOST. "
+            "The TV's address is in Settings → Device Preferences → About → Status."
+        )
     return Adb(host=host)
 
 
@@ -39,12 +66,14 @@ class BucklerGroup(click.Group):
 @click.option(
     "--host",
     envvar=["BUCKLER_HOST", "SHIELD_HOST"],
-    default=DEFAULT_HOST,
-    show_default=True,
-    help="Shield IP or host:port (Network debugging). Env: BUCKLER_HOST or SHIELD_HOST.",
+    default=None,
+    help="TV IP or host:port (Network debugging); remembered for next time. "
+    "Env: BUCKLER_HOST or SHIELD_HOST.",
 )
 @click.pass_context
-def cli(ctx: click.Context, host: str) -> None:
+def cli(ctx: click.Context, host: str | None) -> None:
     """Buckler — ADB cleanup + launcher tooling for NVIDIA SHIELD TV Pro."""
     ctx.ensure_object(dict)
-    ctx.obj["host"] = host
+    if host:
+        save_host(host)
+    ctx.obj["host"] = host or saved_host()

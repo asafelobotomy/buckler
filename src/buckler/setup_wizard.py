@@ -13,7 +13,7 @@ from buckler.home_layout import push_home_layout, write_home_layout
 from buckler.journal import Journal, iter_journals
 from buckler.launcher_ops import build_launcher, handover, install_launcher
 from buckler.ops import apply_profile, format_probe, probe
-from buckler.paths import journals_dir, repo_root
+from buckler.paths import journals_dir, launcher_dir, schema_dir
 from buckler.policy import OUR_LAUNCHER, verify_ai_stack
 from buckler.profiles import SETUP_PROFILES, load_profile
 from buckler.schema_validate import validate_desired_state
@@ -99,7 +99,7 @@ def export_snapshot(
         stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
         path = journals_dir() / f"snapshot-{stamp}.json"
 
-    schema_ref = str(repo_root() / "schema" / "desired-state.v1.json")
+    schema_ref = str(schema_dir() / "desired-state.v1.json")
     doc = {
         "schema": 1,
         "$schema": schema_ref,
@@ -253,7 +253,7 @@ def run_setup(
         report.add("launcher", True, "skipped by user", skipped=True)
     else:
         try:
-            if not skip_build:
+            if not skip_build and launcher_dir() is not None:
                 built = build_launcher()
                 _echo(echo, f"  built {built.apk}")
             install_launcher(adb)

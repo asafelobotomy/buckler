@@ -19,7 +19,7 @@ buckler --host <IP> setup --dry-run
 # Reuse an already-built APK:
 buckler --host <IP> setup --skip-build
 
-# Export desired-state JSON (schema/desired-state.v1.json, validated on write):
+# Export desired-state JSON (src/buckler/data/schema/desired-state.v1.json, validated on write):
 buckler --host <IP> snapshot
 
 # Prefer after a full setup — undo every disable journal, then doctor:

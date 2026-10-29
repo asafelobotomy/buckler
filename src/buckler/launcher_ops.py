@@ -16,6 +16,7 @@ from buckler.policy import (
     OUR_LAUNCHER,
     can_disable_home_owner,
 )
+from buckler.release import latest_apk
 
 
 @dataclass
@@ -37,8 +38,10 @@ def _android_home() -> str:
 
 def build_launcher() -> BuildResult:
     root = launcher_dir()
-    if not (root / "gradlew").is_file():
-        raise RuntimeError(f"Missing gradlew in {root}")
+    if root is None:
+        raise RuntimeError(
+            "Building needs a source checkout; `buckler launcher install` downloads the release APK."
+        )
     env = os.environ.copy()
     env["ANDROID_HOME"] = _android_home()
     env["ANDROID_SDK_ROOT"] = env["ANDROID_HOME"]
@@ -71,20 +74,16 @@ def build_launcher() -> BuildResult:
 
 
 def install_launcher(adb: Adb, apk: Path | None = None) -> str:
+    """Installs [apk]; else the checkout's release build (built if missing); else the latest release."""
     adb.connect()
     if apk is None:
-        apk = (
-            launcher_dir()
-            / "app"
-            / "build"
-            / "outputs"
-            / "apk"
-            / "release"
-            / "app-release.apk"
-        )
-        if not apk.is_file():
-            built = build_launcher()
-            apk = built.apk
+        root = launcher_dir()
+        if root is None:
+            apk = latest_apk()
+        else:
+            apk = root / "app" / "build" / "outputs" / "apk" / "release" / "app-release.apk"
+            if not apk.is_file():
+                apk = build_launcher().apk
     return adb.install_apk(str(apk))
 
 

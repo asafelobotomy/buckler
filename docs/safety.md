@@ -7,7 +7,7 @@
 ## Hard rules
 
 1. **Disable, do not uninstall.** All profiles use `pm disable-user --user 0`. Restore is `pm enable`. There is no uninstall path in the CLI.
-2. **Never-list is absolute.** Packages in [`profiles/never.yaml`](../profiles/never.yaml) are refused even if duplicated in another profile. This includes NVIDIA AI upscaling (`NvCPLSvc`, audio/Dolby), Play Services, keychain, `com.android.se`, remote/Bluetooth, and Settings.
+2. **Never-list is absolute.** Packages in [`profiles/never.yaml`](../src/buckler/data/profiles/never.yaml) are refused even if duplicated in another profile. This includes NVIDIA AI upscaling (`NvCPLSvc`, audio/Dolby), Play Services, keychain, `com.android.se`, remote/Bluetooth, and Settings.
 3. **Never leave the box without HOME.** Stock launchers (`tvlauncher`, `launcherx`, leanback, Xiaomi PatchWall) are only disabled when `dev.solon.bucklerhome` is installed. `launcher handover` disables every present known stock launcher and re-enables them if HOME does not resolve to buckler-home afterward.
 4. **AI stack check after mutations.** `apply` and `check` fail if any AI-stack package is missing or disabled.
 5. **Journals are first-class.** Every successful apply/handover/screensaver writes JSON under `journals/` with restore commands. Desired-state snapshots use `snapshot-*.json` and are excluded from restore globs.

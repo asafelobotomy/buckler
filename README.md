@@ -5,6 +5,9 @@ Command: `buckler` · Project: `~/Projects/buckler` · Path to **kitetvOS**.
 
 Inspired by [cleanyourtv](https://github.com/Gathin23/cleanyourtv)’s safety model (disable-user, journals, never leave the box without HOME) — implemented as our own tooling and **buckler-home** launcher, not a fork.
 
+**Installing Buckler on your TV:** see [docs/install.md](docs/install.md) (on the TV with
+Downloader, or from a computer). The rest of this page is for working on Buckler itself.
+
 ## What it does
 
 - **probe / audit** — identity, HOME owner, package state, AI upscaling health
@@ -23,7 +26,7 @@ Inspired by [cleanyourtv](https://github.com/Gathin23/cleanyourtv)’s safety mo
 
 See [docs/safety.md](docs/safety.md).
 
-## Setup
+## Development setup
 
 ```bash
 cd ~/Projects/buckler
@@ -32,12 +35,19 @@ uv pip install -e '.[dev]' --python .venv/bin/python
 export ANDROID_HOME=~/Android/Sdk   # for launcher builds
 ```
 
-Enable **Network debugging** on the Shield (Developer options). Default host is `192.168.178.23`.
+Enable **Network debugging** on the Shield (Developer options). Buckler asks for the TV once: pass `--host <tv-ip>` and it is remembered (`~/.config/buckler/host`).
 
 ```bash
-export BUCKLER_HOST=192.168.178.23:5555   # or SHIELD_HOST (alias)
+export BUCKLER_HOST=<tv-ip>:5555   # optional; or SHIELD_HOST, or --host once
 .venv/bin/buckler probe
 ```
+
+## Releasing
+
+`python scripts/release.py` builds the signed `buckler-home.apk`, its `.sha256` and the CLI
+wheel into `dist/release/`, and refuses an APK not signed by the release key (its certificate
+SHA-256 is pinned in the script). `--publish` then tags `v<version>` and creates the GitHub
+release. The key stays on the release machine (`launcher/keystore.properties`); CI never signs.
 
 ## Typical flow
 
@@ -84,14 +94,14 @@ Stock factory reset still needs a manual `setup` afterward; kitetvOS will re-ent
 ## Layout
 
 ```text
-profiles/     privacy-core, speech, minimal, extras, home-clean, never
-catalog/      open app swaps and optional suggestions (pinned sha256)
-schema/       desired-state.v1.json (stock ↔ kitetvOS contract)
 src/buckler/  CLI (Click + system adb)
+  data/profiles/  privacy-core, speech, minimal, extras, home-clean, never
+  data/catalog/   open app swaps, suggestions and icon packs (pinned sha256)
+  data/schema/    desired-state.v1.json (stock ↔ kitetvOS contract)
 launcher/     Compose-for-TV app (buckler-home)
 covers/       Curated cover index (keyless Change cover pack)
-journals/     restore journals + snapshots (gitignored JSON)
-docs/         safety, OTA, setup/restore, kitetvOS bridge
+journals/     restore journals + snapshots (gitignored JSON; ~/.local/state/buckler when installed)
+docs/         install guide, safety, OTA, setup/restore, kitetvOS bridge
 tests/        policy / handover / journal / schema unit tests
 ```
 
@@ -129,7 +139,7 @@ buckler launcher build && buckler launcher install
 
 **Missing shapes:** an app without a picture of the tile's shape gets one made from what it has, fitted whole on its own edge colour rather than cropped: a poster from its TV banner (no app ships a poster), or a banner or poster from its icon. The curated pack's square logos are letterboxed the same way.
 
-**Icon packs** (Settings → Appearance → App Thumbnails): any installed launcher icon pack (the ADW / Nova `appfilter.xml` format) replaces each app's icon it has, matched by package and activity, or by the app's name when the pack lists only the phone app (Netflix's TV app gets the pack's `netflix`). With *Fill missing icons* (on) the rest are drawn to match the pack: Buckler measures the pack's own icons for apps on the TV (line width, line colour, how much of the icon the mark fills, and the backing layer of a layered pack like Lawnicons) and draws to those numbers, checking its result the same way. A pack that sets its own rule for unknown apps (`iconback`, `iconmask`, `iconupon`, `scale`) gets that rule instead, and in a full-colour pack without one, an app gets the pack's look: the shape its icons share (circle, squircle, rounded square), at their size, filled with the app's own background colour and its logo on top (a pack's own rule is used only when its icons share no shape); *Theme colour* leaves full-colour packs in their own colours. Home reloads its apps as soon as one is installed, updated or removed, so a newly installed app gets its pack or matched icon straight away. The drawing is each app's own logo traced as a thin, smooth (anti-aliased) line, or its initials in an outlined badge when the icon has no mark to trace; off, they keep their own icons. *Theme colour* paints a single-colour pack in the theme's text colour. Packs are not apps to open, so they stay out of the Library unless *Show in Library* is on, and each has an *Uninstall* button there; uninstalling the chosen pack goes back to apps' own icons. Phone icon packs are not in the TV's Play Store, so `buckler launcher iconpack install lawnicons` (Apache-2.0, about 23,000 apps, 19 MB) or `… install arcticons` (CC BY-SA 4.0 icons, about 49,000 apps, 71 MB) downloads one from its release page or F-Droid, checks it against the sha256 pinned in `catalog/iconpacks.yaml`, and installs it.
+**Icon packs** (Settings → Appearance → App Thumbnails): any installed launcher icon pack (the ADW / Nova `appfilter.xml` format) replaces each app's icon it has, matched by package and activity, or by the app's name when the pack lists only the phone app (Netflix's TV app gets the pack's `netflix`). With *Fill missing icons* (on) the rest are drawn to match the pack: Buckler measures the pack's own icons for apps on the TV (line width, line colour, how much of the icon the mark fills, and the backing layer of a layered pack like Lawnicons) and draws to those numbers, checking its result the same way. A pack that sets its own rule for unknown apps (`iconback`, `iconmask`, `iconupon`, `scale`) gets that rule instead, and in a full-colour pack without one, an app gets the pack's look: the shape its icons share (circle, squircle, rounded square), at their size, filled with the app's own background colour and its logo on top (a pack's own rule is used only when its icons share no shape); *Theme colour* leaves full-colour packs in their own colours. Home reloads its apps as soon as one is installed, updated or removed, so a newly installed app gets its pack or matched icon straight away. The drawing is each app's own logo traced as a thin, smooth (anti-aliased) line, or its initials in an outlined badge when the icon has no mark to trace; off, they keep their own icons. *Theme colour* paints a single-colour pack in the theme's text colour. Packs are not apps to open, so they stay out of the Library unless *Show in Library* is on, and each has an *Uninstall* button there; uninstalling the chosen pack goes back to apps' own icons. Phone icon packs are not in the TV's Play Store, so `buckler launcher iconpack install lawnicons` (Apache-2.0, about 23,000 apps, 19 MB) or `… install arcticons` (CC BY-SA 4.0 icons, about 49,000 apps, 71 MB) downloads one from its release page or F-Droid, checks it against the sha256 pinned in `src/buckler/data/catalog/iconpacks.yaml`, and installs it.
 
 **Setup wizard**: opens on first run and again from Settings → Setup → *Run setup wizard*. *Simple* asks for the colour scheme, layout, shelves, screensaver and, on a SHIELD, three clean-up switches (Privacy and Extras on, Voice & Assistant off). *Advanced* adds the font, app-by-app clean-up, animation speed and Private DNS. It opens on the TV as it is now, so a second run changes only what you change, and *Review* lists exactly those changes before anything is applied. If granting Buckler's install permission restarts it, the wizard reopens at Review with your choices.
 

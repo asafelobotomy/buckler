@@ -5,6 +5,13 @@ description = "Buckler — ADB CLI for NVIDIA SHIELD TV Pro cleanup, privacy pro
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
+keywords = ["android-tv", "nvidia-shield", "adb", "launcher", "privacy"]
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Systems Administration",
+]
 dependencies = [
     "click>=8.1.0",
     "pyyaml>=6.0",
@@ -15,6 +22,10 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.6",
 ]
+
+[project.urls]
+Homepage = "https://github.com/asafelobotomy/buckler"
+Releases = "https://github.com/asafelobotomy/buckler/releases"
 
 [project.scripts]
 buckler = "buckler.cli:cli"
@@ -27,7 +38,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-buckler = ["py.typed"]
+buckler = ["py.typed", "data/*/*.yaml", "data/*/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

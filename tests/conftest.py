@@ -17,3 +17,11 @@ def journals_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr("buckler.tune.journals_dir", lambda: jdir)
     monkeypatch.setattr("buckler.setup_wizard.journals_dir", lambda: jdir)
     return jdir
+
+
+@pytest.fixture(autouse=True)
+def _own_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keeps the remembered --host of a test run out of the real ~/.config."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.delenv("BUCKLER_HOST", raising=False)
+    monkeypatch.delenv("SHIELD_HOST", raising=False)
