@@ -38,6 +38,16 @@ enum class FontChoice(val label: String) {
     SERIF("Serif"),
     PLAYFUL("Playful"),
     MONO("Monospace"),
+    INTER("Inter"),
+    MONTSERRAT("Montserrat"),
+    POPPINS("Poppins"),
+    LATO("Lato"),
+    OPEN_SANS("Open Sans"),
+    NUNITO("Nunito"),
+    RALEWAY("Raleway"),
+    OSWALD("Oswald"),
+    PLAYFAIR("Playfair"),
+    MERRIWEATHER("Merriweather"),
     ;
 
     companion object {

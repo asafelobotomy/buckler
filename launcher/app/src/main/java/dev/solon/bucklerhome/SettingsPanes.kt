@@ -190,6 +190,10 @@ fun AboutPane() {
     SettingsRow("buckler-home ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
     SettingsRow("GitHub: asafelobotomy/buckler")
     SettingsRow("Font \"Hyperlegible\": Atkinson Hyperlegible, Braille Institute (SIL Open Font License)")
+    SettingsRow(
+        "Fonts Inter, Montserrat, Poppins, Lato, Open Sans, Nunito, Raleway, Oswald, Playfair Display and " +
+            "Merriweather: their authors, via Google Fonts (SIL Open Font License)",
+    )
     Spacer(modifier = Modifier.height(18.dp))
     PickerTitle("Android TV")
     SettingsRow("Shortcuts to the system's own screens.")
