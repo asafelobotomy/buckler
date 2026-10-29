@@ -91,447 +91,175 @@
           App-list entries, one pair per colour scheme so the icon follows Settings → Appearance
           (LauncherIcon enables exactly one pair). Keep in step with AppTheme and gen_icons.py.
         -->
-        <activity-alias
-            android:name=".LauncherBuckler"
-            android:enabled="true"
-            android:exported="true"
-            android:banner="@drawable/banner_buckler"
-            android:icon="@drawable/ic_mark_buckler"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherBuckler" android:enabled="true" android:exported="true"
+            android:banner="@drawable/banner_buckler" android:icon="@drawable/ic_mark_buckler" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsBuckler"
-            android:enabled="true"
-            android:exported="true"
-            android:banner="@drawable/banner_buckler"
-            android:icon="@drawable/ic_mark_buckler"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsBuckler" android:enabled="true" android:exported="true"
+            android:banner="@drawable/banner_buckler" android:icon="@drawable/ic_mark_buckler" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherLight"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_light"
-            android:icon="@drawable/ic_mark_light"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherLight" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_light" android:icon="@drawable/ic_mark_light" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsLight"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_light"
-            android:icon="@drawable/ic_mark_light"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsLight" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_light" android:icon="@drawable/ic_mark_light" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherDark"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_dark"
-            android:icon="@drawable/ic_mark_dark"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherDark" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_dark" android:icon="@drawable/ic_mark_dark" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsDark"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_dark"
-            android:icon="@drawable/ic_mark_dark"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsDark" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_dark" android:icon="@drawable/ic_mark_dark" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherGruvbox"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_gruvbox"
-            android:icon="@drawable/ic_mark_gruvbox"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherGruvbox" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_gruvbox" android:icon="@drawable/ic_mark_gruvbox" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsGruvbox"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_gruvbox"
-            android:icon="@drawable/ic_mark_gruvbox"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsGruvbox" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_gruvbox" android:icon="@drawable/ic_mark_gruvbox" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherSnesUk"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_snes_uk"
-            android:icon="@drawable/ic_mark_snes_uk"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherSnesUk" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_snes_uk" android:icon="@drawable/ic_mark_snes_uk" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsSnesUk"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_snes_uk"
-            android:icon="@drawable/ic_mark_snes_uk"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsSnesUk" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_snes_uk" android:icon="@drawable/ic_mark_snes_uk" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherSnesUs"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_snes_us"
-            android:icon="@drawable/ic_mark_snes_us"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherSnesUs" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_snes_us" android:icon="@drawable/ic_mark_snes_us" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsSnesUs"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_snes_us"
-            android:icon="@drawable/ic_mark_snes_us"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsSnesUs" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_snes_us" android:icon="@drawable/ic_mark_snes_us" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherShield"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_shield"
-            android:icon="@drawable/ic_mark_shield"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherShield" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_shield" android:icon="@drawable/ic_mark_shield" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsShield"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_shield"
-            android:icon="@drawable/ic_mark_shield"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsShield" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_shield" android:icon="@drawable/ic_mark_shield" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherSlate"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_slate"
-            android:icon="@drawable/ic_mark_slate"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherSlate" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_slate" android:icon="@drawable/ic_mark_slate" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsSlate"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_slate"
-            android:icon="@drawable/ic_mark_slate"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsSlate" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_slate" android:icon="@drawable/ic_mark_slate" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherVelvet"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_velvet"
-            android:icon="@drawable/ic_mark_velvet"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherVelvet" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_velvet" android:icon="@drawable/ic_mark_velvet" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsVelvet"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_velvet"
-            android:icon="@drawable/ic_mark_velvet"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsVelvet" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_velvet" android:icon="@drawable/ic_mark_velvet" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherEmber"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_ember"
-            android:icon="@drawable/ic_mark_ember"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherEmber" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_ember" android:icon="@drawable/ic_mark_ember" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsEmber"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_ember"
-            android:icon="@drawable/ic_mark_ember"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsEmber" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_ember" android:icon="@drawable/ic_mark_ember" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherTidepool"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_tidepool"
-            android:icon="@drawable/ic_mark_tidepool"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherTidepool" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_tidepool" android:icon="@drawable/ic_mark_tidepool" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsTidepool"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_tidepool"
-            android:icon="@drawable/ic_mark_tidepool"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsTidepool" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_tidepool" android:icon="@drawable/ic_mark_tidepool" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherFjord"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_fjord"
-            android:icon="@drawable/ic_mark_fjord"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherFjord" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_fjord" android:icon="@drawable/ic_mark_fjord" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsFjord"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_fjord"
-            android:icon="@drawable/ic_mark_fjord"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsFjord" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_fjord" android:icon="@drawable/ic_mark_fjord" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherMarshmallow"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_marshmallow"
-            android:icon="@drawable/ic_mark_marshmallow"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherMarshmallow" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_marshmallow" android:icon="@drawable/ic_mark_marshmallow" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsMarshmallow"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_marshmallow"
-            android:icon="@drawable/ic_mark_marshmallow"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsMarshmallow" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_marshmallow" android:icon="@drawable/ic_mark_marshmallow" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherNeon"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_neon"
-            android:icon="@drawable/ic_mark_neon"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherNeon" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_neon" android:icon="@drawable/ic_mark_neon" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsNeon"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_neon"
-            android:icon="@drawable/ic_mark_neon"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsNeon" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_neon" android:icon="@drawable/ic_mark_neon" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherGraphite"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_graphite"
-            android:icon="@drawable/ic_mark_graphite"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherGraphite" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_graphite" android:icon="@drawable/ic_mark_graphite" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsGraphite"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_graphite"
-            android:icon="@drawable/ic_mark_graphite"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsGraphite" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_graphite" android:icon="@drawable/ic_mark_graphite" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherRosewood"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_rosewood"
-            android:icon="@drawable/ic_mark_rosewood"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherRosewood" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_rosewood" android:icon="@drawable/ic_mark_rosewood" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsRosewood"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_rosewood"
-            android:icon="@drawable/ic_mark_rosewood"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsRosewood" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_rosewood" android:icon="@drawable/ic_mark_rosewood" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".LauncherSaffron"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_saffron"
-            android:icon="@drawable/ic_mark_saffron"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".LauncherSaffron" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_saffron" android:icon="@drawable/ic_mark_saffron" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias
-            android:name=".SettingsSaffron"
-            android:enabled="false"
-            android:exported="true"
-            android:banner="@drawable/banner_saffron"
-            android:icon="@drawable/ic_mark_saffron"
-            android:label="@string/settings_activity_label"
-            android:targetActivity=".BucklerSettingsActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+        <activity-alias android:name=".SettingsSaffron" android:enabled="false" android:exported="true"
+            android:banner="@drawable/banner_saffron" android:icon="@drawable/ic_mark_saffron" android:label="@string/settings_activity_label" android:targetActivity=".BucklerSettingsActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity-alias>
 
         <activity
