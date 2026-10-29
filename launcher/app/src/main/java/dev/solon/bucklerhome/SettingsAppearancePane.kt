@@ -1,14 +1,17 @@
 package dev.solon.bucklerhome
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -20,17 +23,17 @@ import androidx.compose.ui.unit.dp
 fun AppearancePane() {
     val context = LocalContext.current
     val appearance = AppearanceStore.config
-    val flow = Arrangement.spacedBy(12.dp)
 
     Column {
         SectionTitle("Appearance")
 
         PickerTitle("Colour scheme")
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        ThreeColumns { width ->
             AppTheme.entries.forEach { theme ->
                 PreviewCard(
                     label = theme.label,
                     selected = theme == appearance.theme,
+                    width = width,
                     onClick = { AppearanceStore.update(context) { it.copy(theme = theme) } },
                 ) { ThemeMiniature(theme, appearance.highContrast) }
             }
@@ -38,14 +41,30 @@ fun AppearancePane() {
 
         Spacer(modifier = Modifier.height(20.dp))
         PickerTitle("Font")
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
+        ThreeColumns { width ->
             FontChoice.entries.forEach { font ->
                 PreviewCard(
                     label = font.label,
                     selected = font == appearance.font,
+                    width = width,
                     onClick = { AppearanceStore.update(context) { it.copy(font = font) } },
                 ) { FontMiniature(font) }
             }
+        }
+    }
+}
+
+private val CardGap = 12.dp
+
+/** Cards three to a row, sized to share the page's width, so no empty band is left on the right. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ThreeColumns(content: @Composable (width: Dp) -> Unit) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        // A little under a third: room for the focus zoom of an end card.
+        val width = (maxWidth - CardGap * 2) / 3 - 2.dp
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(CardGap), verticalArrangement = Arrangement.spacedBy(CardGap)) {
+            content(width)
         }
     }
 }

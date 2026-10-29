@@ -26,6 +26,16 @@ SCHEMES = {
     "snes_uk": ("D9363E", "F2C230", "34353B"),
     "snes_us": ("5B4A99", "A98CE6", "34333F"),
     "shield": ("1C1C1C", "76B900", "0A0A0A"),
+    "slate": ("497298", "6CB4F2", "1E2229"),
+    "velvet": ("74599A", "B88CF4", "211B2D"),
+    "ember": ("9C4158", "FF5C8A", "22201A"),
+    "tidepool": ("1C6E8B", "31A8D6", "03262F"),
+    "fjord": ("5E808C", "8CC4D2", "262C37"),
+    "marshmallow": ("7A6699", "C9A4F5", "1A1A29"),
+    "neon": ("4F6594", "7FA6F5", "14151E"),
+    "graphite": ("376193", "58A2F8", "0E1218"),
+    "rosewood": ("8F6F73", "EDB7B3", "1B1824"),
+    "saffron": ("936C36", "FFB64F", "0E1118"),
 }
 
 # Ring geometry measured from the source art, as fractions of the disc radius.

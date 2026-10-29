@@ -16,6 +16,16 @@ val AppTheme.markRes: Int
         AppTheme.SNES_UK -> R.drawable.ic_mark_snes_uk
         AppTheme.SNES_US -> R.drawable.ic_mark_snes_us
         AppTheme.SHIELD -> R.drawable.ic_mark_shield
+        AppTheme.SLATE -> R.drawable.ic_mark_slate
+        AppTheme.VELVET -> R.drawable.ic_mark_velvet
+        AppTheme.EMBER -> R.drawable.ic_mark_ember
+        AppTheme.TIDEPOOL -> R.drawable.ic_mark_tidepool
+        AppTheme.FJORD -> R.drawable.ic_mark_fjord
+        AppTheme.MARSHMALLOW -> R.drawable.ic_mark_marshmallow
+        AppTheme.NEON -> R.drawable.ic_mark_neon
+        AppTheme.GRAPHITE -> R.drawable.ic_mark_graphite
+        AppTheme.ROSEWOOD -> R.drawable.ic_mark_rosewood
+        AppTheme.SAFFRON -> R.drawable.ic_mark_saffron
     }
 
 /**

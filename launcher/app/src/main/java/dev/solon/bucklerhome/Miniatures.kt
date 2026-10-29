@@ -98,10 +98,11 @@ fun BoxScope.ThemeMiniature(theme: AppTheme, highContrast: Boolean) {
         Spacer(Modifier.height(8.dp))
         Box(Modifier.size(width = 34.dp, height = 3.dp).rounded(palette.section))
         Spacer(Modifier.height(5.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        // Tiles share the card's width, whatever it is.
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.fillMaxWidth()) {
             // The first tile is drawn "focused" to show the accent colour.
-            Box(Modifier.size(width = 36.dp, height = 30.dp).rounded(palette.brand, 5.dp))
-            repeat(3) { Box(Modifier.size(width = 36.dp, height = 30.dp).rounded(palette.tile, 5.dp)) }
+            Box(Modifier.weight(1f).height(30.dp).rounded(palette.brand, 5.dp))
+            repeat(3) { Box(Modifier.weight(1f).height(30.dp).rounded(palette.tile, 5.dp)) }
         }
         Spacer(Modifier.height(6.dp))
         Box(Modifier.fillMaxWidth().height(5.dp).rounded(palette.footer, 3.dp))

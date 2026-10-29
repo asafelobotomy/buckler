@@ -14,6 +14,16 @@ enum class AppTheme(val label: String) {
     SNES_UK("SNES (UK)"),
     SNES_US("SNES (US)"),
     SHIELD("SHIELD"),
+    SLATE("Slate"),
+    VELVET("Velvet"),
+    EMBER("Ember"),
+    TIDEPOOL("Tidepool"),
+    FJORD("Fjord"),
+    MARSHMALLOW("Marshmallow"),
+    NEON("Neon"),
+    GRAPHITE("Graphite"),
+    ROSEWOOD("Rosewood"),
+    SAFFRON("Saffron"),
     ;
 
     companion object {
