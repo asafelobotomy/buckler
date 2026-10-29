@@ -77,7 +77,8 @@ object IconPacks {
         val id = drawableId(mapping, res, pack, component.packageName, component.flattenToString(), label) ?: return null
         val icon = runCatching { res.getDrawableForDensity(id, DisplayMetrics.DENSITY_XXHIGH, null) }.getOrNull()
             ?: return null
-        val tint = IconPackStore.tint(context)
+        // A full-colour pack's icons are pictures, not symbols: the theme colour would flatten them.
+        val tint = IconPackStore.tint(context).takeUnless { style(context, emptyList())?.colourful == true }
         val adaptive = icon as? AdaptiveIconDrawable
         if (tint == null) return PackIconDrawable(icon, if (adaptive != null) 0f else MARGIN, themed = false)
         // A layered icon (Lawnicons) would tint to a solid square: paint only its symbol, which

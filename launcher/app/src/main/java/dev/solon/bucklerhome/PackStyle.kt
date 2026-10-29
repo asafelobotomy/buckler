@@ -42,7 +42,11 @@ data class PackStyle(
             val samples = icons.take(12).mapNotNull(::sample)
             if (samples.isEmpty()) return null
             val plates = samples.mapNotNull { it.plate }
-            val colourful = samples.count { it.colourful } * 2 > samples.size
+            // Full colour: each icon a picture of many colours, or each in its own strong colour
+            // (a green circle, a red one); a line pack's icons share one plain or tinted colour.
+            val vivid = samples.count { saturation(it.ink) > 0.3f } * 2 > samples.size
+            val varied = samples.map { it.ink }.let { inks -> inks.any { a -> inks.any { b -> colourDistance(a, b) > 150 } } }
+            val colourful = samples.count { it.colourful } * 2 > samples.size || (vivid && varied)
             return PackStyle(
                 line = samples.map { it.line }.median(),
                 mark = samples.map { it.mark }.median(),
@@ -201,6 +205,12 @@ data class PackStyle(
         }
 
         private fun List<Float>.median(): Float = sorted()[size / 2]
+
+        private fun saturation(colour: Int): Float {
+            val hsv = FloatArray(3)
+            Color.colorToHSV(colour, hsv)
+            return hsv[1] * hsv[2]
+        }
 
         /** The colour most samples share, to the nearest step, so one odd icon does not decide it. */
         private fun List<Int>.mostCommonColour(): Int =

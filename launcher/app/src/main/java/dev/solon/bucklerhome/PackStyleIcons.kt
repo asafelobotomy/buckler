@@ -65,15 +65,15 @@ object PackStyleIcons {
     private val cache = LruCache<String, Bitmap>(48)
 
     fun make(context: Context, pkg: String, label: String, icon: Drawable, packages: Collection<String>): Drawable {
-        IconPacks.fallback(context)?.let { rule ->
-            return PackIconDrawable(BitmapDrawable(context.resources, rule.apply(icon)), 0f, themed = false)
-        }
         val style = IconPacks.style(context, packages) ?: FALLBACK_STYLE
-        // A full-colour pack: the app's own icon, in the pack's shape and size.
-        if (style.colourful) {
+        val rule = IconPacks.fallback(context)
+        // A full-colour pack: drawn like its own icons when they share a shape (the app's colour
+        // filling it, its logo on top), else by the pack's own rule, else just at the pack's size.
+        if (style.colourful && (style.shape != null || rule == null)) {
             val margin = if (style.plate != null) 0f else IconPacks.FLAT_MARGIN
             return PackIconDrawable(BitmapDrawable(context.resources, reshaped(icon, style)), margin, themed = false)
         }
+        if (rule != null) return PackIconDrawable(BitmapDrawable(context.resources, rule.apply(icon)), 0f, themed = false)
         val version = runCatching { context.packageManager.getPackageInfo(pkg, 0).lastUpdateTime }.getOrDefault(0L)
         val key = "$pkg:$version:$label:$style"
         val art = cache.get(key) ?: (traced(icon, style) ?: initials(label, style)).also { cache.put(key, it) }
@@ -92,9 +92,10 @@ object PackStyleIcons {
     }
 
     /**
-     * The app's own icon in a full-colour pack's look: filling the pack's shared outline (an
-     * adaptive icon's layers drawn whole, so the pack's shape replaces the system's), or, for a
-     * pack with free-form icons, simply at the size its icons are drawn.
+     * The app's own icon in a full-colour pack's look: the pack's shared outline filled with the
+     * app's own background colour, and the app's logo on it at the size pack logos sit (an
+     * adaptive icon's foreground layer; a flat icon whole, on its matching colour); or, for a pack
+     * with free-form icons, simply the app's icon at the size the pack's icons are drawn.
      */
     internal fun reshaped(icon: Drawable, style: PackStyle): Bitmap {
         val bitmap = Bitmap.createBitmap(OUT, OUT, Bitmap.Config.ARGB_8888)
@@ -108,17 +109,26 @@ object PackStyleIcons {
         }
         val box = shapeBounds(shape)
         val adaptive = icon as? AdaptiveIconDrawable
-        if (adaptive != null) {
-            // Layers are 108 units with the art in the middle 72: grow the box so that part fills it.
-            val grow = ((box[2] - box[0]) * (108f / 72f - 1f) / 2f).roundToInt()
-            listOfNotNull(adaptive.background, adaptive.foreground).forEach {
-                drawInto(it, canvas, box[0] - grow, box[1] - grow, box[2] + grow, box[3] + grow)
-            }
+        canvas.drawColor(adaptive?.background?.let(FittedArt::edgeColour) ?: FittedArt.edgeColour(icon) ?: FILL_FALLBACK)
+        val side = box[2] - box[0]
+        val cx = (box[0] + box[2]) / 2
+        val cy = (box[1] + box[3]) / 2
+        val foreground = adaptive?.foreground
+        if (foreground != null) {
+            // A layer is 108 units with the logo in the middle 72: that middle takes [LOGO] of the shape.
+            val half = (side * LOGO * 108f / 72f / 2f).roundToInt()
+            drawInto(foreground, canvas, cx - half, cy - half, cx + half, cy + half)
         } else {
-            drawInto(icon, canvas, box[0], box[1], box[2], box[3])
+            val half = (side * LOGO / 2f).roundToInt()
+            drawInto(icon, canvas, cx - half, cy - half, cx + half, cy + half)
         }
+        // The averaged outline is soft (icons' edges and faint shadows blend): cut it at its middle,
+        // with a narrow ramp for anti-aliasing, so the circle is the pack's size and has no halo.
         val mask = Bitmap.createBitmap(
-            IntArray(PackStyle.MASK * PackStyle.MASK) { Color.argb((shape[it] * 255).roundToInt(), 255, 255, 255) },
+            IntArray(PackStyle.MASK * PackStyle.MASK) {
+                val a = ((shape[it] - 0.5f) * 4f + 0.5f).coerceIn(0f, 1f)
+                Color.argb((a * 255).roundToInt(), 255, 255, 255)
+            },
             PackStyle.MASK, PackStyle.MASK, Bitmap.Config.ARGB_8888,
         )
         val scaled = Bitmap.createScaledBitmap(mask, OUT, OUT, true)
@@ -129,6 +139,12 @@ object PackStyleIcons {
         mask.recycle()
         return bitmap
     }
+
+    /** How much of a full-colour pack's shape an app's logo takes, about as its own icons do. */
+    private const val LOGO = 0.72f
+
+    /** Fill for an icon with no background colour to take (a logo cut out on nothing). */
+    private const val FILL_FALLBACK = 0xFF3A3A3E.toInt()
 
     /** The shape's left, top, right, bottom at [OUT] px. */
     private fun shapeBounds(shape: FloatArray): IntArray {
