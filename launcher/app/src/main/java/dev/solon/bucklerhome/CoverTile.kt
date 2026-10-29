@@ -71,7 +71,7 @@ fun coverSize(
     density: Density = Density(1f),
 ): CoverSize {
     val (width, art) = when (layout) {
-        // Square icon, 2:3 poster, 16:9 TV banner. The old sizes included a title band.
+        // Square icon, 2:3 poster, 16:9 TV banner.
         CoverLayout.ICON -> 132.dp to 132.dp
         // Large (210 dp tall) still fits a whole shelf under the Main Stage on a 1080p TV.
         CoverLayout.POSTER -> 112.dp to 168.dp
@@ -93,12 +93,9 @@ fun CoverTile(
     onLongPress: () -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
-    alsoRequester: FocusRequester? = null,
     moving: Boolean = false,
     tileSize: TileSize = TileSize.MEDIUM,
     showLabels: Boolean = false,
-    /** Shelf circle, to the left of the first tile. */
-    left: FocusRequester? = null,
     /** Left at the first tile reveals the shelf circle; it is not on screen until then. */
     onLeftEdge: (() -> Unit)? = null,
     /** Main Stage, above the first shelf. */
@@ -124,14 +121,8 @@ fun CoverTile(
     if (focusRequester != null) {
         boxModifier = boxModifier.focusRequester(focusRequester)
     }
-    if (alsoRequester != null && alsoRequester != focusRequester) {
-        boxModifier = boxModifier.focusRequester(alsoRequester)
-    }
-    if (left != null || up != null) {
-        boxModifier = boxModifier.focusProperties {
-            if (left != null) this.left = left
-            if (up != null) this.up = up
-        }
+    if (up != null) {
+        boxModifier = boxModifier.focusProperties { this.up = up }
     }
     if (onLeftEdge != null) {
         boxModifier = boxModifier.onPreviewKeyEvent { event ->

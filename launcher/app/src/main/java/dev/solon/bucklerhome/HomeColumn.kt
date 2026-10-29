@@ -184,6 +184,7 @@ fun HomeColumn(
         Spacer(modifier = Modifier.height(STAGE_GAP))
 
         val topShelf = shelves.firstOrNull()
+        val firstFilledId = shelves.firstOrNull { it.items.isNotEmpty() }?.config?.id
         val lastShelf = shelves.lastOrNull()?.takeIf { !homeOptions }
         // The focused shelf (or Library row) moves to the top of the list, whole; the next one
         // peeks in below and fades out. Space after the end lets the last ones reach the top too.
@@ -216,12 +217,12 @@ fun HomeColumn(
               // Rows inside still scroll sideways to the focused tile.
               CompositionLocalProvider(LocalBringIntoViewSpec provides ScrollOnlyAsNeeded) {
                 val id = shelf.config.id
-                val last = shelf == lastShelf
+                val last = shelf.config.id == lastShelf?.config?.id
                 val libraryBottom = last && shelf.config.type == ShelfType.LIBRARY && shelf.items.isNotEmpty()
                 // Stage-down and wrap targets go on the shelf container: a lazy row's first tile is
                 // disposed once scrolled, and a request to it would silently do nothing.
                 val targets = listOfNotNull(
-                    stageDown.takeIf { shelf == topShelf },
+                    stageDown.takeIf { shelf.config.id == topShelf?.config?.id },
                     bottom.takeIf { last && !libraryBottom },
                 )
                 val library = shelf.config.type == ShelfType.LIBRARY && shelf.items.isNotEmpty()
@@ -243,13 +244,13 @@ fun HomeColumn(
                             onShelfMenu = { onShelfMenu(shelf.config) },
                         ),
                         focus = ShelfFocus(
-                            first = if (shelf == shelves.firstOrNull { it.items.isNotEmpty() }) firstFocus else null,
+                            first = if (shelf.config.id == firstFilledId) firstFocus else null,
                             shelfRequester = if (id == focusShelfId) shelfRequester else null,
                             movingShelf = id == shelfMove.target,
                             movingPackage = move.target,
                             focusPackage = focusPkg,
                             moveFocus = moveFocus,
-                            up = if (shelf == topShelf) stageFocus else null,
+                            up = if (shelf.config.id == topShelf?.config?.id) stageFocus else null,
                             bottom = if (libraryBottom) bottom else null,
                         ),
                         onRowFocused = { offset -> if (!move.active) showRow(index, offset) },

@@ -26,7 +26,6 @@ data class StageMetrics(
     val band: Dp,
     val cardHeight: Dp,
     val artWidth: Dp,
-    val chipWidth: Dp,
     val hours: Int,
     val days: Int,
     val suggestedWidth: Dp,
@@ -58,11 +57,6 @@ fun stageMetrics(viewport: Dp, shelf: Dp, size: StageSize, header: Dp): StageMet
         band = band,
         cardHeight = card,
         artWidth = (card * 1.7f).coerceAtMost(280.dp),
-        chipWidth = when (size) {
-            StageSize.SMALL -> 76.dp
-            StageSize.MEDIUM -> 86.dp
-            StageSize.LARGE -> 96.dp
-        },
         hours = when (size) {
             StageSize.SMALL -> 5
             StageSize.MEDIUM -> 6

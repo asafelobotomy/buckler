@@ -30,6 +30,9 @@ data class PackStyle(
     /** The pack icons' shared outline, [MASK]² alpha 0..1 over the whole icon, or null. */
     val shape: FloatArray? = null,
 ) {
+    /** Identifies the look by value, for caching (the [shape] array alone compares by identity). */
+    val key: String get() = "$line:$mark:$ink:$plate:$filled:$colourful:${shape?.contentHashCode()}"
+
     companion object {
         /** Resolution of [shape]. */
         const val MASK = 128

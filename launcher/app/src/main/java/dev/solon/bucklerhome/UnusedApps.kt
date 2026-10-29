@@ -68,6 +68,7 @@ object UnusedApps {
         "com.android.providers.tv",
         "com.android.systemui",
         "com.nvidia.shieldservice",
+        "com.google.android.apps.mediashell",
         "com.nvidia.packagemanagerservice",
         "com.nvidia.KeyComboOta",
         "com.google.android.tv.remote.service",

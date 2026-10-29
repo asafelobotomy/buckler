@@ -25,9 +25,10 @@ fun FontChoice.family(): FontFamily = when (this) {
     FontChoice.SERIF -> FontFamily.Serif
     FontChoice.PLAYFUL -> deviceFamily("casual")
     FontChoice.MONO -> FontFamily.Monospace
-    else -> bundled.getValue(this).let { (regular, bold) ->
+    // test_parity keeps this list and the font files in step; a missing one falls back.
+    else -> bundled[this]?.let { (regular, bold) ->
         FontFamily(Font(regular, FontWeight.Normal), Font(bold, FontWeight.Bold))
-    }
+    } ?: FontFamily.Default
 }
 
 /** Regular and Bold resources of each bundled Google Font. */
@@ -59,5 +60,5 @@ fun FontChoice.typeface(context: Context, light: Boolean): Typeface = when (this
     FontChoice.SERIF -> Typeface.create("serif", Typeface.NORMAL)
     FontChoice.PLAYFUL -> Typeface.create("casual", Typeface.NORMAL)
     FontChoice.MONO -> Typeface.MONOSPACE
-    else -> ResourcesCompat.getFont(context, bundled.getValue(this).first) ?: Typeface.SANS_SERIF
+    else -> bundled[this]?.let { ResourcesCompat.getFont(context, it.first) } ?: Typeface.SANS_SERIF
 }

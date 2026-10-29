@@ -80,7 +80,9 @@ fun CleanUpPane() {
     val ownCache by produceState(0L, resume, cleared) {
         value = withContext(Dispatchers.IO) { StorageUse.ownCacheBytes(context) }
     }
-    val photos = remember(resume) { ScreensaverImages.uploaded(context).sumOf { it.length() } }
+    val photos by produceState(0L, resume) {
+        value = withContext(Dispatchers.IO) { ScreensaverImages.uploaded(context).sumOf { it.length() } }
+    }
     val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle("Clean up")
@@ -183,7 +185,8 @@ private fun AppStorageList(apps: List<AppStorage>?, empty: String, detail: (AppS
                     SettingsRow(detail(app))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         SettingsAction("App info (Clear cache)") { openAppInfo(context, app.packageName) }
-                        if (canUninstallPackage(context, app.packageName)) {
+                        // Read with the sizes, off the main thread: system apps cannot be uninstalled.
+                        if (!app.system && app.packageName != context.packageName) {
                             SettingsAction("Uninstall") { uninstallPackage(context, app.packageName) }
                         }
                     }

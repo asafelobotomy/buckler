@@ -162,13 +162,7 @@ private fun AppInfoDialog(item: ShelfItem, onDismiss: () -> Unit) {
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (pkg != null) {
-                        SettingsAction("App info", focusRequester = infoFocus) {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.fromParts("package", pkg, null)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            safeLaunch(context, intent, "App info")
-                        }
+                        SettingsAction("App info", focusRequester = infoFocus) { openAppInfo(context, pkg) }
                     }
                     SettingsAction(
                         "Close",

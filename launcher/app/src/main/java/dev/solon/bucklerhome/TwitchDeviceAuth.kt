@@ -27,7 +27,6 @@ sealed class DevicePollResult {
 object TwitchDeviceAuth {
     private const val DEVICE_URL = "https://id.twitch.tv/oauth2/device"
     private const val TOKEN_URL = "https://id.twitch.tv/oauth2/token"
-    private const val VALIDATE_URL = "https://id.twitch.tv/oauth2/validate"
 
     fun clientIdConfigured(): Boolean = BuildConfig.TWITCH_CLIENT_ID.isNotBlank()
 
@@ -116,13 +115,5 @@ object TwitchDeviceAuth {
         val expires = CoverAccounts.igdbExpiresAt(context)
         if (System.currentTimeMillis() < expires) return access
         return if (refresh(context)) CoverAccounts.igdbAccessToken(context) else null
-    }
-
-    fun validate(accessToken: String): Boolean {
-        val response = HttpJson.get(
-            VALIDATE_URL,
-            headers = mapOf("Authorization" to "OAuth $accessToken"),
-        )
-        return response.code in 200..299
     }
 }

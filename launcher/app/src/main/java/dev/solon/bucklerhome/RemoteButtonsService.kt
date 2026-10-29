@@ -103,7 +103,15 @@ class RemoteButtonsService : AccessibilityService() {
     private fun open(intent: Intent) = safeLaunch(this, intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), "Buckler")
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
-    override fun onInterrupt() = Unit
+    override fun onInterrupt() {
+        handler.removeCallbacksAndMessages(null)
+        pendingPress = null
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
 
     private companion object {
         const val HOLD_MS = 500L

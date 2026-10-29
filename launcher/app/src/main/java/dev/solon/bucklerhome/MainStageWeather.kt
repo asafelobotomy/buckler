@@ -46,7 +46,7 @@ fun WeatherStage(
         StageHeading("Weather", place?.name)
         when {
             place == null -> Text(
-                text = "Set a city in Settings → Header to show the forecast.",
+                text = "Set a city in Settings → Appearance → Main Stage to show the forecast.",
                 color = ColorMuted,
                 fontSize = 15.sp,
             )

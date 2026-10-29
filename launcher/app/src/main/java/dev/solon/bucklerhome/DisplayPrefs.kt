@@ -7,7 +7,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/** Date styles offered in Settings → Header. The sample text is rendered live from the pattern. */
+/** Date styles offered in Settings → Appearance → Header. The sample text is rendered live from the pattern. */
 enum class DateStyle(val pattern: String) {
     SHORT("EEE d MMM"),
     LONG("EEEE, d MMMM"),
@@ -81,7 +81,7 @@ enum class TickerSpeed(val label: String, val velocityDp: Float, val rotateMs: L
     }
 }
 
-/** Header pieces that can be switched off one by one in Settings → Header. */
+/** Header pieces that can be switched off one by one in Settings → Appearance → Header. */
 enum class HeaderElement(val label: String) {
     LOGO("Logo"),
     CLOCK("Clock"),

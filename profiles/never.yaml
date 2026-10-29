@@ -18,6 +18,8 @@ packages:
   - com.android.providers.tv
   - com.android.systemui
   - com.nvidia.shieldservice
+  # Chromecast built-in (cast from a phone)
+  - com.google.android.apps.mediashell
   - com.nvidia.packagemanagerservice
   - com.nvidia.KeyComboOta
   # Remote / Bluetooth / controllers

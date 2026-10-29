@@ -42,8 +42,9 @@ fun appIcon(
 /**
  * Icons for apps a pack has no icon for, made to match the pack's own ([PackStyle], measured from
  * its icons): its line width and colour, the mark's size, and its backing plate when its icons are
- * layered. A pack with its own rule for such apps ([PackFallback]) gets that rule instead, and a
- * full-colour pack without one leaves the app's icon as it is, since no traced line would match.
+ * layered. A full-colour pack, whose icons are pictures, gets the app's own icon in the shape its
+ * icons share (filled with the app's colour, its logo on top); only when they share no shape does
+ * the pack's own rule for such apps ([PackFallback]) apply, or the icon stays as it is.
  *
  * The app's logo is traced on a soft (anti-aliased) copy at [WORK] px: blurred, its edge becomes a
  * ramp, and the line is the band of that ramp as wide as the pack's lines, with a one-pixel soft
@@ -66,17 +67,19 @@ object PackStyleIcons {
 
     fun make(context: Context, pkg: String, label: String, icon: Drawable, packages: Collection<String>): Drawable {
         val style = IconPacks.style(context, packages) ?: FALLBACK_STYLE
+        val version = runCatching { context.packageManager.getPackageInfo(pkg, 0).lastUpdateTime }.getOrDefault(0L)
+        // Made once per app version and pack look; a return to Home reuses them.
+        val key = "$pkg:$version:$label:${style.key}:${IconPackStore.pack(context)}"
+        fun made(build: () -> Bitmap): Bitmap = cache.get(key) ?: build().also { cache.put(key, it) }
         val rule = IconPacks.fallback(context)
         // A full-colour pack: drawn like its own icons when they share a shape (the app's colour
         // filling it, its logo on top), else by the pack's own rule, else just at the pack's size.
         if (style.colourful && (style.shape != null || rule == null)) {
             val margin = if (style.plate != null) 0f else IconPacks.FLAT_MARGIN
-            return PackIconDrawable(BitmapDrawable(context.resources, reshaped(icon, style)), margin, themed = false)
+            return PackIconDrawable(BitmapDrawable(context.resources, made { reshaped(icon, style) }), margin, themed = false)
         }
-        if (rule != null) return PackIconDrawable(BitmapDrawable(context.resources, rule.apply(icon)), 0f, themed = false)
-        val version = runCatching { context.packageManager.getPackageInfo(pkg, 0).lastUpdateTime }.getOrDefault(0L)
-        val key = "$pkg:$version:$label:$style"
-        val art = cache.get(key) ?: (traced(icon, style) ?: initials(label, style)).also { cache.put(key, it) }
+        if (rule != null) return PackIconDrawable(BitmapDrawable(context.resources, made { rule.apply(icon) }), 0f, themed = false)
+        val art = made { traced(icon, style) ?: initials(label, style) }
         val tint = IconPackStore.tint(context)
         val glyph = BitmapDrawable(context.resources, art).apply {
             setTint(tint ?: style.ink)
@@ -144,7 +147,7 @@ object PackStyleIcons {
     private const val LOGO = 0.72f
 
     /** Fill for an icon with no background colour to take (a logo cut out on nothing). */
-    private const val FILL_FALLBACK = 0xFF3A3A3E.toInt()
+    private const val FILL_FALLBACK = CoverResolver.LOGO_FALLBACK
 
     /** The shape's left, top, right, bottom at [OUT] px. */
     private fun shapeBounds(shape: FloatArray): IntArray {

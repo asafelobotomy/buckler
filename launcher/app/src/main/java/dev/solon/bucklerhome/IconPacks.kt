@@ -156,13 +156,21 @@ object IconPacks {
 
     /** Read once per pack version; packs hold tens of thousands of entries. */
     private fun mapping(context: Context, pack: String): Mapping? {
+        // One app-list load asks for the mapping several times per app: check the pack's
+        // version (a call into the system) at most every couple of seconds.
+        val now = android.os.SystemClock.uptimeMillis()
+        cache?.let { (cached, m) -> if (cached == pack && now - checkedAt < RECHECK_MS) return m }
         val version = runCatching { context.packageManager.getPackageInfo(pack, 0).lastUpdateTime }.getOrNull()
             ?: return null
+        checkedAt = now
         cache?.let { (cached, m) -> if (cached == pack && m.version == version) return m }
         val parsed = parse(context, pack, version) ?: return null
         cache = pack to parsed
         return parsed
     }
+
+    @Volatile private var checkedAt = 0L
+    private const val RECHECK_MS = 2_000L
 
     private fun parse(context: Context, pack: String, version: Long): Mapping? {
         val res = resources(context, pack) ?: return null
@@ -192,7 +200,7 @@ object IconPacks {
         }
         @Suppress("DiscouragedApi")
         val xmlId = res.getIdentifier("appfilter", "xml", pack)
-        val ok = runCatching {
+        runCatching {
             if (xmlId != 0) {
                 res.getXml(xmlId).use { read(it) }
             } else {
@@ -200,8 +208,9 @@ object IconPacks {
                     read(Xml.newPullParser().apply { setInput(input, null) })
                 }
             }
-        }.isSuccess
-        return if (ok && byComponent.isNotEmpty()) Mapping(version, byComponent, byPackage, back, mask, upon, scale) else null
+        }
+        // A parse error part-way keeps every entry read before it.
+        return if (byComponent.isNotEmpty()) Mapping(version, byComponent, byPackage, back, mask, upon, scale) else null
     }
 }
 

@@ -86,14 +86,14 @@ object CoverResolver {
 
     private fun fittedArt(item: ShelfItem, art: Drawable, layout: CoverLayout, fromBanner: Boolean): ShelfItem {
         if (layout == CoverLayout.BANNER && fromBanner) return bannerArt(item, art)
-        val fill = FittedArt.edgeColour(art) ?: TILE_FALLBACK
+        val fill = FittedArt.edgeColour(art) ?: LOGO_FALLBACK
         // A banner spans the poster's width; an icon sits with room around it, as on a TV banner.
         val share = if (fromBanner) 0.94f else 0.62f
         return bannerArt(item, FittedArt(art.constantState?.newDrawable()?.mutate() ?: art, fill, share))
     }
 
     /** Behind a cut-out logo with no edge colour: a dark neutral that suits every theme's tiles. */
-    private const val TILE_FALLBACK = 0xFF2A2A2E.toInt()
+    const val LOGO_FALLBACK = 0xFF2A2A2E.toInt()
 
     fun leanbackBanner(context: Context, packageName: String): Drawable? {
         return runCatching {

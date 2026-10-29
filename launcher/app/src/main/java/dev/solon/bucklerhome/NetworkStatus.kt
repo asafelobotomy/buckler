@@ -32,7 +32,6 @@ data class NetState(
 data class NetInfo(
     val wifi: Boolean = false,
     val ethernet: Boolean = false,
-    val cellular: Boolean = false,
     val vpn: Boolean = false,
     val internet: Boolean = true,
 )
@@ -67,7 +66,6 @@ private class LiveNets {
             NetInfo(
                 wifi = cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
                 ethernet = cap.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET),
-                cellular = cap.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
                 vpn = cap.hasTransport(NetworkCapabilities.TRANSPORT_VPN),
                 internet = cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
             )

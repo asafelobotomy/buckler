@@ -59,8 +59,11 @@ val USER_FACING_SYSTEM: Set<String> = setOf(
     "com.disney.disneyplus",
 )
 
-/** Every app with a TV or phone launcher entry, with the chosen icon pack's icon where it has one. */
-fun loadLaunchableApps(context: Context): List<LaunchableApp> {
+/**
+ * Every app with a TV or phone launcher entry, with the chosen icon pack's icon where it has one.
+ * [icons] false skips icons entirely, for screens that only list names (it is much cheaper).
+ */
+fun loadLaunchableApps(context: Context, icons: Boolean = true): List<LaunchableApp> {
     val pm = context.packageManager
     val leanback = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
     val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -72,6 +75,8 @@ fun loadLaunchableApps(context: Context): List<LaunchableApp> {
     for (info in pm.queryIntentActivities(launcher, 0)) {
         resolved.putIfAbsent(info.activityInfo.packageName, info)
     }
+    // The pack's look is measured once, from its icons for these apps, before any app asks for it.
+    if (icons && IconPacks.isActive(context)) IconPacks.style(context, resolved.keys)
 
     return resolved.values
         .mapNotNull { info ->
@@ -90,7 +95,11 @@ fun loadLaunchableApps(context: Context): List<LaunchableApp> {
                 label = label,
                 packageName = pkg,
                 launchIntent = intent,
-                icon = appIcon(context, intent.component, label, resolved.keys) { runCatching { info.loadIcon(pm) }.getOrNull() },
+                icon = if (!icons) {
+                    null
+                } else {
+                    appIcon(context, intent.component, label, resolved.keys) { runCatching { info.loadIcon(pm) }.getOrNull() }
+                },
                 isSystem = isSystem,
             )
         }
@@ -120,7 +129,8 @@ fun launchPackage(context: Context, packageName: String, label: String) {
 
 /** Opens the installed weather app: an app named Weather, otherwise the first whose name says so. */
 fun launchWeatherApp(context: Context) {
-    val match = loadLaunchableApps(context)
+    // Names only: this runs on the OK press, where drawing every icon would stall Home.
+    val match = loadLaunchableApps(context, icons = false)
         .filter { app ->
             val label = app.label.lowercase()
             "weather" in label || "weather" in app.packageName.lowercase()

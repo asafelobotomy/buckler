@@ -31,7 +31,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (intent.getBooleanExtra(EXTRA_EDIT_HOME, false)) editRequests.intValue++
-        HomeLayout.importIfPresent(this)
         AppearanceStore.ensureLoaded(this)
         setContent {
             BucklerHomeTheme {
@@ -45,10 +44,8 @@ class MainActivity : ComponentActivity() {
 
                 DisposableEffect(this) {
                     val observer = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_RESUME) {
-                            HomeLayout.importIfPresent(this@MainActivity)
-                            resumeTick += 1
-                        }
+                        // A pushed layout is imported by HomeLayout.load(), on IO, which this triggers.
+                        if (event == Lifecycle.Event.ON_RESUME) resumeTick += 1
                     }
                     lifecycle.addObserver(observer)
                     onDispose { lifecycle.removeObserver(observer) }

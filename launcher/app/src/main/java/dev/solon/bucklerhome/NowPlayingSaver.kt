@@ -129,7 +129,7 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
         val column = column(Gravity.CENTER_HORIZONTAL)
         clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 64f)
         column.addView(clock)
-        val note = if (model.accessGranted) "Nothing playing" else "Allow media access in Settings → Header to show Now Playing"
+        val note = if (model.accessGranted) "Nothing playing" else "Allow media access in Settings → Appearance → Main Stage to show Now Playing"
         column.addView(
             text(18f, light = false).apply { text = note; alpha = 0.7f },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -284,7 +284,10 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
             ?: context.packageManager.getApplicationIcon(packageName)
         val w = drawable.intrinsicWidth.takeIf { it > 0 } ?: 320
         val h = drawable.intrinsicHeight.takeIf { it > 0 } ?: 180
-        drawable.toBitmap(w * 2, h * 2)
+        // Twice its size for a sharp backdrop, but never past 640 px wide: a large banner would
+        // otherwise cost a full-screen bitmap on every track change.
+        val k = minOf(2f, 640f / w)
+        drawable.toBitmap((w * k).toInt().coerceAtLeast(1), (h * k).toInt().coerceAtLeast(1))
     }.getOrNull()
 
     // --- view helpers ---------------------------------------------------------------------

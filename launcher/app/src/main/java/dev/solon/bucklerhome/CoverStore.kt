@@ -21,12 +21,7 @@ object CoverStore {
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun get(context: Context, packageName: String): String? {
-        val raw = prefs(context).getString(KEY, "{}") ?: "{}"
-        val json = runCatching { JSONObject(raw) }.getOrNull() ?: return null
-        return json.optString(packageName).takeIf { it.isNotBlank() }
-    }
-
+    @Synchronized
     fun set(context: Context, packageName: String, value: String?) {
         val raw = prefs(context).getString(KEY, "{}") ?: "{}"
         val json = runCatching { JSONObject(raw) }.getOrElse { JSONObject() }

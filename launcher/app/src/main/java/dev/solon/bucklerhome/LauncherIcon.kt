@@ -44,6 +44,9 @@ object LauncherIcon {
     }
 
     fun apply(context: Context, theme: AppTheme) {
+        val prefs = context.getSharedPreferences("bucklerhome", Context.MODE_PRIVATE)
+        // Done already for this scheme: no need to ask the system about every alias again.
+        if (prefs.getString(KEY_APPLIED, null) == theme.name) return
         val pm = context.packageManager
         // Enable the new pair before disabling the old one so the app never vanishes from the list.
         val ordered = listOf(theme) + AppTheme.entries.filter { it != theme }
@@ -58,10 +61,15 @@ object LauncherIcon {
                 runCatching { pm.setComponentEnabledSetting(alias, state, PackageManager.DONT_KILL_APP) }
             }
         }
+        prefs.edit().putString(KEY_APPLIED, theme.name).apply()
     }
 
+    private const val KEY_APPLIED = "launcher_icon_applied"
+
     private fun current(pm: PackageManager, alias: ComponentName, theme: AppTheme): Int =
-        when (val setting = pm.getComponentEnabledSetting(alias)) {
+        // A scheme without its alias (they are kept in step by hand) reads as "not enabled".
+        when (val setting = runCatching { pm.getComponentEnabledSetting(alias) }
+            .getOrDefault(PackageManager.COMPONENT_ENABLED_STATE_DISABLED)) {
             // Manifest default: only the Buckler pair ships enabled.
             PackageManager.COMPONENT_ENABLED_STATE_DEFAULT ->
                 if (theme == AppTheme.BUCKLER) {

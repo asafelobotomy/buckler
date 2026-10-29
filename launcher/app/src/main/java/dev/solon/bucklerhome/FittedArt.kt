@@ -20,7 +20,7 @@ class FittedArt(private val source: Drawable, private val fill: Int, private val
     override fun draw(canvas: Canvas) {
         val box = bounds
         if (box.isEmpty) return
-        canvas.drawColor(fill)
+        canvas.drawRect(box, fillPaint)
         val sw = source.intrinsicWidth.takeIf { it > 0 } ?: box.height()
         val sh = source.intrinsicHeight.takeIf { it > 0 } ?: box.height()
         val scale = minOf(box.width() * share / sw, box.height() * share / sh)
@@ -32,8 +32,12 @@ class FittedArt(private val source: Drawable, private val fill: Int, private val
         source.draw(canvas)
     }
 
+    private val fillPaint = android.graphics.Paint().apply { color = fill }
+
     override fun setAlpha(alpha: Int) {
         source.alpha = alpha
+        fillPaint.alpha = alpha
+        invalidateSelf()
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
@@ -41,7 +45,7 @@ class FittedArt(private val source: Drawable, private val fill: Int, private val
     }
 
     @Deprecated("Deprecated in Java")
-    override fun getOpacity(): Int = PixelFormat.OPAQUE
+    override fun getOpacity(): Int = if (fillPaint.alpha == 255) PixelFormat.OPAQUE else PixelFormat.TRANSLUCENT
 
     companion object {
         /**
@@ -50,7 +54,9 @@ class FittedArt(private val source: Drawable, private val fill: Int, private val
          */
         fun edgeColour(drawable: Drawable): Int? {
             // A layered icon's edge is its mask; its background layer is the colour behind it.
-            val sample = (drawable as? AdaptiveIconDrawable)?.background ?: drawable
+            // A copy: the original may be on screen, drawing on the main thread.
+            val own = drawable.constantState?.newDrawable()?.mutate() ?: drawable
+            val sample = (own as? AdaptiveIconDrawable)?.background ?: own
             val sw = sample.intrinsicWidth.takeIf { it > 0 } ?: 48
             val sh = sample.intrinsicHeight.takeIf { it > 0 } ?: 48
             val k = 48f / max(sw, sh)

@@ -220,7 +220,7 @@ private fun ActionChoices(button: RemoteButton, kind: PressKind, onDone: () -> U
     }
     if (pickApp) {
         val apps by produceState<List<LaunchableApp>>(emptyList()) {
-            value = withContext(Dispatchers.IO) { loadLaunchableApps(context) }
+            value = withContext(Dispatchers.IO) { loadLaunchableApps(context, icons = false) }
         }
         FlowRow(
             horizontalArrangement = flow,

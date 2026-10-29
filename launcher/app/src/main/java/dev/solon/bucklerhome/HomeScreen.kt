@@ -256,7 +256,7 @@ fun HomeScreen(
         homeLayout = next
     }
 
-    // Home options card: shelves and header back to how a new install has them.
+    // Home options card: default shelves and header, keeping the apps pinned to the Apps shelf.
     fun resetHome() {
         val next = HomeLayout.default(DockPrefs.loadPins(context))
         HomeLayout.save(context, next)

@@ -14,11 +14,6 @@ enum class ScreensaverMode(val label: String) {
     STARFIELD("Starfield"),
     ;
 
-    val isPhotos: Boolean get() = this == PHOTOS || this == UPLOADED
-
-    /** Full-screen animations that can carry the small clock overlay. */
-    val isRetro: Boolean get() = this == MAZE || this == PIPES || this == MYSTIFY || this == STARFIELD
-
     companion object {
         fun fromName(raw: String?): ScreensaverMode = entries.firstOrNull { it.name == raw } ?: CLOCK
     }

@@ -146,6 +146,7 @@ object AppearanceStore {
 
     private var loaded = false
 
+    @Synchronized
     fun ensureLoaded(context: Context) {
         if (loaded) return
         loaded = true
