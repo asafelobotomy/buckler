@@ -1,3 +1,3 @@
 """Buckler — NVIDIA SHIELD TV Pro ADB cleanup and launcher tooling."""
 
-__version__ = "0.19.0"
+__version__ = "0.20.0"

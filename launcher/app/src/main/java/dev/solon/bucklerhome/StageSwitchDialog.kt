@@ -9,11 +9,37 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+/**
+ * Home's Main Stage menu while [open]; on closing, focus goes back to the stage, since a new
+ * stage replaces the target that held it (it would otherwise fall to the header).
+ */
+@Composable
+fun MainStageMenu(
+    open: Boolean,
+    current: MainStage,
+    onPickStage: (MainStage) -> Unit,
+    onOptionsChanged: () -> Unit,
+    stageFocus: FocusRequester,
+    onClose: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    if (!open) return
+    StageSwitchDialog(current, pinLabel = null, onPickStage, onOptionsChanged, onPin = null) {
+        onClose()
+        scope.launch {
+            delay(100)
+            runCatching { stageFocus.requestFocus() }
+        }
+    }
+}
 
 /** Hold OK on the Main Stage: pick the widget, then the options of the one showing ([StageOptions]). */
 @OptIn(ExperimentalLayoutApi::class)

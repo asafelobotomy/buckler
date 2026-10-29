@@ -21,7 +21,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -318,23 +317,7 @@ fun HomeScreen(
         }
     }
 
-    if (pickingStage) {
-        StageSwitchDialog(
-            current = layout.mainStage,
-            pinLabel = null,
-            onPickStage = ::pickStage,
-            onOptionsChanged = ::reloadConfig,
-            onPin = null,
-            onDismiss = {
-                pickingStage = false
-                // A new stage replaces the target that held focus; without this it falls to the header.
-                scope.launch {
-                    delay(100)
-                    runCatching { stageFocus.requestFocus() }
-                }
-            },
-        )
-    }
+    MainStageMenu(pickingStage, layout.mainStage, ::pickStage, ::reloadConfig, stageFocus) { pickingStage = false }
 
     HomeShelfDialogs(
         menu = shelfMenu,
