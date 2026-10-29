@@ -49,6 +49,7 @@ enum class MainStage(val label: String) {
     CALENDAR("Calendar"),
     WEATHER_MAP("Weather map"),
     COMPANION("Companion"),
+    MULTIVIEW("Multiview"),
     ;
 
     fun wire(): String = name.lowercase()
@@ -96,6 +97,7 @@ fun MainStage(
         MainStage.CALENDAR -> CalendarStage(use24h, stageFocus, onDown, onHold, metrics)
         MainStage.WEATHER_MAP -> WeatherMapStage(place, stageFocus, onDown, onHold, metrics)
         MainStage.COMPANION -> CompanionStage(companion, place, stageFocus, onDown, onHold, metrics)
+        MainStage.MULTIVIEW -> MultiviewStage(stageFocus, onDown, onHold, metrics)
     }
 }
 

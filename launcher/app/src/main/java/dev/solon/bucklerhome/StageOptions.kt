@@ -105,6 +105,13 @@ fun StageOptions(stage: MainStage, onChanged: () -> Unit) {
         MainStage.GLANCE, MainStage.CALENDAR -> CalendarsShown(tick) { changed() }
         MainStage.WEATHER_MAP -> OptionsNote("◀ ▶ on the map step through the hours.")
         MainStage.COMPANION -> CompanionChoice(cfg.companion) { changed() }
+        MainStage.MULTIVIEW -> {
+            val tiles = MultiviewStore.tiles
+            OptionsNote(
+                tiles.mapIndexed { i, t -> "${i + 1}: ${t?.title ?: "empty"}" }.joinToString("   ") +
+                    ". Choose the videos and their sources in Settings.",
+            )
+        }
     }
 }
 

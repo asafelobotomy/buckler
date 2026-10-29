@@ -107,6 +107,11 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("androidx.security:security-crypto:1.1.0")
     implementation("com.google.zxing:core:3.5.4")
+    // Multiview: up to three streams on the Main Stage (HLS from Jellyfin and IPTV, RTSP cameras).
+    implementation("androidx.media3:media3-exoplayer:1.11.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
+    implementation("androidx.media3:media3-exoplayer-rtsp:1.11.1")
+    implementation("androidx.media3:media3-ui:1.11.1")
 
     testImplementation("junit:junit:4.13.2")
     // android.jar stubs org.json for unit tests; use the real implementation on the JVM.

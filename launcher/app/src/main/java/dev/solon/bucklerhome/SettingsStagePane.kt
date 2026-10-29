@@ -145,6 +145,7 @@ fun MainStagePane() {
             )
             WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
         }
+        MainStage.MULTIVIEW -> MultiviewSettings()
         MainStage.COMPANION -> {
             CompanionPicker(cfg.companion) { tick++ }
             Spacer(modifier = Modifier.height(14.dp))

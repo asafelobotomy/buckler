@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Plain http is allowed for Multiview's sources: a Jellyfin server, an IPTV playlist or a camera on
+  the home network is usually http (and Android cannot limit this to private addresses). Buckler's
+  own internet fetches (news, weather, artwork, updates) still insist on https in code.
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

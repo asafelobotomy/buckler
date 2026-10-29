@@ -15,17 +15,29 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,7 +102,11 @@ fun DialogPanel(
     }
 }
 
-/** Text input with a visible focus ring, so D-pad users can tell it is selected. */
+/**
+ * Text input with a visible focus ring, so D-pad users can tell it is selected. A stop like any
+ * other: focus passing over it leaves the keyboard closed and Up / Down move on; OK starts typing.
+ * Until then it is read-only, as the TV keyboard opens itself for any editable field in focus.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun FocusableTextField(
@@ -100,21 +116,53 @@ fun FocusableTextField(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
+    /** Shown as dots, with the keyboard's password layout. */
+    password: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(8.dp)
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    var typing by remember { mutableStateOf(false) }
+    LaunchedEffect(focused) { if (!focused) typing = false }
+    LaunchedEffect(typing) { if (typing) keyboard?.show() }
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
+        readOnly = !typing,
         interactionSource = interaction,
         textStyle = TextStyle(color = ColorText, fontSize = 16.sp),
         cursorBrush = SolidColor(ColorBrand),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { onDone() }),
+        keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Done,
+            showKeyboardOnFocus = false,
+            keyboardType = if (password) KeyboardType.Password else KeyboardType.Text,
+        ),
+        visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardActions = KeyboardActions(onDone = {
+            typing = false
+            keyboard?.hide()
+            onDone()
+        }),
         modifier = modifier
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .onPreviewKeyEvent { event ->
+                when {
+                    event.key == Key.DirectionDown || event.key == Key.DirectionUp -> {
+                        if (event.type == KeyEventType.KeyDown) {
+                            focusManager.moveFocus(if (event.key == Key.DirectionDown) FocusDirection.Down else FocusDirection.Up)
+                        }
+                        true
+                    }
+                    !typing && event.key.isTvSelectKey() -> {
+                        if (event.type == KeyEventType.KeyUp) typing = true
+                        true
+                    }
+                    else -> false
+                }
+            }
             .widthIn(min = 280.dp)
             .clip(shape)
             .background(if (focused) ColorTile else ColorFooter)
