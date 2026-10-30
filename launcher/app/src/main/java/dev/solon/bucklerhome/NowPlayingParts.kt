@@ -21,7 +21,9 @@ import kotlinx.coroutines.delay
 /** Whether [ScrollingLine]s scroll: Home provides the user's choice ([DisplayConfig.scrollTitles]). */
 val LocalScrollTitles = compositionLocalOf { true }
 
-/** One line that scrolls sideways when it does not fit; cut short instead when scrolling is off or under reduced motion. */
+private const val IDLE_TITLES_MS = 3 * 60_000L
+
+/** One line that scrolls sideways when it does not fit; cut short instead when scrolling is off, under reduced motion, or idle. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ScrollingLine(
@@ -31,7 +33,8 @@ fun ScrollingLine(
     modifier: Modifier = Modifier,
     fontWeight: FontWeight? = null,
 ) {
-    val still = !LocalScrollTitles.current || AppearanceStore.config.reduceMotion
+    // Also cut short while no one is using Home: each scrolling frame repaints all of it.
+    val still = !LocalScrollTitles.current || AppearanceStore.config.reduceMotion || rememberIdle(IDLE_TITLES_MS)
     Text(
         text = text,
         color = color,
