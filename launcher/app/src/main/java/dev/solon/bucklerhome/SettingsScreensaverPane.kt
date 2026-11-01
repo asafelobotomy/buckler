@@ -44,11 +44,7 @@ fun ScreensaverPane() {
     StartAfterSection(tick = tick, onChanged = { tick++ }, onCustom = { customTimeout = true })
     Spacer(modifier = Modifier.height(12.dp))
     SettingsAction("System screensaver settings") {
-        launchFirstThatWorks(
-            context,
-            "screensaver settings",
-            listOf(Intent(Settings.ACTION_DREAM_SETTINGS), Intent(Settings.ACTION_DISPLAY_SETTINGS)),
-        )
+        SystemScreen.SCREENSAVER.open(context)
     }
     if (customTimeout) {
         CustomTimeoutDialog(

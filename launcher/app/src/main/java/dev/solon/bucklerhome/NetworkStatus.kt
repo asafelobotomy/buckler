@@ -151,14 +151,8 @@ val VPN_APP_PACKAGES: List<String> = listOf(
     "com.surfshark.vpnclient.android",
 )
 
-fun openNetworkSettings(context: Context, link: LinkType) {
-    val first = if (link == LinkType.ETHERNET) Settings.ACTION_WIRELESS_SETTINGS else Settings.ACTION_WIFI_SETTINGS
-    launchFirstThatWorks(
-        context,
-        "Network settings",
-        listOf(Intent(first), Intent(Settings.ACTION_WIRELESS_SETTINGS), Intent(Settings.ACTION_SETTINGS)),
-    )
-}
+/** Android TV's network screen has Wi-Fi and Ethernet both. */
+fun openNetworkSettings(context: Context) = SystemScreen.NETWORK.open(context)
 
 /** Open the user's VPN app when one is installed, otherwise the system VPN settings. */
 fun openVpn(context: Context) {
@@ -166,12 +160,9 @@ fun openVpn(context: Context) {
     val appIntent = VPN_APP_PACKAGES.firstNotNullOfOrNull { pkg ->
         pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg)
     }
-    val candidates = listOfNotNull(appIntent) + listOf(
-        Intent(Settings.ACTION_VPN_SETTINGS),
-        Intent(Settings.ACTION_WIRELESS_SETTINGS),
-        Intent(Settings.ACTION_SETTINGS),
-    )
-    launchFirstThatWorks(context, "VPN", candidates)
+    if (appIntent != null && runCatching { context.startActivity(appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    // SHIELD has no VPN screen; the network screen is the nearest.
+    SystemScreen.VPN.open(context, orElse = SystemScreen.NETWORK)
 }
 
 /** Settings screens vary by TV vendor, so fall through the candidates until one starts. */

@@ -174,7 +174,7 @@ fun rememberHeaderActions(onOpenEditHome: () -> Unit): HeaderActions {
     val context = LocalContext.current
     return remember(onOpenEditHome) {
         HeaderActions(
-            onNetwork = { link -> openNetworkSettings(context, link) },
+            onNetwork = { openNetworkSettings(context) },
             onVpn = { openVpn(context) },
             onSettings = {
                 safeLaunch(context, Intent(context, BucklerSettingsActivity::class.java), "Buckler Settings")

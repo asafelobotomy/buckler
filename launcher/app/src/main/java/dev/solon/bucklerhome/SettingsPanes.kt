@@ -2,7 +2,6 @@ package dev.solon.bucklerhome
 
 import android.content.Intent
 import android.net.Uri
-import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -200,11 +199,11 @@ fun AboutPane() {
     PickerTitle("Android TV")
     SettingsRow("Shortcuts to the system's own screens.")
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        SettingsAction("Network") { openSettingsAction(context, Settings.ACTION_WIFI_SETTINGS) }
-        SettingsAction("Apps") { openSettingsAction(context, Settings.ACTION_APPLICATION_SETTINGS) }
-        SettingsAction("Display") { openSettingsAction(context, Settings.ACTION_DISPLAY_SETTINGS) }
-        SettingsAction("About this TV") { openSettingsAction(context, Settings.ACTION_DEVICE_INFO_SETTINGS) }
-        SettingsAction("All settings") { safeLaunch(context, Intent(Settings.ACTION_SETTINGS), "Settings") }
+        SettingsAction("Network") { SystemScreen.NETWORK.open(context) }
+        SettingsAction("Apps") { SystemScreen.APPS.open(context) }
+        SettingsAction("Display & Sound") { SystemScreen.DISPLAY_SOUND.open(context) }
+        SettingsAction("About this TV") { SystemScreen.ABOUT.open(context) }
+        SettingsAction("All settings") { SystemScreen.ALL.open(context) }
     }
     Spacer(modifier = Modifier.height(18.dp))
     SettingsAction("Open releases") {
@@ -237,9 +236,4 @@ fun SettingsRow(text: String) {
         color = ColorMuted,
         modifier = Modifier.padding(bottom = 8.dp),
     )
-}
-
-fun openSettingsAction(context: android.content.Context, action: String) {
-    val intent = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    safeLaunch(context, intent, action)
 }

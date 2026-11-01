@@ -1,7 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +32,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -176,7 +173,7 @@ private fun Artwork(info: NowPlayingInfo, metrics: HeaderMetrics) {
 
 @Composable
 private fun AccessPrompt(below: FocusRequester?, metrics: HeaderMetrics, modifier: Modifier, onHold: (() -> Unit)?) {
-    val context = LocalContext.current
+    val grant = rememberMediaAccessGrant()
     Box(modifier = modifier) {
         HeaderIconButton(
             icon = R.drawable.ic_music,
@@ -186,14 +183,7 @@ private fun AccessPrompt(below: FocusRequester?, metrics: HeaderMetrics, modifie
             down = below,
             onLongPress = onHold,
         ) {
-            launchFirstThatWorks(
-                context,
-                "notification access",
-                listOf(
-                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
-                    Intent(Settings.ACTION_SETTINGS),
-                ),
-            )
+            grant()
         }
     }
 }

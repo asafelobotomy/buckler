@@ -1,6 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -175,14 +174,10 @@ fun CompanionPicker(current: CompanionKind, onChanged: () -> Unit) {
 @Composable
 fun MediaAccessSection() {
     val context = LocalContext.current
-    val access = nowPlayingAccessGranted(context)
+    val grant = rememberMediaAccessGrant()
+    // Reading the counter looks again once Buckler has granted access itself.
+    val access = MediaAccess.granted.let { nowPlayingAccessGranted(context) }
     SettingsRow(if (access) "Media access: granted." else "Media access: not granted, so nothing playing can be shown.")
     if (access) return
-    SettingsAction("Grant media access") {
-        launchFirstThatWorks(
-            context,
-            "notification access",
-            listOf(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS), Intent(Settings.ACTION_SETTINGS)),
-        )
-    }
+    SettingsAction("Grant media access") { grant() }
 }

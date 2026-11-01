@@ -1,7 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -73,6 +71,7 @@ fun LyricsStage(
     metrics: StageMetrics,
 ) {
     val context = LocalContext.current
+    val grantAccess = rememberMediaAccessGrant()
     val info = model.info
     val music = info?.takeIf { it.kind == MediaKind.MUSIC }
     val fetched by produceState<LyricsState>(LyricsState.Idle, music?.title, music?.artist, music?.album) {
@@ -134,11 +133,7 @@ fun LyricsStage(
                 }
                 .stageTarget(stageFocus, onDown, credit?.let { "Lyrics, $it" } ?: "Lyrics", onLongPress = onHold) {
                     when {
-                        !model.accessGranted -> launchFirstThatWorks(
-                            context,
-                            "notification access",
-                            listOf(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS), Intent(Settings.ACTION_SETTINGS)),
-                        )
+                        !model.accessGranted -> grantAccess()
                         info != null && info.packageName.isNotBlank() ->
                             launchPackage(context, info.packageName, info.appLabel.ifBlank { info.title })
                     }

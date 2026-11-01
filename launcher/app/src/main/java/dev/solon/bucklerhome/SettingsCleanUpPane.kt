@@ -53,14 +53,10 @@ fun rememberResumeTick(): Int {
 
 /** Android's page for [packageName], where Clear cache, Clear storage and Disable are. */
 fun openAppInfo(context: Context, packageName: String) {
-    launchFirstThatWorks(
-        context,
-        "app info",
-        listOf(
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)),
-            Intent(Settings.ACTION_APPLICATION_SETTINGS),
-        ),
-    )
+    val details = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
+    if (runCatching { context.startActivity(details.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isFailure) {
+        SystemScreen.APPS.open(context)
+    }
 }
 
 /**
@@ -101,11 +97,7 @@ fun CleanUpPane() {
     }
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
         SettingsAction("Android's storage settings") {
-            launchFirstThatWorks(
-                context,
-                "storage settings",
-                listOf(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS), Intent(Settings.ACTION_SETTINGS)),
-            )
+            SystemScreen.STORAGE.open(context)
         }
     }
 

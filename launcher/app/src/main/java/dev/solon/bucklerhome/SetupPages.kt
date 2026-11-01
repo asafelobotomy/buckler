@@ -204,11 +204,7 @@ fun DoneStep(results: List<String>, tvTouched: Boolean, onFinish: () -> Unit) {
     }
 }
 
-fun openDeveloperOptions(context: Context) = launchFirstThatWorks(
-    context,
-    "Developer options",
-    listOf(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS), Intent(Settings.ACTION_SETTINGS)),
-)
+fun openDeveloperOptions(context: Context) = SystemScreen.DEVELOPER.open(context)
 
 /** Opens the setup wizard on Home, from Settings. */
 fun openSetupWizard(context: Context) {

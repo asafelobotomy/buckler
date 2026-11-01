@@ -229,8 +229,9 @@ private fun MediaController.isPlaying(): Boolean {
 fun rememberNowPlaying(enabled: Boolean, resumeTick: Int): NowPlayingModel {
     val context = LocalContext.current
     val model = remember { NowPlayingModel(context) }
-    // resumeTick: re-read access after the user returns from the notification-access screen.
-    DisposableEffect(enabled, resumeTick) {
+    // resumeTick: re-read access after the user returns from the notification-access screen;
+    // MediaAccess.granted: after Buckler granted it in place.
+    DisposableEffect(enabled, resumeTick, MediaAccess.granted) {
         if (enabled) model.start()
         onDispose { model.stop() }
     }

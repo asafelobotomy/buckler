@@ -1,6 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -34,14 +33,6 @@ fun AccessibilityPane() {
 
     fun update(transform: (AppearanceConfig) -> AppearanceConfig) = AppearanceStore.update(context, transform)
 
-    fun openSystem(action: String, label: String) {
-        launchFirstThatWorks(
-            context,
-            label,
-            listOf(Intent(action), Intent(Settings.ACTION_SETTINGS)),
-        )
-    }
-
     Column {
         SectionTitle("Accessibility")
 
@@ -61,7 +52,7 @@ fun AccessibilityPane() {
                 update { it.copy(spokenFocus = !it.spokenFocus) }
             }
             SettingsAction("Screen reader (TalkBack)") {
-                openSystem(Settings.ACTION_ACCESSIBILITY_SETTINGS, "accessibility settings")
+                SystemScreen.ACCESSIBILITY.open(context)
             }
         }
         Spacer(modifier = Modifier.height(18.dp))
@@ -87,7 +78,7 @@ fun AccessibilityPane() {
                 }
             }
             SettingsAction("Captions") {
-                openSystem(Settings.ACTION_CAPTIONING_SETTINGS, "caption settings")
+                SystemScreen.CAPTIONS.open(context)
             }
         }
     }

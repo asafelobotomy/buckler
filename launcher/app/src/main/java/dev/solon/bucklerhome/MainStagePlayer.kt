@@ -1,7 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -159,7 +157,7 @@ private fun StageArt(info: NowPlayingInfo?, artSize: Dp) {
 
 @Composable
 private fun GrantMediaAccess(stageFocus: FocusRequester, onDown: () -> Unit, onHold: () -> Unit) {
-    val context = LocalContext.current
+    val grant = rememberMediaAccessGrant()
     // The stage's only target until access is granted, so it carries the stage's hold too.
     HeaderIconButton(
         icon = R.drawable.ic_music,
@@ -169,10 +167,6 @@ private fun GrantMediaAccess(stageFocus: FocusRequester, onDown: () -> Unit, onH
         focusRequester = stageFocus,
         onLongPress = onHold,
     ) {
-        launchFirstThatWorks(
-            context,
-            "notification access",
-            listOf(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS), Intent(Settings.ACTION_SETTINGS)),
-        )
+        grant()
     }
 }
