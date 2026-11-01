@@ -16,6 +16,11 @@ val keystoreProps = Properties().apply {
 }
 val hasReleaseKeystore = keystoreProps.getProperty("storeFile")?.let { rootProject.file(it).isFile } == true
 
+// SHA-256 of the release key's certificate (`apksigner verify --print-certs`). GitHub releases are
+// signed with it; an install signed with any other key (a debug or `optimized` build) can never
+// take them, so it isn't offered them.
+val releaseCertSha256 = "ed2c0df423e5428f219484e887b5187d30c9714aeac6bb19e9d106745b9f87c8"
+
 android {
     namespace = "dev.solon.bucklerhome"
     compileSdk = 37
@@ -32,6 +37,7 @@ android {
         // Register at https://dev.twitch.tv/console and enable Device Code Grant.
         buildConfigField("String", "TWITCH_CLIENT_ID", "\"\"")
         buildConfigField("String", "GITHUB_REPO", "\"$githubRepo\"")
+        buildConfigField("String", "RELEASE_CERT_SHA256", "\"$releaseCertSha256\"")
         buildConfigField(
             "String",
             "GITHUB_RELEASES_URL",

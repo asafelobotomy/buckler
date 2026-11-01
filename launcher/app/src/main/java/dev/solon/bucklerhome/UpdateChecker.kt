@@ -2,9 +2,11 @@ package dev.solon.bucklerhome
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.MessageDigest
 
 data class GitHubRelease(
     val tag: String,
@@ -68,13 +70,30 @@ object UpdatePrefs {
 object UpdateChecker {
     private const val THROTTLE_MS = 12L * 60L * 60L * 1000L
 
+    /**
+     * True when this install is signed with the key GitHub releases use. Android won't install an
+     * update signed with a different key, so a dev-signed install is never offered one.
+     */
+    fun isReleaseSigned(context: Context): Boolean = runCatching {
+        val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+        val signers = info.signingInfo?.apkContentsSigners.orEmpty()
+        signers.any { sha256Hex(it.toByteArray()).equals(BuildConfig.RELEASE_CERT_SHA256, ignoreCase = true) }
+    }.getOrDefault(false)
+
+    private fun sha256Hex(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
     fun shouldAutoCheck(context: Context): Boolean {
+        if (!isReleaseSigned(context)) return false
         if (UpdatePrefs.isSnoozed(context)) return false
         val last = UpdatePrefs.lastCheck(context)
         return System.currentTimeMillis() - last >= THROTTLE_MS
     }
 
     fun check(context: Context, force: Boolean = false): UpdateCheckResult {
+        if (!isReleaseSigned(context)) {
+            return UpdateCheckResult.Error("Dev build: not signed with the release key, so GitHub updates can't install")
+        }
         if (!force && UpdatePrefs.isSnoozed(context)) return UpdateCheckResult.Snoozed
         UpdatePrefs.setLastCheck(context)
         val auth = CoverAccounts.githubAuthHeaders(context)
