@@ -1,6 +1,7 @@
 package dev.solon.bucklerhome
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -49,4 +50,42 @@ object ComicStrips {
         val arr = JSONArray(file.readText())
         (0 until arr.length()).map { i -> arr.getJSONObject(i).let { CommonsImage(it.getString("u"), it.optString("c")) } }
     }.getOrDefault(emptyList())
+
+    /**
+     * The colour of [file]'s paper, from the pixels along its outer edge in a reduced copy (see
+     * [edgeColour]). Blocking; null when the file cannot be read.
+     */
+    fun paperColour(file: File): Int? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        if (bounds.outWidth <= 0) return null
+        var sample = 1
+        // About 200 px wide: decoding smaller averages bigger blocks, which pulls in more of the
+        // panel lines and lettering beside the edge and greys the paper.
+        while (bounds.outWidth / (sample * 2) >= 200) sample *= 2
+        val small = runCatching {
+            BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+        }.getOrNull() ?: return null
+        val pixels = IntArray(small.width * small.height)
+        small.getPixels(pixels, 0, small.width, 0, 0, small.width, small.height)
+        val colour = edgeColour(pixels, small.width, small.height)
+        small.recycle()
+        return colour
+    }
+
+    /**
+     * The paper among the outer [ring] pixels of a [width] x [height] image: the one nine tenths of
+     * the way up by brightness (on the strips tried, within a level or two of the real edge). Ink, panel borders and lettering along the edge (and the blocks
+     * a reduced copy averages them into) are darker than the paper, so they fall below it, and a
+     * stray white speck stays above. An edge that really is dark, such as a strip photographed on
+     * black cloth, gives a dark colour, which is what meets the card there.
+     */
+    fun edgeColour(pixels: IntArray, width: Int, height: Int, ring: Int = 2): Int {
+        val edge = ArrayList<Int>()
+        for (y in 0 until height) for (x in 0 until width) {
+            if (x < ring || y < ring || x >= width - ring || y >= height - ring) edge += pixels[y * width + x]
+        }
+        fun brightness(c: Int) = ((c shr 16) and 0xFF) * 299 + ((c shr 8) and 0xFF) * 587 + (c and 0xFF) * 114
+        return edge.sortedBy(::brightness)[edge.size * 9 / 10] or (0xFF shl 24)
+    }
 }
