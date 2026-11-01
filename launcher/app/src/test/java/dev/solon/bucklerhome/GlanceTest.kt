@@ -58,7 +58,32 @@ class GlanceTest {
             AgendaTask("Someday thing", null, false, "Buckler"),
         )
         val line = GlanceRules.lines(now, emptyList(), tasks, null, true, false).single { it.glyph == "✓" }
-        assertEquals("2 reminders today: Bins, Call Mum", line.text)
+        assertEquals("2 reminders (1 overdue): Bins, Call Mum", line.text)
+        val today = GlanceRules.lines(now, emptyList(), tasks.drop(1), null, true, false).single { it.glyph == "✓" }
+        assertEquals("Reminder: Call Mum", today.text)
+    }
+
+    @Test
+    fun anEventOverMidnightSaysTomorrowOnceOnly() {
+        val evening = now.withHour(20)
+        val lines = GlanceRules.lines(evening, listOf(event("Flight", now.plusDays(1).withHour(7))), emptyList(), null, true, false)
+        assertEquals(listOf("Flight tomorrow at 07:00 · in 11 h"), lines.map { it.text })
+    }
+
+    @Test
+    fun aHolidayThatBeganYesterdayStillShowsToday() {
+        val start = now.toLocalDate().minusDays(1).atStartOfDay(zone)
+        val holiday = AgendaEvent("Half term", start, start.plusDays(3), true, "Me", 0)
+        val lines = GlanceRules.lines(now, listOf(holiday), emptyList(), null, true, false)
+        assertTrue(lines.any { it.text == "Today: Half term" })
+        val after = GlanceRules.lines(now.plusDays(2), listOf(holiday), emptyList(), null, true, false)
+        assertTrue("its end is the day after its last", after.none { it.text == "Today: Half term" })
+    }
+
+    @Test
+    fun rainInTheHourUnderWaySaysThisHour() {
+        val lines = GlanceRules.lines(now.plusMinutes(40), emptyList(), emptyList(), weather(rainAt = 0), true, false)
+        assertTrue(lines.any { it.text == "Rain likely this hour (80%)" })
     }
 
     @Test

@@ -47,14 +47,16 @@ fun rememberGlanceWeather(place: Place?): State<GlanceWeather?> {
 }
 
 /**
- * The calendar and reminders, re-read every 5 minutes while Home is on screen and each time it
- * comes back (from Settings, after ticking off a reminder). Reading is local and quick.
+ * The calendar and reminders, re-read every 5 minutes while Home is on screen, each time it comes
+ * back, and whenever Buckler's settings change (a reminder ticked off or a calendar hidden in the
+ * Settings panel, which leaves Home only paused behind it). Reading is local and quick.
  */
 @Composable
 fun rememberAgenda(days: Long = 7): State<AgendaSnapshot?> {
     val context = LocalContext.current
     val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
-    return produceState(StageCache.agenda, visible, days) {
+    val changes = rememberPrefsChanges()
+    return produceState(StageCache.agenda, visible, days, changes) {
         if (!visible) return@produceState
         while (true) {
             val fresh = withContext(Dispatchers.IO) { readAgenda(context, days) }

@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
+import androidx.lifecycle.Lifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -33,8 +34,10 @@ fun ScrollingLine(
     modifier: Modifier = Modifier,
     fontWeight: FontWeight? = null,
 ) {
-    // Also cut short while no one is using Home: each scrolling frame repaints all of it.
-    val still = !LocalScrollTitles.current || AppearanceStore.config.reduceMotion || rememberIdle(IDLE_TITLES_MS)
+    // Also cut short while no one is using Home, or while it is not in front (the Settings panel
+    // over it): each scrolling frame repaints all of it, as the news ticker's notes say.
+    val still = !LocalScrollTitles.current || AppearanceStore.config.reduceMotion || rememberIdle(IDLE_TITLES_MS) ||
+        !rememberLifecycleAtLeast(Lifecycle.State.RESUMED)
     Text(
         text = text,
         color = color,

@@ -3,10 +3,15 @@ package dev.solon.bucklerhome
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import kotlin.math.roundToInt
 import org.json.JSONObject
 
-/** One hour or one day in a forecast strip. [label] is "23:00" or "2026-10-27". */
+/**
+ * One hour or one day in a forecast strip. [label] is "23:00" or "2026-10-27"; an hour also has
+ * [at], its start on the TV's clock, so a strip can drop hours that have gone by since the fetch.
+ */
 data class ForecastSlot(
     val label: String,
     val temperatureC: Double,
@@ -14,6 +19,7 @@ data class ForecastSlot(
     val isDay: Boolean = true,
     val lowC: Double? = null,
     val allDay: Boolean = false,
+    val at: LocalDateTime? = null,
 )
 
 data class Forecast(val hours: List<ForecastSlot> = emptyList(), val days: List<ForecastSlot> = emptyList())
@@ -82,15 +88,25 @@ object WeatherClient {
         hourCount: Int = 8,
         dayCount: Int = 5,
         now: LocalDateTime = LocalDateTime.now(),
+        zone: ZoneId = ZoneId.systemDefault(),
     ): Forecast {
         val root = HttpJson.parseObject(body) ?: return Forecast()
+        // Hours come in the city's own zone (timezone=auto): shift them to the TV's, which "now"
+        // and the strip's labels are on, as At a Glance does. A reply without the offset is
+        // taken as already local.
+        val offset = root.takeIf { it.has("utc_offset_seconds") }?.optInt("utc_offset_seconds")?.let(ZoneOffset::ofTotalSeconds)
+        fun local(stamp: String): LocalDateTime? = runCatching {
+            val at = LocalDateTime.parse(stamp)
+            offset?.let { at.atOffset(it).atZoneSameInstant(zone).toLocalDateTime() } ?: at
+        }.getOrNull()
         return Forecast(
-            hours = readHours(root.optJSONObject("hourly"), hourCount, now),
+            // One spare hour, for the strip to fall back on once the first has gone by.
+            hours = readHours(root.optJSONObject("hourly"), hourCount + 1, now, ::local),
             days = readDays(root.optJSONObject("daily"), dayCount),
         )
     }
 
-    private fun readHours(hourly: JSONObject?, count: Int, now: LocalDateTime): List<ForecastSlot> {
+    private fun readHours(hourly: JSONObject?, count: Int, now: LocalDateTime, local: (String) -> LocalDateTime?): List<ForecastSlot> {
         if (hourly == null || count <= 0) return emptyList()
         val times = hourly.optJSONArray("time") ?: return emptyList()
         val temps = hourly.optJSONArray("temperature_2m") ?: return emptyList()
@@ -101,17 +117,18 @@ object WeatherClient {
             for (i in 0 until times.length()) {
                 if (size >= count) break
                 val stamp = times.optString(i)
-                val whenAt = runCatching { LocalDateTime.parse(stamp) }.getOrNull() ?: continue
+                val whenAt = local(stamp) ?: continue
                 if (whenAt.isBefore(start)) continue
                 if (i >= temps.length() || i >= codes.length()) continue
                 val temperature = temps.optDouble(i)
                 if (temperature.isNaN()) continue
                 add(
                     ForecastSlot(
-                        label = stamp.substringAfter('T', stamp).take(5),
+                        label = whenAt.toLocalTime().toString().take(5),
                         temperatureC = temperature,
                         code = codes.optInt(i),
                         isDay = day?.optInt(i, 1) != 0,
+                        at = whenAt,
                     ),
                 )
             }

@@ -74,8 +74,13 @@ fun LyricsStage(
     val grantAccess = rememberMediaAccessGrant()
     val info = model.info
     val music = info?.takeIf { it.kind == MediaKind.MUSIC }
-    val fetched by produceState<LyricsState>(LyricsState.Idle, music?.title, music?.artist, music?.album) {
+    // Retries only while Home is on screen: a failing lookup behind a film is wasted requests.
+    val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
+    val fetched by produceState<LyricsState>(LyricsState.Idle, music?.title, music?.artist, music?.album, visible) {
         val track = music ?: return@produceState run { value = LyricsState.Idle }
+        // Coming back on screen with this song's lyrics already found: nothing to fetch.
+        if ((value as? LyricsState.Ready)?.key == LyricsPrefs.songKey(track.title, track.artist)) return@produceState
+        if (!visible) return@produceState
         value = LyricsState.Loading
         while (true) {
             val found = withContext(Dispatchers.IO) {
@@ -91,7 +96,8 @@ fun LyricsStage(
     }
     // Player lag, route delay (measured) and the route's fine-tune, plus this song's nudge (◀ ▶).
     val route = rememberAudioRoute(active = music?.playing == true)
-    val routeTune = remember(route.kind) { LyricsPrefs.offset(context, route.kind) }
+    // Re-read when settings change, so a fine-tune in the Settings panel applies while it is open.
+    val routeTune = remember(route.kind, rememberPrefsChanges()) { LyricsPrefs.offset(context, route.kind) }
     val songKey = music?.let { LyricsPrefs.songKey(it.title, it.artist) }
     // Right after a track change the previous song's lyrics are still held for a frame; never show
     // them under the new song.

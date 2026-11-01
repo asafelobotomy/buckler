@@ -181,6 +181,9 @@ private fun describe(mode: ScreensaverMode, cfg: ScreensaverConfig, photoCount: 
     ScreensaverMode.PIPES -> "Pipes grow and twist through 3D space, after the Windows 3D Pipes."
     ScreensaverMode.MYSTIFY -> "Bouncing, colour-shifting outlines with trails, after Windows Mystify."
     ScreensaverMode.STARFIELD -> "Flying through a field of stars, after Windows Starfield."
+    ScreensaverMode.WEATHER ->
+        "The weather at Home's city in turn: now, the next hours, the next days, the pressure map " +
+            "and a temperature heat map (Open-Meteo, no key)."
 }
 
 private fun applyIdleTimeout(context: Context, ms: Int) {

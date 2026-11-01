@@ -11,8 +11,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.CacheDrawScope
-import androidx.compose.ui.draw.DrawResult
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -39,6 +37,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,8 +55,11 @@ const val WEATHER_MAP_CREDIT = "Weather: Open-Meteo · Map: Natural Earth"
 
 private val RainBlue = Color(0xFF4F9DFF)
 
+/** What the map shows: the synoptic chart (isobars, wind, rain) or a temperature heat map. */
+enum class WeatherMapStyle { PRESSURE, HEAT }
+
 /** The theme colours the map draws with, read once per composition. */
-private class MapColours(
+internal class MapColours(
     val sea: Color,
     val land: Color,
     val coast: Color,
@@ -65,7 +67,24 @@ private class MapColours(
     val text: Color,
     val high: Color,
     val low: Color,
-)
+) {
+    companion object {
+        fun of(sea: Color, text: Color, muted: Color) = MapColours(
+            sea = sea,
+            land = lerp(sea, text, 0.10f),
+            coast = lerp(sea, text, 0.24f),
+            isobar = muted.copy(alpha = 0.85f),
+            text = text,
+            // The weather-map convention (blue H, red L) reads on every scheme, even where the
+            // theme's brand and section colours are the same.
+            high = Color(0xFF4F8EF7),
+            low = Color(0xFFE5534B),
+        )
+    }
+}
+
+/** The size and density a map is laid out for: a Compose draw cache, or an off-screen bitmap. */
+internal class MapCanvas(density: Density, val size: Size) : Density by density
 
 /**
  * A synoptic-style map around [place] for hour [hour] of [grid]: land, rain shading, isobars every
@@ -92,25 +111,16 @@ fun WeatherMap(place: Place, grid: WeatherGrid?, hour: Int, modifier: Modifier =
     val text = ColorText
     val muted = ColorMuted
     // Once per scheme: a new MapColours each recomposition would rebuild the whole draw cache.
-    val colours = remember(sea, text, muted) {
-        MapColours(
-            sea = sea,
-            land = lerp(sea, text, 0.10f),
-            coast = lerp(sea, text, 0.24f),
-            isobar = muted.copy(alpha = 0.85f),
-            text = text,
-            // The weather-map convention (blue H, red L) reads on every scheme, even where the
-            // theme's brand and section colours are the same.
-            high = Color(0xFF4F8EF7),
-            low = Color(0xFFE5534B),
-        )
-    }
+    val colours = remember(sea, text, muted) { MapColours.of(sea, text, muted) }
     val measurer = rememberTextMeasurer()
     Box(modifier.clipToBounds()) {
         Spacer(
             Modifier
                 .fillMaxSize()
-                .drawWithCache { buildMap(place, grid, layers, coast, colours, measurer) },
+                .drawWithCache {
+                    val draw = MapCanvas(this, size).buildMap(place, grid, layers, coast, colours, measurer)
+                    onDrawBehind(draw)
+                },
         )
         Text(
             text = WEATHER_MAP_CREDIT,
@@ -122,16 +132,20 @@ fun WeatherMap(place: Place, grid: WeatherGrid?, hour: Int, modifier: Modifier =
 }
 
 /** Projects every layer for the current size once; redraws reuse the result. */
-private fun CacheDrawScope.buildMap(
+internal fun MapCanvas.buildMap(
     place: Place,
     grid: WeatherGrid,
     layers: MapLayers,
     coast: List<CoastRing>,
     colours: MapColours,
     measurer: TextMeasurer,
-): DrawResult {
+    style: WeatherMapStyle = WeatherMapStyle.PRESSURE,
+    fahrenheit: Boolean = false,
+    hour: Int = 0,
+): DrawScope.() -> Unit {
     val view = MapProjection(grid, size)
     val land = landPath(view, Coastlines.visible(coast, view.south, view.north, view.west, view.east))
+    if (style == WeatherMapStyle.HEAT) return heatMap(view, land, grid.temperatureField(hour), place, colours, measurer, fahrenheit)
     val rainCell = 8.dp.toPx()
     val rain = rainImage(view, layers.rain, rainCell)
     val isobars = layers.isobars.map { (level, lines) ->
@@ -156,7 +170,7 @@ private fun CacheDrawScope.buildMap(
     val hair = Stroke(width = 0.75.dp.toPx(), join = StrokeJoin.Round)
     val arrowWidth = 1.2.dp.toPx()
     val head = 3.5.dp.toPx()
-    return onDrawBehind {
+    return {
         drawRect(colours.sea)
         drawPath(land, colours.land)
         drawPath(land, colours.coast, style = hair)
@@ -179,7 +193,7 @@ private fun CacheDrawScope.buildMap(
  * All visible rings in one even-odd path: a lake ring inside a continent cuts a hole, an island in
  * that lake fills again, without the file having to say which ring is which.
  */
-private fun landPath(view: MapProjection, rings: List<VisibleRing>): Path = Path().apply {
+internal fun landPath(view: MapProjection, rings: List<VisibleRing>): Path = Path().apply {
     fillType = PathFillType.EvenOdd
     for (ring in rings) {
         moveTo(view.x(ring.lons[0].toDouble()), view.y(ring.lats[0].toDouble()))
@@ -236,11 +250,11 @@ private fun smoothLine(path: Path, points: List<Offset>) {
 
 private fun Rect.overlapsAny(others: List<Rect>) = others.any { it.overlaps(this) }
 
-private fun CacheDrawScope.insideMargins(r: Rect, margin: Float) =
+private fun MapCanvas.insideMargins(r: Rect, margin: Float) =
     r.left >= margin && r.top >= margin && r.right <= size.width - margin && r.bottom <= size.height - margin
 
 /** "H" or "L" with the centre's pressure underneath, for each centre on screen. */
-private fun CacheDrawScope.centreLabels(
+private fun MapCanvas.centreLabels(
     view: MapProjection,
     extrema: List<Extremum>,
     colours: MapColours,
@@ -276,7 +290,7 @@ private fun CacheDrawScope.centreLabels(
  * A pressure label on a few isobars: at the middle of each level's longest line, when the line is
  * long enough to carry it and the label clears the edges and everything placed before it.
  */
-private fun CacheDrawScope.isobarLabels(
+private fun MapCanvas.isobarLabels(
     isobars: List<Pair<Float, List<List<Offset>>>>,
     colours: MapColours,
     measurer: TextMeasurer,
@@ -302,16 +316,16 @@ private fun CacheDrawScope.isobarLabels(
 
 private const val MAX_ISOBAR_LABELS = 4
 
-private fun CacheDrawScope.onScreen(p: Offset) = p.x in 0f..size.width && p.y in 0f..size.height
+private fun MapCanvas.onScreen(p: Offset) = p.x in 0f..size.width && p.y in 0f..size.height
 
 /** Length of the parts of [line] whose both ends are on the canvas. */
-private fun CacheDrawScope.onScreenLength(line: List<Offset>): Float =
+private fun MapCanvas.onScreenLength(line: List<Offset>): Float =
     (1 until line.size).sumOf { i ->
         if (onScreen(line[i - 1]) && onScreen(line[i])) (line[i] - line[i - 1]).getDistance().toDouble() else 0.0
     }.toFloat()
 
 /** The point [distance] along the on-canvas parts of [line]. */
-private fun CacheDrawScope.pointAlong(line: List<Offset>, distance: Float): Offset? {
+private fun MapCanvas.pointAlong(line: List<Offset>, distance: Float): Offset? {
     var left = distance
     for (i in 1 until line.size) {
         if (!onScreen(line[i - 1]) || !onScreen(line[i])) continue
@@ -327,7 +341,7 @@ private fun CacheDrawScope.pointAlong(line: List<Offset>, distance: Float): Offs
  * ones. Each is centred on its lattice point, points where the air is going, and grows with speed.
  * Arrows that would sit on a label or the place dot are left out.
  */
-private fun CacheDrawScope.windArrows(view: MapProjection, layers: MapLayers, taken: List<Rect>): List<Pair<Offset, Offset>> {
+private fun MapCanvas.windArrows(view: MapProjection, layers: MapLayers, taken: List<Rect>): List<Pair<Offset, Offset>> {
     val spacing = (size.height / 3f).coerceIn(52.dp.toPx(), 110.dp.toPx())
     val cols = (size.width / spacing).toInt().coerceAtLeast(1)
     val rows = (size.height / spacing).toInt().coerceAtLeast(1)

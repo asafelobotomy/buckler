@@ -13,7 +13,7 @@ import org.json.JSONObject
  * may run past ±180 so the grid stays continuous across the antimeridian). Each field is indexed
  * `field[hour][r * cols + c]`; [hours] holds the local "yyyy-MM-ddTHH:mm" stamp of each hour.
  * Pressure is mean sea-level in hPa, wind speed in km/h, wind direction in degrees the wind
- * blows *from*, rain in mm over the hour. A missing reading is NaN.
+ * blows *from*, rain in mm over the hour, temperature at 2 m in °C. A missing reading is NaN.
  */
 class WeatherGrid(
     val lats: List<Double>,
@@ -23,12 +23,16 @@ class WeatherGrid(
     val windSpeed: Array<FloatArray>,
     val windDir: Array<FloatArray>,
     val rain: Array<FloatArray>,
+    val temperature: Array<FloatArray> = Array(hours.size) { FloatArray(lats.size * lons.size) { Float.NaN } },
 ) {
     val rows: Int get() = lats.size
     val cols: Int get() = lons.size
 
     /** The pressure of [hour] as a contourable field. */
     fun pressureField(hour: Int): ScalarField = ScalarField(rows, cols, pressure[hour])
+
+    /** The temperature of [hour], for the heat map. */
+    fun temperatureField(hour: Int): ScalarField = ScalarField(rows, cols, temperature[hour])
 
     /**
      * Wind of [hour] as (east, north) component fields in km/h. Speed and direction are turned
@@ -86,7 +90,7 @@ object WeatherMapClient {
         }
         val url = "$FORECAST?latitude=${pointLats.joinToString(",") { "%.2f".format(Locale.ROOT, it) }}" +
             "&longitude=${pointLons.joinToString(",") { "%.2f".format(Locale.ROOT, it) }}" +
-            "&hourly=pressure_msl,wind_speed_10m,wind_direction_10m,precipitation" +
+            "&hourly=pressure_msl,wind_speed_10m,wind_direction_10m,precipitation,temperature_2m" +
             "&forecast_hours=$HOURS&timezone=auto"
         val res = runCatching { HttpJson.get(url) }.getOrNull() ?: return null
         if (res.code !in 200..299) return null
@@ -145,6 +149,7 @@ object WeatherMapClient {
             windDir = field("wind_direction_10m", 0f),
             // No reading means nothing to shade, so rain defaults to dry rather than a gap.
             rain = field("precipitation", 0f),
+            temperature = field("temperature_2m", Float.NaN),
         )
     }
 

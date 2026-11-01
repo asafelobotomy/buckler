@@ -20,7 +20,7 @@ object ScreensaverImages {
     private const val INDEX_TTL_MS = 3 * 24 * 3_600_000L
     private const val MAX_CACHED_FILES = 40
     private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
-    private val UA = mapOf(
+    val UA = mapOf(
         "User-Agent" to "buckler-home/${BuildConfig.VERSION_NAME} (https://github.com/${BuildConfig.GITHUB_REPO})",
     )
 
@@ -93,7 +93,12 @@ object ScreensaverImages {
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
-    fun parseCommons(body: String): List<CommonsImage> {
+    /**
+     * The images in a Commons search reply, shuffled. Only those at least [minWidth] wide whose
+     * shape is in [aspect] (width over height) are kept: landscape-ish by default, as portrait
+     * shots would be cropped to a sliver on a 16:9 screen.
+     */
+    fun parseCommons(body: String, minWidth: Int = 1400, aspect: ClosedFloatingPointRange<Double> = 1.3..2.1): List<CommonsImage> {
         val pages = HttpJson.parseObject(body)?.optJSONObject("query")?.optJSONObject("pages")
             ?: return emptyList()
         return pages.keys().asSequence().mapNotNull { key ->
@@ -102,8 +107,7 @@ object ScreensaverImages {
             val w = info.optInt("thumbwidth")
             val h = info.optInt("thumbheight")
             val url = info.optString("thumburl")
-            // Landscape-ish only: portrait shots would be cropped to a sliver on a 16:9 screen.
-            if (url.isBlank() || w < 1400 || h <= 0 || w.toDouble() / h !in 1.3..2.1) {
+            if (url.isBlank() || w < minWidth || h <= 0 || w.toDouble() / h !in aspect) {
                 return@mapNotNull null
             }
             CommonsImage(url, credit(page.optString("title"), info.optJSONObject("extmetadata")))

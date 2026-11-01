@@ -86,6 +86,7 @@ enum class SettingsPane(
     NOW_PLAYING("Now Playing & Lyrics", WIDGETS),
     MULTIVIEW("Multiview", WIDGETS),
     COMPANION("Companion", WIDGETS),
+    CURIOSITIES("Comics & correlations", WIDGETS),
     SCREENSAVER("Screensaver"),
     SAVER_CLOCK(ScreensaverMode.CLOCK.label, SCREENSAVER, ScreensaverMode.CLOCK),
     SAVER_DVD(ScreensaverMode.DVD.label, SCREENSAVER, ScreensaverMode.DVD),
@@ -96,6 +97,7 @@ enum class SettingsPane(
     SAVER_PIPES(ScreensaverMode.PIPES.label, SCREENSAVER, ScreensaverMode.PIPES),
     SAVER_MYSTIFY(ScreensaverMode.MYSTIFY.label, SCREENSAVER, ScreensaverMode.MYSTIFY),
     SAVER_STARFIELD(ScreensaverMode.STARFIELD.label, SCREENSAVER, ScreensaverMode.STARFIELD),
+    SAVER_WEATHER(ScreensaverMode.WEATHER.label, SCREENSAVER, ScreensaverMode.WEATHER),
     ACCESSIBILITY("Accessibility"),
     REMOTE("Remote & accessories"),
     NETWORK("Network"),
@@ -120,6 +122,7 @@ enum class SettingsPane(
             MainStage.GLANCE, MainStage.CALENDAR -> CALENDAR
             MainStage.MULTIVIEW -> MULTIVIEW
             MainStage.COMPANION -> COMPANION
+            MainStage.COMICS, MainStage.SPURIOUS -> CURIOSITIES
         }
     }
 }
@@ -147,11 +150,13 @@ fun SettingsPageContent(pane: SettingsPane) {
         SettingsPane.NOW_PLAYING -> NowPlayingPane()
         SettingsPane.MULTIVIEW -> MultiviewSettings()
         SettingsPane.COMPANION -> CompanionPane()
+        SettingsPane.CURIOSITIES -> CuriositiesPane()
         SettingsPane.ACCESSIBILITY -> AccessibilityPane()
         SettingsPane.SCREENSAVER -> ScreensaverPane()
         SettingsPane.SAVER_CLOCK, SettingsPane.SAVER_DVD, SettingsPane.SAVER_PHOTOS,
         SettingsPane.SAVER_UPLOADED, SettingsPane.SAVER_NOW_PLAYING, SettingsPane.SAVER_MAZE,
         SettingsPane.SAVER_PIPES, SettingsPane.SAVER_MYSTIFY, SettingsPane.SAVER_STARFIELD,
+        SettingsPane.SAVER_WEATHER,
         -> ScreensaverModePane(pane.saver ?: ScreensaverMode.CLOCK)
         SettingsPane.REMOTE -> RemotePane()
         SettingsPane.NETWORK -> NetworkPane()

@@ -44,6 +44,7 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
     private var driftY: ObjectAnimator? = null
     private var frameCallback: Choreographer.FrameCallback? = null
     private var nowPlaying: NowPlayingSaver? = null
+    private var weather: WeatherSaver? = null
 
     private val imageA = slideImage()
     private val imageB = slideImage()
@@ -73,6 +74,7 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
             ScreensaverMode.DVD -> startDvd()
             ScreensaverMode.PHOTOS, ScreensaverMode.UPLOADED -> startSlideshow()
             ScreensaverMode.NOW_PLAYING -> startNowPlaying()
+            ScreensaverMode.WEATHER -> startWeather()
             ScreensaverMode.MAZE -> startScene(
                 MazeScene(context, config.value(SaverOption.MAZE_SIZE), config.value(SaverOption.WALLS), config.speed),
             )
@@ -90,6 +92,8 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
         scope.cancel()
         nowPlaying?.stop()
         nowPlaying = null
+        weather?.stop()
+        weather = null
         driftX?.cancel()
         driftY?.cancel()
         frameCallback?.let { Choreographer.getInstance().removeFrameCallback(it) }
@@ -134,6 +138,17 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
         val saver = NowPlayingSaver(context, config)
         nowPlaying = saver
         addView(saver, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        saver.start()
+    }
+
+    private fun startWeather() {
+        val saver = WeatherSaver(context, config)
+        weather = saver
+        addView(saver, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        if (config.showClock) {
+            addView(overlayClock, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.END)
+                .apply { setMargins(0, 0, dp(40), dp(24)) })
+        }
         saver.start()
     }
 
@@ -255,7 +270,7 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
                     .map { ScreensaverImages.onlineIndex(context, it) },
             ).map { Slide.Remote(it) }
         ScreensaverMode.CLOCK, ScreensaverMode.DVD, ScreensaverMode.NOW_PLAYING, ScreensaverMode.MAZE,
-        ScreensaverMode.PIPES, ScreensaverMode.MYSTIFY, ScreensaverMode.STARFIELD,
+        ScreensaverMode.PIPES, ScreensaverMode.MYSTIFY, ScreensaverMode.STARFIELD, ScreensaverMode.WEATHER,
         -> emptyList()
     }
 

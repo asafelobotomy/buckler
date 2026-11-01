@@ -25,6 +25,7 @@ enum class SaverOption(val title: String, val choices: List<Pair<Int, String>>, 
     TRAIL("Trail", listOf(4 to "Short", 7 to "Medium", 12 to "Long"), 7),
     STARS("Stars", listOf(200 to "Fewer", 420 to "Normal", 800 to "More"), 420),
     STAR_COLOUR("Star colour", listOf(0 to "White", 1 to "Tinted"), 0),
+    WEATHER_SLIDES("Slides", listOf(0 to "Forecast and maps", 1 to "Forecast only", 2 to "Maps only"), 0),
     ;
 
     fun label(value: Int): String = choices.firstOrNull { it.first == value }?.second ?: "$value"
@@ -42,4 +43,5 @@ val ScreensaverMode.options: List<SaverOption>
         ScreensaverMode.PIPES -> listOf(SaverOption.SPEED, SaverOption.PIPES, SaverOption.CLOCK)
         ScreensaverMode.MYSTIFY -> listOf(SaverOption.SPEED, SaverOption.SHAPES, SaverOption.TRAIL, SaverOption.CLOCK)
         ScreensaverMode.STARFIELD -> listOf(SaverOption.SPEED, SaverOption.STARS, SaverOption.STAR_COLOUR, SaverOption.CLOCK)
+        ScreensaverMode.WEATHER -> listOf(SaverOption.WEATHER_SLIDES, SaverOption.INTERVAL, SaverOption.CLOCK)
     }

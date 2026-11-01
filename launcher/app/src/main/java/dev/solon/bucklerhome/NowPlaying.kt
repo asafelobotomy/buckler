@@ -69,7 +69,12 @@ object RecentMedia {
     /** Shown as paused: if it were still playing, its session would still be active. */
     fun recent(): NowPlayingInfo? {
         val (info, at) = last ?: return null
-        return info.copy(playing = false).takeIf { SystemClock.elapsedRealtime() - at <= MAX_AGE_MS }
+        if (SystemClock.elapsedRealtime() - at > MAX_AGE_MS) {
+            // Let go of its artwork (often a few MB) once it is too old to show.
+            last = null
+            return null
+        }
+        return info.copy(playing = false)
     }
 }
 

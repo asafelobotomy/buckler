@@ -56,10 +56,12 @@ fun WeatherStage(
                 )
                 forecast == null -> Text(text = "…", color = ColorMuted, fontSize = 15.sp)
                 else -> {
+                    // Re-read every 30 s, so an hour that has gone by since the fetch drops off.
+                    val hour = rememberNow().value.toLocalDateTime().withMinute(0).withSecond(0).withNano(0)
                     val days = span == WeatherSpan.DAYS
                     SlotRow(
                         title = if (days) "Next 10 days" else "Next hours",
-                        slots = if (days) forecast.days.take(10) else forecast.hours.take(8),
+                        slots = if (days) forecast.days.take(10) else forecast.hours.filter { it.at?.isBefore(hour) != true }.take(8),
                         fahrenheit = fahrenheit,
                         use24h = use24h,
                     )

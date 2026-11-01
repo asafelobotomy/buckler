@@ -36,10 +36,15 @@ object GlanceRules {
         events.firstOrNull { !it.allDay && !it.start.isAfter(now) && it.end.isAfter(now) }?.let {
             add(GlanceLine("●", "Now: ${it.title}, until ${clock.format(it.end)}", 0))
         }
-        events.firstOrNull { !it.allDay && it.start.isAfter(now) && Duration.between(now, it.start).toHours() < SOON_HOURS }?.let {
-            add(GlanceLine("◷", "${it.title} at ${clock.format(it.start)} · ${inTime(now, it.start)}", 1))
+        val soon = events.firstOrNull { !it.allDay && it.start.isAfter(now) && Duration.between(now, it.start).toHours() < SOON_HOURS }
+        soon?.let {
+            // Late in the evening the next hours run into tomorrow, which the line then says.
+            val day = if (it.start.toLocalDate() == today) "" else " tomorrow"
+            add(GlanceLine("◷", "${it.title}$day at ${clock.format(it.start)} · ${inTime(now, it.start)}", 1))
         }
-        events.filter { it.allDay && it.start.toLocalDate() == today }.take(2).forEach {
+        // An all-day event spans its days (its end is the day after its last), so a holiday that
+        // began yesterday still shows today.
+        events.filter { it.allDay && covers(it, today) }.take(2).forEach {
             add(GlanceLine("★", "Today: ${it.title}", 3))
         }
 
@@ -49,6 +54,7 @@ object GlanceRules {
             val names = due.take(2).joinToString(", ") { it.title } + if (due.size > 2) " and ${due.size - 2} more" else ""
             val head = when {
                 overdue > 0 && overdue == due.size -> if (due.size == 1) "Overdue" else "${due.size} overdue"
+                overdue > 0 -> "${due.size} reminders ($overdue overdue)"
                 due.size == 1 -> "Reminder"
                 else -> "${due.size} reminders today"
             }
@@ -61,7 +67,7 @@ object GlanceRules {
         // In the evening, what tomorrow starts with.
         if (now.hour >= 18) {
             val tomorrow = today.plusDays(1)
-            events.firstOrNull { it.start.toLocalDate() == tomorrow }?.let {
+            events.firstOrNull { it.start.toLocalDate() == tomorrow && it != soon }?.let {
                 val time = if (it.allDay) "" else " at ${clock.format(it.start)}"
                 add(GlanceLine("→", "Tomorrow: ${it.title}$time", 5))
             }
@@ -76,7 +82,9 @@ object GlanceRules {
         if (!wetNow) {
             ahead.firstOrNull { it.rainChance >= RAIN_LIKELY || isWet(it.code) }?.let { h ->
                 val what = if (h.code in 71..77 || h.code in 85..86) "Snow" else "Rain"
-                return GlanceLine("☂", "$what likely from ${clock.format(h.at)} (${h.rainChance}%)", 4)
+                // The hour under way has already begun, so it reads as "this hour", not its start.
+                val from = if (h.at.isAfter(now.toLocalDateTime())) "from ${clock.format(h.at)}" else "this hour"
+                return GlanceLine("☂", "$what likely $from (${h.rainChance}%)", 4)
             }
         } else {
             ahead.drop(1).firstOrNull { it.rainChance < RAIN_LIKELY && !isWet(it.code) }?.let { h ->
@@ -98,6 +106,13 @@ object GlanceRules {
             near(w?.sunrise) -> GlanceLine("☀", "Sunrise at ${clock.format(w!!.sunrise)}", 6)
             else -> null
         }
+    }
+
+    /** True when all-day [event] falls on [day]; its end is exclusive, the day after its last. */
+    fun covers(event: AgendaEvent, day: java.time.LocalDate): Boolean {
+        val first = event.start.toLocalDate()
+        val last = event.end.minusDays(1).toLocalDate().let { if (it.isBefore(first)) first else it }
+        return !day.isBefore(first) && !day.isAfter(last)
     }
 
     fun isWet(code: Int): Boolean = code in 51..67 || code in 71..77 || code in 80..86 || code in 95..99
