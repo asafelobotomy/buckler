@@ -5,12 +5,10 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -23,13 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -133,7 +128,7 @@ fun CachePane() {
     SettingsRow(
         "Files apps keep to start faster. Clearing a cache is safe: nothing you made or signed in to is lost. " +
             "Free cache space clears, over Network debugging, every cache Android lets go of: the part " +
-            "over each app's share. Each app's page below clears the rest of its own.",
+            "over each app's share. Each app's page below links to Android's, which clears the rest of its own.",
     )
     SettingsAction(status ?: "Free cache space") {
         if (status?.endsWith("…") == true) return@SettingsAction
@@ -151,7 +146,11 @@ fun CachePane() {
         }
     }
     Spacer(modifier = Modifier.height(12.dp))
-    AppStorageList(apps, empty = "No app holds more than ${StorageUse.size(context, CACHE_WORTH_BYTES)} of cache.") { app ->
+    AppStorageList(
+        apps,
+        empty = "No app holds more than ${StorageUse.size(context, CACHE_WORTH_BYTES)} of cache.",
+        value = { StorageUse.size(context, it.cacheBytes) },
+    ) { app ->
         "Cache ${StorageUse.size(context, app.cacheBytes)} · ${StorageUse.size(context, app.totalBytes)} in all"
     }
 }
@@ -169,7 +168,7 @@ fun LargestAppsPane() {
 
     SectionTitle("Largest apps")
     SettingsRow("The apps taking the most space: the app itself plus what it has saved, such as downloads and offline videos.")
-    AppStorageList(apps, empty = "No apps to show.") { app ->
+    AppStorageList(apps, empty = "No apps to show.", value = { StorageUse.size(context, it.totalBytes) }) { app ->
         "${StorageUse.size(context, app.totalBytes)}: app ${StorageUse.size(context, app.appBytes)}, " +
             "saved data ${StorageUse.size(context, app.dataBytes)}"
     }
@@ -177,7 +176,7 @@ fun LargestAppsPane() {
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalTvMaterial3Api::class)
 @Composable
-private fun AppStorageList(apps: List<AppStorage>?, empty: String, detail: (AppStorage) -> String) {
+private fun AppStorageList(apps: List<AppStorage>?, empty: String, value: (AppStorage) -> String, detail: (AppStorage) -> String) {
     val context = LocalContext.current
     when {
         !UnusedApps.hasAccess(context) -> {
@@ -189,17 +188,7 @@ private fun AppStorageList(apps: List<AppStorage>?, empty: String, detail: (AppS
         else -> {
             Spacer(modifier = Modifier.height(10.dp))
             apps.forEach { app ->
-                Column(modifier = Modifier.padding(bottom = 14.dp)) {
-                    Text(text = app.label, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = ColorText)
-                    SettingsRow(detail(app))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SettingsAction("App info (Clear cache)") { openAppInfo(context, app.packageName) }
-                        // Read with the sizes, off the main thread: system apps cannot be uninstalled.
-                        if (!app.system && app.packageName != context.packageName) {
-                            SettingsAction("Uninstall") { uninstallPackage(context, app.packageName) }
-                        }
-                    }
-                }
+                SettingsLink(app.label, value = value(app)) { AppPage(app.packageName, detail(app)) }
             }
         }
     }

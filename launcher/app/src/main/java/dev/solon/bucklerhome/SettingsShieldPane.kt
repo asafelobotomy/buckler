@@ -19,16 +19,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Runs one SHIELD step at a time over Buckler's own adb link ([AdbSelf], [ShieldOps]), saying what happens. */
-private class ShieldRunner(private val context: Context, private val scope: CoroutineScope) {
+class ShieldRunner(private val context: Context, private val scope: CoroutineScope) {
     var status by mutableStateOf("Not connected yet.")
     var busy by mutableStateOf(false)
     var connected by mutableStateOf(false)
     var journal by mutableIntStateOf(ShieldJournal.all(context).size)
 
+    /** Whether anything has run yet, so a page shows [status] only once it says something. */
+    var used by mutableStateOf(false)
+
     /** Runs [work] over a fresh connection off the main thread. */
     fun run(label: String, work: (ShieldOps) -> String) {
         if (busy) return
         busy = true
+        used = true
         status = "$label…"
         scope.launch {
             status = withContext(Dispatchers.IO) {
@@ -48,7 +52,7 @@ private class ShieldRunner(private val context: Context, private val scope: Coro
 }
 
 @Composable
-private fun rememberShieldRunner(): ShieldRunner {
+fun rememberShieldRunner(): ShieldRunner {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     return remember { ShieldRunner(context, scope) }
@@ -69,6 +73,8 @@ fun ShieldPane() {
     DateTimeSection()
     Spacer(modifier = Modifier.height(18.dp))
     KeyboardSection()
+    Spacer(modifier = Modifier.height(18.dp))
+    PowerSection(runner)
     Spacer(modifier = Modifier.height(18.dp))
     PickerTitle("Setup")
     SettingsRow("The setup wizard walks through Buckler's look and, on a SHIELD, its clean-up, showing every change before making it.")

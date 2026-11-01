@@ -1,7 +1,6 @@
 package dev.solon.bucklerhome
 
 import android.provider.Settings
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -9,10 +8,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -27,8 +22,6 @@ import androidx.compose.ui.unit.dp
 fun AccessibilityPane() {
     val context = LocalContext.current
     val a11y = AppearanceStore.config
-    var tick by remember { mutableIntStateOf(0) }
-    val mono = remember(tick) { SystemSettings.monoAudio(context) }
     val flow = Arrangement.spacedBy(12.dp)
 
     fun update(transform: (AppearanceConfig) -> AppearanceConfig) = AppearanceStore.update(context, transform)
@@ -61,13 +54,15 @@ fun AccessibilityPane() {
         PickerTitle("Whole TV")
         GrantNote()
         SystemToggle("High contrast text", SystemKeys.HIGH_TEXT_CONTRAST)
-        SettingsToggle("Mono audio", mono) {
-            if (SystemSettings.setMonoAudio(context, !mono)) {
-                tick++
-            } else {
-                Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
-            }
-        }
+        // Both are Android's private keys, so they are written over Network debugging.
+        SystemToggle("Mono audio", SystemKeys.MONO_AUDIO)
+        SystemChoice(
+            "Text size",
+            SystemKeys.FONT_SCALE,
+            listOf("0.85" to "Small", "1.0" to "Normal", "1.15" to "Large", "1.3" to "Largest"),
+            note = "For Android's screens and other apps, which restart to take it (one playing stops). Text size above is Buckler's own.",
+            other = { "${it}×" },
+        )
         SystemChoice(
             "Speech rate",
             SystemKeys.TTS_RATE,

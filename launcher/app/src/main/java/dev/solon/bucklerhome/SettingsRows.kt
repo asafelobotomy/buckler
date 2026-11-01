@@ -1,5 +1,7 @@
 package dev.solon.bucklerhome
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -9,10 +11,14 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * How a page in the Settings panel opens more of itself: a list of its own (a choice, a remote
@@ -115,7 +121,7 @@ fun <T> SettingsChoice(
 
 /** The list a [SettingsChoice] opens, with focus on the current choice. */
 @Composable
-private fun <T> ChoiceList(options: List<T>, current: T, optionLabel: (T) -> String, note: String?, onPick: (T) -> Unit) {
+fun <T> ChoiceList(options: List<T>, current: T?, optionLabel: (T) -> String, note: String?, onPick: (T) -> Unit) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         delay(80)
@@ -145,13 +151,15 @@ private fun sameValue(a: String, b: String): Boolean {
 @Composable
 fun SystemToggle(label: String, key: SystemKey, onChanged: (Boolean) -> Unit = {}) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val write = rememberSettingWriter()
     var on by remember { mutableStateOf(SystemSettings.get(context, key) == "1") }
     SettingsToggle(label, on) {
-        if (SystemSettings.put(context, key, if (on) "0" else "1")) {
-            on = !on
-            onChanged(on)
-        } else {
-            SystemSettings.explainGrant(context)
+        val next = !on
+        write(key, if (next) "1" else "0") { took ->
+            if (took) {
+                on = next
+                onChanged(next)
+            }
         }
     }
 }
@@ -170,11 +178,12 @@ fun SystemChoice(
     other: (String) -> String = { it },
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val write = rememberSettingWriter()
     var value by remember { mutableStateOf(SystemSettings.get(context, key)) }
     val current = options.firstOrNull { sameValue(it.first, value) } ?: (value to other(value))
     val shown = if (current in options) options else options + current
     SettingsChoice(label, shown, current, { it.second }, note) { (picked, _) ->
-        if ((listOf(key) + also).all { SystemSettings.put(context, it, picked) }) value = picked else SystemSettings.explainGrant(context)
+        (listOf(key) + also).forEach { k -> write(k, picked) { took -> if (took && k == key) value = picked } }
     }
 }
 
@@ -183,4 +192,38 @@ fun SystemChoice(
 fun GrantNote(table: SettingsTable = SettingsTable.SECURE) {
     val context = androidx.compose.ui.platform.LocalContext.current
     if (!SystemSettings.canWrite(context, table)) SettingsRow("Read-only until ${SystemSettings.GRANT_COMMAND} is run from a computer.")
+}
+
+/**
+ * Runs [command] over Buckler's own adb link (Network debugging), off the main thread. Says why
+ * on screen when it cannot connect; returns whether the command succeeded.
+ */
+suspend fun runOverAdb(context: Context, command: String): Boolean {
+    val result = withContext(Dispatchers.IO) { runCatching { AdbSelf.connect(context).use { it.shell(command).ok } } }
+    result.exceptionOrNull()?.let { Toast.makeText(context, AdbSelf.explain(it), Toast.LENGTH_LONG).show() }
+    return result.getOrDefault(false)
+}
+
+/**
+ * Writes [key] to [value], straight or, for an [SystemKey.overAdb] key Android refuses, over adb;
+ * [done] gets whether it took.
+ */
+@Composable
+fun rememberSettingWriter(): (key: SystemKey, value: String, done: (Boolean) -> Unit) -> Unit {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    return remember {
+        { key, value, done ->
+            when {
+                SystemSettings.put(context, key, value) -> done(true)
+                !key.overAdb -> {
+                    SystemSettings.explainGrant(context)
+                    done(false)
+                }
+                else -> scope.launch {
+                    done(runOverAdb(context, "settings put ${key.shellTable} ${key.name} $value") && SystemSettings.get(context, key) == value)
+                }
+            }
+        }
+    }
 }

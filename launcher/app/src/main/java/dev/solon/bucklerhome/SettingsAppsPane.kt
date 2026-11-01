@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -15,18 +14,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Settings → Apps & storage → Unused apps: apps not opened for a while, busiest in the background first, each with a way
- * to remove it. Your own apps uninstall; stock apps open Android's app page, where Disable is
- * (Buckler cannot disable apps itself; `buckler unused --apply` does it from a computer).
+ * Settings → Apps & storage → Unused apps: apps not opened for a while, busiest in the background
+ * first, each opening its [AppPage] to uninstall it, turn it off, or keep it.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalTvMaterial3Api::class)
 @Composable
@@ -80,28 +75,22 @@ fun AppsPane() {
         when {
             list == null -> SettingsRow("Checking…")
             list.isEmpty() -> SettingsRow("Every app has been opened in the last $days days.")
-            else -> list.forEach { app -> UnusedAppRow(app) { changed++ } }
+            else -> list.forEach { app -> UnusedAppRow(app) }
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalTvMaterial3Api::class)
 @Composable
-private fun UnusedAppRow(app: AppUsage, onChanged: () -> Unit) {
+private fun UnusedAppRow(app: AppUsage) {
     val context = LocalContext.current
-    Column(modifier = Modifier.padding(bottom = 14.dp)) {
-        Text(text = app.label, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = ColorText)
-        val detail = listOfNotNull(UnusedApps.describeLastUse(app), UnusedApps.describeBackground(app))
-        SettingsRow(detail.joinToString(" · "))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (canUninstallPackage(context, app.packageName)) {
-                SettingsAction("Uninstall") { uninstallPackage(context, app.packageName) }
-            } else {
-                SettingsAction("App info (Disable)") { openAppInfo(context, app.packageName) }
-            }
-            SettingsAction("Keep") {
+    val detail = listOfNotNull(UnusedApps.describeLastUse(app), UnusedApps.describeBackground(app)).joinToString(" · ")
+    SettingsLink(app.label) {
+        val nav = LocalPanelNav.current
+        AppPage(app.packageName, detail) {
+            SettingsAction("Keep (leave off this list)") {
                 UnusedApps.keep(context, app.packageName)
-                onChanged()
+                nav?.back()
             }
         }
     }

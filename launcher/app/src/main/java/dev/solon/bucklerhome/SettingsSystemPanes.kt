@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import java.util.TimeZone
 
 /**
  * Settings → Network: Private DNS for the whole TV (the setup wizard's choices), then Android's own
@@ -102,8 +103,9 @@ fun DateTimeSection() {
     PickerTitle("Date & time")
     SystemToggle("Automatic date & time", SystemKeys.AUTO_TIME)
     SystemToggle("Automatic time zone", SystemKeys.AUTO_TIME_ZONE)
+    TimeZoneLink()
     ClockChoice()
-    SystemScreenLink("Time zone and more", SystemScreen.DATE_TIME)
+    SystemScreenLink("Date & time in Android", SystemScreen.DATE_TIME)
 }
 
 /** Device → Global's keyboard: which one types, which are on, and the autofill service. */
@@ -194,3 +196,74 @@ val SleepChoices = listOf(
     "86400000" to "24 hours",
     "-1" to "Never",
 )
+
+/** Device → Global's power rows, over Network debugging: sleep now, and restart (pressed twice). */
+@Composable
+fun PowerSection(runner: ShieldRunner) {
+    var armed by remember { mutableStateOf(false) }
+    PickerTitle("Power")
+    SettingsAction("Sleep") { runner.run("Going to sleep") { ops -> if (ops.sleep()) "Asleep." else "Could not sleep." } }
+    SettingsAction(if (armed) "Press again to restart" else "Restart") {
+        if (!armed) {
+            armed = true
+            return@SettingsAction
+        }
+        armed = false
+        runner.run("Restarting") { ops ->
+            ops.restart()
+            "Restarting…"
+        }
+    }
+    if (runner.used) SettingsRow(runner.status)
+}
+
+/** Time zone regions, in Android's own IDs (Europe/Berlin); Etc and the old aliases are left out. */
+private val ZoneRegions = listOf("Africa", "America", "Antarctica", "Asia", "Atlantic", "Australia", "Europe", "Indian", "Pacific")
+
+private fun zoneLabel(id: String) = id.substringAfter('/').replace('_', ' ')
+
+/** Device → Global's time zone row: the zone now, opening its region list. */
+@Composable
+fun TimeZoneLink() {
+    val zone = remember { TimeZone.getDefault().id }
+    // Set through an Android 11 call; elsewhere Android's own screen does it.
+    if (android.os.Build.VERSION.SDK_INT != android.os.Build.VERSION_CODES.R) return
+    SettingsLink("Time zone", value = zoneLabel(zone)) { TimeZoneRegions() }
+}
+
+@Composable
+private fun TimeZoneRegions() {
+    val context = LocalContext.current
+    val current = remember { TimeZone.getDefault().id }
+    val zones = remember {
+        TimeZone.getAvailableIDs().filter { '/' in it && it.substringBefore('/') in ZoneRegions }.sorted().groupBy { it.substringBefore('/') }
+    }
+    if (SystemSettings.get(context, SystemKeys.AUTO_TIME_ZONE) == "1") {
+        SettingsRow("Automatic time zone is on. Choosing one here turns it off.")
+    }
+    SettingsRow("Set over Network debugging.")
+    zones.forEach { (region, ids) ->
+        SettingsLink(region, value = zoneLabel(current).takeIf { current in ids }) { TimeZoneList(ids, current) }
+    }
+}
+
+/** One region's zones; choosing one sets it and comes back to the regions. */
+@Composable
+private fun TimeZoneList(ids: List<String>, current: String) {
+    val context = LocalContext.current
+    val runner = rememberShieldRunner()
+    val nav = LocalPanelNav.current
+    if (runner.used) SettingsRow(runner.status)
+    ChoiceList(ids, current.takeIf { it in ids }, ::zoneLabel, note = null) { zone ->
+        // A zone chosen by hand is ignored while the network's is in use.
+        SystemSettings.put(context, SystemKeys.AUTO_TIME_ZONE, "0")
+        runner.run("Setting the time zone") { ops ->
+            if (ops.setTimeZone(zone)) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post { nav?.back() }
+                "Time zone: ${zoneLabel(zone)}."
+            } else {
+                "Could not set the time zone."
+            }
+        }
+    }
+}

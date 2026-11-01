@@ -15,7 +15,6 @@ object SystemSettings {
     const val GRANT_COMMAND = "buckler launcher grant-settings"
 
     /** Hidden-API key names; stable since Android 5 but not exposed as constants. */
-    private const val KEY_MONO = "master_mono"
     private const val KEY_SCREENSAVER_ENABLED = "screensaver_enabled"
 
     /** Longest screen-off timeout is "never"; Android stores it as the max int. */
@@ -39,13 +38,6 @@ object SystemSettings {
 
     fun setScreensaverEnabled(context: Context, enabled: Boolean): Boolean = canWriteSecure(context) &&
         runCatching { Settings.Secure.putInt(context.contentResolver, KEY_SCREENSAVER_ENABLED, if (enabled) 1 else 0) }
-            .getOrDefault(false)
-
-    fun monoAudio(context: Context): Boolean =
-        Settings.System.getInt(context.contentResolver, KEY_MONO, 0) == 1
-
-    fun setMonoAudio(context: Context, on: Boolean): Boolean = canWriteSystem(context) &&
-        runCatching { Settings.System.putInt(context.contentResolver, KEY_MONO, if (on) 1 else 0) }
             .getOrDefault(false)
 
     fun canWrite(context: Context, table: SettingsTable): Boolean =
@@ -83,8 +75,14 @@ object SystemSettings {
 /** Android's three settings tables: System needs the WRITE_SETTINGS app-op, the others WRITE_SECURE_SETTINGS. */
 enum class SettingsTable { SYSTEM, SECURE, GLOBAL }
 
-/** One of Android's whole-TV settings: its table, its key, and the value Android uses while it is unset. */
-data class SystemKey(val table: SettingsTable, val name: String, val default: String)
+/**
+ * One of Android's whole-TV settings: its table, its key, and the value Android uses while it is
+ * unset. Android refuses apps its private System keys whatever they hold; [overAdb] ones are then
+ * written over Buckler's own adb link, as the shell user may.
+ */
+data class SystemKey(val table: SettingsTable, val name: String, val default: String, val overAdb: Boolean = false) {
+    val shellTable: String get() = table.name.lowercase()
+}
 
 /** The whole-TV settings Buckler Settings shows as its own rows. */
 object SystemKeys {
@@ -92,6 +90,9 @@ object SystemKeys {
     val AUTO_TIME_ZONE = SystemKey(SettingsTable.GLOBAL, Settings.Global.AUTO_TIME_ZONE, "1")
     /** "12", "24", or unset to follow the language. */
     val TIME_12_24 = SystemKey(SettingsTable.SYSTEM, Settings.System.TIME_12_24, "")
+    val MONO_AUDIO = SystemKey(SettingsTable.SYSTEM, "master_mono", "0", overAdb = true)
+    /** Text size for every app, 1.0 being normal. */
+    val FONT_SCALE = SystemKey(SettingsTable.SYSTEM, Settings.System.FONT_SCALE, "1.0", overAdb = true)
     val SOUND_EFFECTS = SystemKey(SettingsTable.SYSTEM, Settings.System.SOUND_EFFECTS_ENABLED, "1")
     val AWAKE_ON_MUSIC = SystemKey(SettingsTable.SECURE, "awake_on_music", "1")
     /** Milliseconds from the last button press until the TV sleeps; -1 is never. */

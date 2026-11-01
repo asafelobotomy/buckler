@@ -154,6 +154,39 @@ class ShieldOps(private val context: Context, private val adb: AdbSelf) {
         }.onEach { ShieldJournal.remove(context, it) }
     }
 
+    /**
+     * Whether Settings may stop, clear or turn off [pkg]: never Buckler (that would end this very
+     * process, and the Remote buttons with it) nor what the never list keeps (Android needs those).
+     */
+    fun mayChange(pkg: String): Boolean = isPackageName(pkg) && pkg != context.packageName && pkg !in data.never
+
+    fun forceStop(pkg: String): Boolean = mayChange(pkg) && adb.shell("am force-stop $pkg").ok
+
+    /** Deletes everything [pkg] has saved: sign-ins, settings, downloads. */
+    fun clearData(pkg: String): Boolean = mayChange(pkg) && adb.shell("pm clear $pkg").ok
+
+    /** Turns [pkg] back on, and forgets any journal entry for it. */
+    fun turnOn(pkg: String): Boolean = isPackageName(pkg) && adb.shell("pm enable $pkg").ok.also { if (it) ShieldJournal.remove(context, pkg) }
+
+    /** Puts the TV to sleep, as the remote's power button does. */
+    fun sleep(): Boolean = adb.shell("input keyevent KEYCODE_SLEEP").ok
+
+    /** Restarts the TV; the link drops as it goes, so the reply may never come. */
+    fun restart() {
+        adb.shell("svc power reboot")
+    }
+
+    /**
+     * Sets the time zone by hand ([zone] is an Olson ID such as Europe/Berlin). The shell may set it
+     * (SET_TIME_ZONE) but not suggest one (time_zone_detector wants a permission it lacks), so this
+     * calls AlarmManager's setTimeZone, transaction 3 on Android 11 only; checked by reading it back.
+     */
+    fun setTimeZone(zone: String): Boolean {
+        if (!ZONE.matches(zone) || android.os.Build.VERSION.SDK_INT != android.os.Build.VERSION_CODES.R) return false
+        adb.shell("service call alarm 3 s16 $zone")
+        return adb.shell("getprop persist.sys.timezone").output.trim() == zone
+    }
+
     /** Packages currently disabled for the TV's user. */
     fun disabledPackages(): Set<String> = packageSet("pm list packages -d")
 
@@ -192,6 +225,8 @@ class ShieldOps(private val context: Context, private val adb: AdbSelf) {
 
         /** Only well-formed package names ever reach a shell command. */
         fun isPackageName(value: String): Boolean = PACKAGE.matches(value)
+
+        private val ZONE = Regex("[A-Za-z]+(/[A-Za-z0-9_+-]+)+")
     }
 }
 
