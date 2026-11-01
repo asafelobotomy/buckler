@@ -124,7 +124,8 @@ python scripts/check_loc.py                 # every source file <= 400 lines
 
 For a TV used day to day, install the **optimized** build rather than debug: it is the release
 build (shrunk, optimised, not debuggable; about 8.7 MB against 50 MB) signed with this machine's
-debug key, so it installs over a debug install without losing settings. On SHIELD it holds about
+debug key, so it installs over a debug install without losing settings (and, being debug-signed,
+is never offered GitHub updates: update it from this machine). On SHIELD it holds about
 40% less memory. It stays profileable, so CPU and frames can still be measured; use the debug
 build when you need `run-as` or a debugger.
 

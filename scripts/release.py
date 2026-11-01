@@ -33,8 +33,22 @@ ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER = ROOT / "launcher"
 OUT = ROOT / "dist" / "release"
 REPO = "asafelobotomy/buckler"
-# SHA-256 of the release signing certificate (alias "buckler", made 2026-10-29).
-RELEASE_CERT = "ed2c0df423e5428f219484e887b5187d30c9714aeac6bb19e9d106745b9f87c8"
+
+
+def release_cert() -> str:
+    """SHA-256 of the release signing certificate (alias "buckler", made 2026-10-29).
+
+    Read from the launcher's build, which also uses it to offer GitHub updates only to installs
+    signed with this key, so the two can't drift apart.
+    """
+    gradle = (LAUNCHER / "app" / "build.gradle.kts").read_text(encoding="utf-8")
+    match = re.search(r'releaseCertSha256\s*=\s*"([0-9a-f]{64})"', gradle)
+    if not match:
+        sys.exit("releaseCertSha256 not found in launcher/app/build.gradle.kts")
+    return match.group(1)
+
+
+RELEASE_CERT = release_cert()
 
 
 def run(*cmd: str | Path, cwd: Path = ROOT, capture: bool = False) -> str:

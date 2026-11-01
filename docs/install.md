@@ -72,7 +72,9 @@ and Settings → Setup lists them with **Turn them off again** (Network debuggin
 ## Updates
 
 Settings → Updates in Buckler checks GitHub for a newer release and installs it. An update must
-be signed with the same key as the installed app; Android refuses any other.
+be signed with the same key as the installed app; Android refuses any other. A Buckler you built
+yourself (signed with your computer's debug key) is never offered GitHub updates: update it from
+the computer you built it on instead.
 
 ## Safety
 
