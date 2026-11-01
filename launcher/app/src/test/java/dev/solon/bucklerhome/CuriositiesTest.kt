@@ -69,4 +69,21 @@ class CuriositiesTest {
         assertEquals(TickerStyle.SINGLE, TickerStyle.fromName("SINGLE"))
         assertEquals(TickerStyle.SCROLL, DisplayConfig().tickerStyle)
     }
+
+    @Test
+    fun aStripsPaperIsTheMedianOfItsEdge() {
+        val paper = 0xFFE8DCC0.toInt()
+        val ink = 0xFF000000.toInt()
+        // 8 x 4 of paper, with a black panel border along part of the top edge and ink inside.
+        val pixels = IntArray(32) { paper }
+        for (x in 2..5) pixels[x] = ink
+        for (i in listOf(10, 11, 12, 13, 18, 19, 20, 21)) pixels[i] = ink
+        assertEquals(paper, ComicStrips.edgeColour(pixels, 8, 4, ring = 1))
+        // Greyed blocks along the edge (ink averaged in) fall below the paper, not into it.
+        val grey = 0xFFB0B0B0.toInt()
+        for (i in listOf(0, 1, 6, 7, 8, 15, 16, 23)) pixels[i] = grey
+        assertEquals(paper, ComicStrips.edgeColour(pixels, 8, 4, ring = 1))
+        // A strip photographed on black cloth: its edge is dark, and so is the card.
+        assertEquals(ink, ComicStrips.edgeColour(IntArray(32) { ink }, 8, 4, ring = 1))
+    }
 }

@@ -1,6 +1,8 @@
 package dev.solon.bucklerhome
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -118,6 +120,12 @@ fun ComicsStage(stageFocus: FocusRequester, onDown: () -> Unit, onHold: () -> Un
             withContext(Dispatchers.IO) { ScreensaverImages.download(context, next) }
         }
     }
+    // The card takes the strip's paper colour, so the strip sits on it without a visible edge.
+    val paper by produceState<Color?>(null, file) {
+        val shown = file ?: return@produceState
+        value = withContext(Dispatchers.IO) { ComicStrips.paperColour(shown) }?.let(::Color)
+    }
+    val cardColour by animateColorAsState(paper ?: ColorTile, animationSpec = tween(600), label = "paper")
     // Always a note line, so the stage keeps its height while the first strip loads.
     val note = strip?.credit?.let { if (strips.size > 1) "$it  ◀ ▶" else it } ?: "Public-domain newspaper strips"
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -130,7 +138,7 @@ fun ComicsStage(stageFocus: FocusRequester, onDown: () -> Unit, onHold: () -> Un
                 .fillMaxWidth()
                 .height(metrics.cardHeight)
                 .clip(RoundedCornerShape(12.dp))
-                .background(ColorTile),
+                .background(cardColour),
         ) {
             val shown = file
             when {
