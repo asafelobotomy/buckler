@@ -1,4 +1,4 @@
-# Icon packs for Settings → Appearance → App Thumbnails, installed with
+# Icon packs for Settings → Appearance → Icons & artwork, installed with
 # `buckler launcher iconpack install ID`. Phone icon packs are not in the TV's Play Store.
 # Each maps apps to icons by package name; Buckler reads any installed pack, these are just the open ones.
 entries:

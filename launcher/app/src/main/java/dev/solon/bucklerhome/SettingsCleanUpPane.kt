@@ -60,8 +60,8 @@ fun openAppInfo(context: Context, packageName: String) {
 }
 
 /**
- * Settings → Clean up (Global): how full the TV is, where the space goes, and Buckler's own cache.
- * The pages beside it go app by app: Apps (unused), Cache, Largest apps.
+ * Settings → Apps & storage (Overview): how full the TV is, where the space goes, and Buckler's own
+ * cache. The pages beside it go app by app: Unused apps, Cache, Largest apps.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -82,7 +82,7 @@ fun CleanUpPane() {
     }
     val flow = Arrangement.spacedBy(12.dp)
 
-    SectionTitle("Clean up")
+    SectionTitle("Apps & storage")
     SettingsRow("${StorageUse.size(context, free)} free of ${StorageUse.size(context, total)}.")
     val list = apps
     when {
@@ -91,15 +91,12 @@ fun CleanUpPane() {
         list == null -> SettingsRow("Adding up…")
         else -> SettingsRow(
             "Apps take ${StorageUse.size(context, list.sumOf { it.totalBytes })}, of which " +
-                "${StorageUse.size(context, list.sumOf { it.cacheBytes })} is cache they can rebuild. Apps, Cache " +
-                "and Largest apps, in the Clean up list, go through them one by one.",
+                "${StorageUse.size(context, list.sumOf { it.cacheBytes })} is cache they can rebuild. Unused apps, " +
+                "Cache and Largest apps go through them one by one.",
         )
     }
-    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        SettingsAction("Android's storage settings") {
-            SystemScreen.STORAGE.open(context)
-        }
-    }
+    SystemScreenLink("Android's storage settings", SystemScreen.STORAGE)
+    SystemScreenLink("Android's apps", SystemScreen.APPS)
 
     Spacer(modifier = Modifier.height(24.dp))
     SectionTitle("Buckler")
@@ -118,7 +115,7 @@ fun CleanUpPane() {
     }
 }
 
-/** Settings → Clean up → Cache: apps by cache size, each opening its page where Clear cache is. */
+/** Settings → Apps & storage → Cache: apps by cache size, each opening its page where Clear cache is. */
 @Composable
 fun CachePane() {
     val context = LocalContext.current
@@ -159,7 +156,7 @@ fun CachePane() {
     }
 }
 
-/** Settings → Clean up → Largest apps: the apps taking the most space, to uninstall or clear. */
+/** Settings → Apps & storage → Largest apps: the apps taking the most space, to uninstall or clear. */
 @Composable
 fun LargestAppsPane() {
     val context = LocalContext.current

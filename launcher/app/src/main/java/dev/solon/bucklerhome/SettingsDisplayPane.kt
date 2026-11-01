@@ -1,9 +1,6 @@
 package dev.solon.bucklerhome
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -14,152 +11,87 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import java.time.LocalDate
-import java.time.LocalTime
 
 /**
- * Settings → Appearance → Header: the row at the top of Home. What it shows, its size and clock,
- * then a section for each widget in it that is on: Weather, the News ticker, and the Side Stage
- * (the mini stage in the middle, where Now Playing appears). Hidden pieces take their options with them.
+ * Settings → Appearance → Header: the row at the top of Home. Whether it shows, what is in it, its
+ * size, and the Side Stage (the mini stage in the middle, where Now Playing appears). Each widget's
+ * own options are its page under Widgets, linked from here.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HeaderPane() {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
     val cfg = remember(tick) { DisplayPrefs.load(context) }
     val stage = remember(tick) { HomeLayout.stored(context).mainStage }
-    val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle("Header")
     SettingsRow(
         if (cfg.headerVisible) {
-            "The row at the top of Home. ● = shown."
+            "The row at the top of Home."
         } else {
             "Header off: Home shows the Main Stage and shelves, with a Home options card at the end for Settings."
         },
     )
-    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        SettingsAction("Header: ${if (cfg.headerVisible) "On" else "Off"}") {
-            DisplayPrefs.setHeaderVisible(context, !cfg.headerVisible)
-            tick++
-        }
-    }
-
-    if (cfg.headerVisible) {
-        Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("Shows")
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            HeaderElement.entries.forEach { element ->
-                SettingsAction(element.label, selected = element !in cfg.hidden) {
-                    if (element !in cfg.hidden && !canHideHeaderElement(element, cfg.hidden)) {
-                        Toast.makeText(context, "Keep Edit Home or Settings in the header", Toast.LENGTH_SHORT).show()
-                        return@SettingsAction
-                    }
-                    val hidden = if (element in cfg.hidden) cfg.hidden - element else cfg.hidden + element
-                    DisplayPrefs.setHidden(context, hidden)
-                    tick++
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("Size")
-        SettingsRow("Logo, clock, icons and the Side Stage scale together.")
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            HeaderSize.entries.forEach { size ->
-                SettingsAction(size.label, selected = size == cfg.headerSize) {
-                    DisplayPrefs.setHeaderSize(context, size)
-                    tick++
-                }
-            }
-        }
-    }
-
-    // The 12/24-hour choice also drives the screensaver clock and weather times, so it stays.
-    val showsClock = cfg.shows(HeaderElement.CLOCK)
-    val showsDate = cfg.shows(HeaderElement.DATE)
-    Spacer(modifier = Modifier.height(18.dp))
-    PickerTitle(if (showsDate) "Time and date" else "Time")
-    SettingsRow(
-        listOfNotNull(
-            DisplayFormat.time(LocalTime.now(), cfg.use24h).takeIf { showsClock || !cfg.headerVisible },
-            DisplayFormat.date(LocalDate.now(), cfg.dateStyle).takeIf { showsDate },
-        ).joinToString("  ·  ").ifEmpty { "Used by the screensaver clock and weather times." },
-    )
-    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        SettingsAction("Clock: ${if (cfg.use24h) "24-hour" else "12-hour"}") {
-            DisplayPrefs.setUse24h(context, !cfg.use24h)
-            tick++
-        }
-        if (showsDate) {
-            SettingsAction("Date: ${DisplayFormat.date(LocalDate.now(), cfg.dateStyle)}") {
-                DisplayPrefs.setDateStyle(context, cfg.dateStyle.next())
-                tick++
-            }
-        }
+    SettingsToggle("Header", cfg.headerVisible) {
+        DisplayPrefs.setHeaderVisible(context, !cfg.headerVisible)
+        tick++
     }
     if (!cfg.headerVisible) return
 
-    if (cfg.shows(HeaderElement.WEATHER)) {
-        Spacer(modifier = Modifier.height(24.dp))
-        SectionTitle("Weather")
-        WeatherSection(HomeSection.HEADER, cfg, onChanged = { tick++ })
+    val shown = HeaderElement.entries.count { it !in cfg.hidden }
+    SettingsLink("Shows", value = "$shown of ${HeaderElement.entries.size}") { HeaderShowsList() }
+    SettingsChoice(
+        "Size",
+        HeaderSize.entries,
+        cfg.headerSize,
+        { it.label },
+        note = "Logo, clock, icons and the Side Stage scale together.",
+    ) {
+        DisplayPrefs.setHeaderSize(context, it)
+        tick++
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
-    SectionTitle("News ticker")
-    SettingsRow("A dim line of headlines under the header. No sources turns it off.")
-    if (cfg.showsNews) {
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            TickerSpeed.entries.forEach { speed ->
-                SettingsAction(speed.label, selected = speed == cfg.tickerSpeed) {
-                    DisplayPrefs.setTickerSpeed(context, speed)
-                    tick++
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-    }
-    NewsSection(HomeSection.HEADER, cfg, onChanged = { tick++ })
-
-    Spacer(modifier = Modifier.height(24.dp))
-    SectionTitle("Side Stage")
-    SettingsRow(
-        "The mini stage in the middle of the header. It shows what is playing, with previous, play/pause and " +
-            "next, while something plays.",
-    )
-    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        SettingsAction("Now Playing", selected = cfg.nowPlaying) {
-            DisplayPrefs.setNowPlaying(context, !cfg.nowPlaying)
-            tick++
-        }
-        // Long song, artist and album lines scroll sideways; off, they are cut short.
-        if (cfg.nowPlaying) ScrollTitlesToggle(cfg.scrollTitles) { tick++ }
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("Side Stage")
+    SettingsRow("The mini stage in the middle of the header: what is playing, with its controls, while something plays.")
+    SettingsToggle("Now Playing", cfg.nowPlaying) {
+        DisplayPrefs.setNowPlaying(context, !cfg.nowPlaying)
+        tick++
     }
     if (stage == MainStage.NOW_PLAYING && cfg.nowPlaying) {
         SettingsRow("Hidden while the Main Stage shows Now Playing, so it is not on screen twice.")
     }
-    if (cfg.nowPlaying) MediaAccessSection()
-    Spacer(modifier = Modifier.height(14.dp))
-    PickerTitle("While nothing plays")
-    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        SideIdle.entries.forEach { idle ->
-            SettingsAction(idle.label, selected = idle == cfg.sideIdle) {
-                StagePrefs.setSideIdle(context, idle)
-                tick++
-            }
-        }
+    SettingsChoice("While nothing plays", SideIdle.entries, cfg.sideIdle, { it.label }) {
+        StagePrefs.setSideIdle(context, it)
+        tick++
     }
+
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("Widgets in the header")
+    if (cfg.shows(HeaderElement.WEATHER)) SettingsPaneLink("Weather", SettingsPane.WEATHER, value = cfg.place?.name ?: "No city")
+    SettingsPaneLink("News ticker", SettingsPane.NEWS, value = if (cfg.showsNews) "${cfg.newsSources.size} sources" else "Off")
+    if (cfg.nowPlaying) SettingsPaneLink("Now Playing", SettingsPane.NOW_PLAYING)
     when (cfg.sideIdle) {
-        SideIdle.GLANCE -> {
-            Spacer(modifier = Modifier.height(14.dp))
-            CalendarSection()
-        }
-        SideIdle.COMPANION -> {
-            Spacer(modifier = Modifier.height(14.dp))
-            CompanionPicker(cfg.companion) { tick++ }
-        }
+        SideIdle.GLANCE -> SettingsPaneLink("Calendar & reminders", SettingsPane.CALENDAR)
+        SideIdle.COMPANION -> SettingsPaneLink("Companion", SettingsPane.COMPANION, value = cfg.companion.label)
         SideIdle.NOTHING -> Unit
+    }
+}
+
+/** What the header shows, each ticked when shown; Edit Home or Settings always stays. */
+@Composable
+private fun HeaderShowsList() {
+    val context = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    val cfg = remember(tick) { DisplayPrefs.load(context) }
+    HeaderElement.entries.forEach { element ->
+        SettingsCheck(element.label, element !in cfg.hidden) {
+            if (element !in cfg.hidden && !canHideHeaderElement(element, cfg.hidden)) {
+                Toast.makeText(context, "Keep Edit Home or Settings in the header", Toast.LENGTH_SHORT).show()
+                return@SettingsCheck
+            }
+            DisplayPrefs.setHidden(context, if (element in cfg.hidden) cfg.hidden - element else cfg.hidden + element)
+            tick++
+        }
     }
 }

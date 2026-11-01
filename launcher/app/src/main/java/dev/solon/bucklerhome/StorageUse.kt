@@ -24,7 +24,7 @@ data class AppStorage(
 }
 
 /**
- * Storage for Settings → Clean up. Other apps' sizes come from Android's storage records, which
+ * Storage for Settings → Apps & storage. Other apps' sizes come from Android's storage records, which
  * need the same usage access as the unused-apps list. Buckler can empty only its own cache; other
  * apps' caches clear from their app page (or all at once with `buckler clean --cache`).
  */

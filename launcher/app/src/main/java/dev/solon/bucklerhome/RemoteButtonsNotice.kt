@@ -20,7 +20,7 @@ fun RemoteButtonsNotice(resumeTick: Int) {
         while (RemoteMap.healing) delay(SETTLE_MS)
         if (!RemoteMap.needsRestart(context)) return@LaunchedEffect
         shown = true
-        Toast.makeText(context, "Remote buttons stopped. Settings → Remote → Turn on again.", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "Remote buttons stopped. Settings → Remote & accessories → Turn on again.", Toast.LENGTH_LONG).show()
     }
 }
 

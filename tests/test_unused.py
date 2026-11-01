@@ -50,7 +50,7 @@ def test_report_reads_and_describes() -> None:
 def test_missing_list_explains_what_to_do() -> None:
     adb = make_adb()
     adb.report = "cat: No such file or directory"
-    with pytest.raises(AdbError, match="Settings → Clean up → Apps"):
+    with pytest.raises(AdbError, match="Settings → Apps & storage → Unused apps"):
         read_report(adb)  # type: ignore[arg-type]
 
 

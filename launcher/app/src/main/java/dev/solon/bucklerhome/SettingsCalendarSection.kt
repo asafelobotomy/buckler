@@ -57,7 +57,7 @@ fun CalendarSection() {
     val canRead = remember(tick) { Agenda.canReadCalendar(context) }
     val syncOff = remember(tick) { googleCalendarSyncOff(context) }
 
-    SectionTitle("Calendar and reminders")
+    SectionTitle("Calendar & reminders")
     SettingsRow(
         "From the accounts the TV already syncs: the Google account on the TV, DAVx⁵ for iCloud, Nextcloud, " +
             "Fastmail and other CalDAV (with their reminders through OpenTasks), and ICSx⁵ for calendar links " +
@@ -98,7 +98,7 @@ fun CalendarSection() {
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             calendars.forEach { c ->
                 val shown = c.id !in hidden
-                SettingsAction(c.name.ifBlank { c.account }, selected = shown) {
+                SettingsCheck(c.name.ifBlank { c.account }, shown) {
                     StagePrefs.setCalendarShown(context, c.id, !shown)
                     tick++
                 }

@@ -86,7 +86,10 @@ fun StageOptions(stage: MainStage, onChanged: () -> Unit) {
                 }
             }
             Spacer(modifier = Modifier.height(14.dp))
-            NewsRefreshPicker(cfg.newsRefresh) { changed() }
+            SettingsChoice("Check for new stories every", NewsRefresh.entries, cfg.newsRefresh, { it.label }) {
+                DisplayPrefs.setNewsRefresh(context, it)
+                changed()
+            }
         }
         MainStage.NOW_PLAYING -> {
             MediaAccessOption("Shows what is playing, with its controls.")
@@ -186,7 +189,7 @@ private fun CompanionChoice(current: CompanionKind, onChanged: () -> Unit) {
 @Composable
 fun ScrollTitlesToggle(on: Boolean, onChanged: () -> Unit) {
     val context = LocalContext.current
-    SettingsAction("Scroll long titles", selected = on) {
+    SettingsToggle("Scroll long titles", on) {
         StagePrefs.setScrollTitles(context, !on)
         onChanged()
     }

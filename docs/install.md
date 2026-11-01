@@ -34,7 +34,7 @@ https://github.com/asafelobotomy/buckler/releases/latest/download/buckler-home.a
      Choose **Apply** again to finish.
    - When the wizard is done you can turn Network debugging off again.
 
-Run the wizard again any time from Settings → Setup → **Run setup wizard**. It starts from how
+Run the wizard again any time from Settings → Device → **Run setup wizard**. It starts from how
 the TV is now, so it changes only what you change.
 
 ## From a computer
@@ -58,7 +58,7 @@ so later commands don't need it.
 
 ## Undoing it
 
-- **Turned-off apps:** Settings → Setup → **Restore everything** turns back on every app Buckler
+- **Turned-off apps:** Settings → Device → SHIELD clean-up → **Restore everything** turns back on every app Buckler
   turned off from the TV. From a computer, `buckler restore-wizard --all` undoes everything
   `buckler` did.
 - **Home screen:** Buckler never removes the stock launcher. Uninstall Buckler (Settings → Apps)
@@ -67,7 +67,7 @@ so later commands don't need it.
 ## After a system update
 
 An Android update can turn apps Buckler turned off back on. Home says so once after the update,
-and Settings → Setup lists them with **Turn them off again** (Network debugging needed).
+and Settings → Device → SHIELD clean-up lists them with **Turn them off again** (Network debugging needed).
 
 ## Updates
 

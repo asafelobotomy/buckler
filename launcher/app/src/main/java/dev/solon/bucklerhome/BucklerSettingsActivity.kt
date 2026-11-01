@@ -62,17 +62,30 @@ class BucklerSettingsActivity : ComponentActivity() {
 }
 
 /**
- * Appearance first, with a page for each part of Home top to bottom (Header, Main Stage,
- * Shelves) and App Thumbnails, then Screensaver with a page for each screensaver ([saver]), then the rest, then
- * upkeep. An entry with a [parent] is not in the panel's first list: choosing the parent opens a list
- * of its own, with the parent's own page first as "Global" and then its children.
+ * Buckler's own sections first (Appearance with a page for each part of Home, Widgets with a page
+ * for each widget wherever it shows, Screensaver with a page for each screensaver ([saver])), then
+ * the TV's, in SHIELD's order, then Accounts, Updates and About. An entry with a [parent] is not in
+ * the panel's first list: choosing the parent opens a list of its own, with the parent's own page
+ * first as [ownPage] ("Global", or "Overview" for a summary) and then its children.
  */
-enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val saver: ScreensaverMode? = null) {
+enum class SettingsPane(
+    val label: String,
+    val parent: SettingsPane? = null,
+    val saver: ScreensaverMode? = null,
+    val ownPage: String = "Global",
+) {
     APPEARANCE("Appearance"),
     HEADER("Header", APPEARANCE),
     MAIN_STAGE("Main Stage", APPEARANCE),
     SHELVES("Shelves", APPEARANCE),
-    COVERS("App Thumbnails", APPEARANCE),
+    COVERS("Icons & artwork", APPEARANCE),
+    WIDGETS("Widgets"),
+    WEATHER("Weather", WIDGETS),
+    NEWS("News", WIDGETS),
+    CALENDAR("Calendar & reminders", WIDGETS),
+    NOW_PLAYING("Now Playing & Lyrics", WIDGETS),
+    MULTIVIEW("Multiview", WIDGETS),
+    COMPANION("Companion", WIDGETS),
     SCREENSAVER("Screensaver"),
     SAVER_CLOCK(ScreensaverMode.CLOCK.label, SCREENSAVER, ScreensaverMode.CLOCK),
     SAVER_DVD(ScreensaverMode.DVD.label, SCREENSAVER, ScreensaverMode.DVD),
@@ -84,14 +97,29 @@ enum class SettingsPane(val label: String, val parent: SettingsPane? = null, val
     SAVER_MYSTIFY(ScreensaverMode.MYSTIFY.label, SCREENSAVER, ScreensaverMode.MYSTIFY),
     SAVER_STARFIELD(ScreensaverMode.STARFIELD.label, SCREENSAVER, ScreensaverMode.STARFIELD),
     ACCESSIBILITY("Accessibility"),
-    REMOTE("Remote"),
-    CLEAN_UP("Clean up"),
-    APPS("Apps", CLEAN_UP),
-    CACHE("Cache", CLEAN_UP),
-    LARGEST_APPS("Largest apps", CLEAN_UP),
-    SHIELD("Setup"),
+    REMOTE("Remote & accessories"),
+    STORAGE("Apps & storage", ownPage = "Overview"),
+    UNUSED_APPS("Unused apps", STORAGE),
+    CACHE("Cache", STORAGE),
+    LARGEST_APPS("Largest apps", STORAGE),
+    DEVICE("Device"),
+    SHIELD_CLEAN_UP("SHIELD clean-up", DEVICE),
+    ACCOUNTS("Accounts"),
     UPDATES("Updates"),
     ABOUT("About"),
+    ;
+
+    companion object {
+        /** The page with [stage]'s own options, for "More in Settings" and the Main Stage page. */
+        fun forStage(stage: MainStage): SettingsPane = when (stage) {
+            MainStage.NEWS -> NEWS
+            MainStage.WEATHER, MainStage.WEATHER_MAP -> WEATHER
+            MainStage.NOW_PLAYING, MainStage.LYRICS, MainStage.SUGGESTED -> NOW_PLAYING
+            MainStage.GLANCE, MainStage.CALENDAR -> CALENDAR
+            MainStage.MULTIVIEW -> MULTIVIEW
+            MainStage.COMPANION -> COMPANION
+        }
+    }
 }
 
 /** One Settings page's content, with the dialogs its account links open. */
@@ -109,32 +137,40 @@ fun SettingsPageContent(pane: SettingsPane) {
         SettingsPane.HEADER -> HeaderPane()
         SettingsPane.MAIN_STAGE -> MainStagePane()
         SettingsPane.SHELVES -> ShelvesPane()
+        SettingsPane.COVERS -> CoversPane()
+        SettingsPane.WIDGETS -> WidgetsPane()
+        SettingsPane.WEATHER -> WeatherPane()
+        SettingsPane.NEWS -> NewsPane()
+        SettingsPane.CALENDAR -> CalendarSection()
+        SettingsPane.NOW_PLAYING -> NowPlayingPane()
+        SettingsPane.MULTIVIEW -> MultiviewSettings()
+        SettingsPane.COMPANION -> CompanionPane()
         SettingsPane.ACCESSIBILITY -> AccessibilityPane()
         SettingsPane.SCREENSAVER -> ScreensaverPane()
         SettingsPane.SAVER_CLOCK, SettingsPane.SAVER_DVD, SettingsPane.SAVER_PHOTOS,
         SettingsPane.SAVER_UPLOADED, SettingsPane.SAVER_NOW_PLAYING, SettingsPane.SAVER_MAZE,
         SettingsPane.SAVER_PIPES, SettingsPane.SAVER_MYSTIFY, SettingsPane.SAVER_STARFIELD,
         -> ScreensaverModePane(pane.saver ?: ScreensaverMode.CLOCK)
-        SettingsPane.SHIELD -> ShieldPane()
+        SettingsPane.REMOTE -> RemotePane()
+        SettingsPane.STORAGE -> CleanUpPane()
+        SettingsPane.UNUSED_APPS -> AppsPane()
+        SettingsPane.CACHE -> CachePane()
+        SettingsPane.LARGEST_APPS -> LargestAppsPane()
+        SettingsPane.DEVICE -> ShieldPane()
+        SettingsPane.SHIELD_CLEAN_UP -> ShieldCleanUpPane()
+        SettingsPane.ACCOUNTS -> AccountsPane(
+            accountTick = accountTick,
+            onConnectGithub = { connectGithub = true },
+            onConnectSgdb = { connectSgdb = true },
+            onConnectIgdb = { connectIgdb = true },
+            onAccountChanged = { accountTick++ },
+        )
         SettingsPane.UPDATES -> UpdatesPane(
             accountTick = accountTick,
             updateResult = updateResult,
             onResult = { updateResult = it },
             onAvailable = { availableRelease = it },
-            onConnectGithub = { connectGithub = true },
-            onAccountChanged = { accountTick++ },
         )
-        SettingsPane.COVERS -> CoversPane(
-            accountTick = accountTick,
-            onConnectSgdb = { connectSgdb = true },
-            onConnectIgdb = { connectIgdb = true },
-            onAccountChanged = { accountTick++ },
-        )
-        SettingsPane.REMOTE -> RemotePane()
-        SettingsPane.CLEAN_UP -> CleanUpPane()
-        SettingsPane.APPS -> AppsPane()
-        SettingsPane.CACHE -> CachePane()
-        SettingsPane.LARGEST_APPS -> LargestAppsPane()
         SettingsPane.ABOUT -> AboutPane()
     }
 

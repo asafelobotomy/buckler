@@ -129,7 +129,7 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
         val column = column(Gravity.CENTER_HORIZONTAL)
         clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 64f)
         column.addView(clock)
-        val note = if (model.accessGranted) "Nothing playing" else "Allow media access in Settings → Appearance → Main Stage to show Now Playing"
+        val note = if (model.accessGranted) "Nothing playing" else "Allow media access in Settings → Widgets to show Now Playing"
         column.addView(
             text(18f, light = false).apply { text = note; alpha = 0.7f },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)

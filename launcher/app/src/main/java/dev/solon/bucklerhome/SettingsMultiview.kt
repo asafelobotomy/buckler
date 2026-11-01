@@ -27,8 +27,8 @@ import kotlinx.coroutines.withContext
 private val Flow = Arrangement.spacedBy(12.dp)
 
 /**
- * Settings → Main Stage with Multiview chosen: what each of the three tiles plays, then where the
- * videos come from (a Jellyfin server, an IPTV playlist, cameras).
+ * Settings → Widgets → Multiview: what each of the three tiles plays, then where the videos come
+ * from (an IPTV playlist, cameras; Jellyfin and Stremio sign in under Accounts).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -68,9 +68,13 @@ fun MultiviewSettings() {
         Spacer(Modifier.height(8.dp))
     }
     Spacer(Modifier.height(12.dp))
-    JellyfinSection { tick++ }
-    Spacer(Modifier.height(16.dp))
-    StremioSection { tick++ }
+    val jellyfin = remember { MultiviewStore.jellyfin(context) != null }
+    val stremio = remember { StremioAccount.authKey(context) != null }
+    SettingsPaneLink(
+        "Jellyfin and Stremio",
+        SettingsPane.ACCOUNTS,
+        value = listOfNotNull("Jellyfin".takeIf { jellyfin }, "Stremio".takeIf { stremio }).joinToString(", ").ifEmpty { "Not signed in" },
+    )
     Spacer(Modifier.height(16.dp))
     PlaylistSection { tick++ }
     Spacer(Modifier.height(16.dp))
@@ -95,7 +99,7 @@ private fun TileChooser(tick: Int, onChoose: (MultiviewTile?) -> Unit) {
         FlowRow(horizontalArrangement = Flow, verticalArrangement = Flow) {
             SettingsAction("Empty") { onChoose(null) }
         }
-        if (account == null) SettingsRow("Jellyfin: sign in below to choose its videos.")
+        if (account == null) SettingsRow("Jellyfin: sign in under Accounts to choose its videos.")
         if (account != null && videos == null) SettingsRow("Jellyfin: loading…")
         videos?.filter { it.second.isNotEmpty() }?.forEach { (label, items) ->
             PickerTitle("Jellyfin · $label")
@@ -131,7 +135,7 @@ private fun TileChooser(tick: Int, onChoose: (MultiviewTile?) -> Unit) {
 /** Sign in to a Jellyfin server: found on the network or typed, then Quick Connect or name and password. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun JellyfinSection(onChanged: () -> Unit) {
+fun JellyfinSection(onChanged: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var tick by remember { mutableIntStateOf(0) }

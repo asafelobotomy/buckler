@@ -50,7 +50,7 @@ fun WeatherStage(
         ) {
             when {
                 place == null -> Text(
-                    text = "Set a city in Settings → Appearance → Main Stage to show the forecast.",
+                    text = "Set a city in Settings → Widgets → Weather to show the forecast.",
                     color = ColorMuted,
                     fontSize = 15.sp,
                 )

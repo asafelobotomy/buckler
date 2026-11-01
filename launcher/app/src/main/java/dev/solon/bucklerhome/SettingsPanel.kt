@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,12 +51,24 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 
-/** Where the panel is: its first list, a section's own list, or a page. */
+/** Where the panel is: its first list, a section's own list, a page, or a list a page opened. */
 private sealed interface PanelNode {
     data object Root : PanelNode
     data class Section(val section: SettingsPane) : PanelNode
     data class Page(val pane: SettingsPane) : PanelNode
+
+    /** Compared by [id] alone: each opening is its own level. */
+    class Sub(val id: Int, val title: String, val content: @Composable () -> Unit) : PanelNode {
+        override fun equals(other: Any?) = other is Sub && other.id == id
+        override fun hashCode() = id
+    }
 }
+
+/** Android's own screens in the first list, after the Buckler section they follow (SHIELD's order). */
+private val RootLinks = mapOf(
+    SettingsPane.REMOTE to listOf("Network" to SystemScreen.NETWORK, "Display & sound" to SystemScreen.DISPLAY_SOUND),
+)
+private const val ALL_SETTINGS_ROW = "android:all"
 
 private fun SettingsPane.hasPages() = SettingsPane.entries.any { it.parent == this }
 
@@ -94,13 +108,29 @@ fun BucklerSettingsPanel(start: SettingsPane?, opened: Int, onClose: () -> Unit)
         if (!still) delay(SLIDE_MS)
         onClose()
     }
+    // Whether the row a page was left from has taken focus back, so the page need not.
+    val refocused = remember { mutableStateMapOf<PanelNode, Boolean>() }
+    var nextSub by remember { mutableIntStateOf(0) }
     fun open(from: PanelNode, row: String, next: PanelNode) {
         leftFrom[from] = row
+        refocused[from] = false
         stack.add(next)
     }
+    // A level left by Back starts afresh next time; the one it returns to keeps its row.
+    fun up() {
+        if (stack.size > 1) leftFrom.remove(stack.removeAt(stack.lastIndex))
+    }
+    fun nav(node: PanelNode) = PanelNav(
+        open = { row, title, content -> open(node, row, PanelNode.Sub(nextSub++, title, content)) },
+        openPane = { row, pane -> open(node, row, PanelNode.Page(pane)) },
+        back = ::up,
+        returnTo = leftFrom[node],
+        claimFocus = { refocused[node] = true },
+        focusClaimed = { refocused[node] == true },
+    )
     BackHandler {
         if (stack.size > 1) {
-            stack.removeAt(stack.lastIndex)
+            up()
         } else {
             shown = false
             closing = true
@@ -138,7 +168,9 @@ fun BucklerSettingsPanel(start: SettingsPane?, opened: Int, onClose: () -> Unit)
                     },
                     label = "panel",
                 ) { (node, _) ->
-                    PanelScreen(node, stack.getOrNull(stack.indexOf(node) - 1), leftFrom[node]) { row, next -> open(node, row, next) }
+                    CompositionLocalProvider(LocalPanelNav provides nav(node)) {
+                        PanelScreen(node, stack.getOrNull(stack.indexOf(node) - 1), leftFrom[node]) { row, next -> open(node, row, next) }
+                    }
                 }
             }
         }
@@ -151,20 +183,31 @@ private fun PanelScreen(node: PanelNode, above: PanelNode?, returnTo: String?, o
     Column(Modifier.fillMaxSize()) {
         when (node) {
             PanelNode.Root -> {
+                val context = LocalContext.current
                 PanelTitle("Buckler Settings", "buckler-home ${BuildConfig.VERSION_NAME}")
-                PanelList(
-                    rows = SettingsPane.entries.filter { it.parent == null }.map { it.name to it.label },
-                    returnTo = returnTo,
-                ) { key ->
-                    val pane = SettingsPane.valueOf(key)
-                    onOpen(key, if (pane.hasPages()) PanelNode.Section(pane) else PanelNode.Page(pane))
+                val links = RootLinks.values.flatten().associate { (label, screen) -> "android:${screen.name}" to screen }
+                val rows = SettingsPane.entries.filter { it.parent == null }.flatMap { pane ->
+                    listOf(PanelRow(pane.name, pane.label)) +
+                        RootLinks[pane].orEmpty().map { (label, screen) -> PanelRow("android:${screen.name}", label, external = true) }
+                } + PanelRow(ALL_SETTINGS_ROW, "All Android settings", external = true)
+                PanelList(rows, returnTo) { key ->
+                    when {
+                        key == ALL_SETTINGS_ROW -> SystemScreen.ALL.open(context)
+                        key in links -> links.getValue(key).open(context)
+                        else -> {
+                            val pane = SettingsPane.valueOf(key)
+                            onOpen(key, if (pane.hasPages()) PanelNode.Section(pane) else PanelNode.Page(pane))
+                        }
+                    }
                 }
             }
             is PanelNode.Section -> {
                 PanelTitle(node.section.label, null)
-                val pages = listOf(node.section.name to "Global") +
+                val pages = listOf(node.section.name to node.section.ownPage) +
                     SettingsPane.entries.filter { it.parent == node.section }.map { it.name to it.label }
-                PanelList(pages, returnTo) { key -> onOpen(key, PanelNode.Page(SettingsPane.valueOf(key))) }
+                PanelList(pages.map { (key, label) -> PanelRow(key, label) }, returnTo) { key ->
+                    onOpen(key, PanelNode.Page(SettingsPane.valueOf(key)))
+                }
             }
             is PanelNode.Page -> {
                 // The page carries its own title; above it, the section it sits in (not on the
@@ -172,6 +215,10 @@ private fun PanelScreen(node: PanelNode, above: PanelNode?, returnTo: String?, o
                 val trail = (above as? PanelNode.Section)?.section?.takeIf { it != node.pane }?.label
                 if (trail != null) Text(trail, color = ColorMuted, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
                 PanelPage(node.pane)
+            }
+            is PanelNode.Sub -> {
+                PanelTitle(node.title, null)
+                PanelPage(node.id) { node.content() }
             }
         }
     }
@@ -185,26 +232,29 @@ private fun PanelTitle(title: String, subtitle: String?) {
     Spacer(Modifier.height(18.dp))
 }
 
+/** A row in a [PanelList]; [external] ones open one of Android's own screens. */
+private data class PanelRow(val key: String, val label: String, val external: Boolean = false)
+
 /** A list of rows that each open something; focus starts on [returnTo] when coming back to it. */
 @Composable
-private fun PanelList(rows: List<Pair<String, String>>, returnTo: String?, onOpen: (String) -> Unit) {
-    val requesters = remember(rows) { rows.associate { it.first to FocusRequester() } }
+private fun PanelList(rows: List<PanelRow>, returnTo: String?, onOpen: (String) -> Unit) {
+    val requesters = remember(rows) { rows.associate { it.key to FocusRequester() } }
     LaunchedEffect(Unit) {
         delay(60)
-        runCatching { requesters.getValue(returnTo?.takeIf { it in requesters } ?: rows.first().first).requestFocus() }
+        runCatching { requesters.getValue(returnTo?.takeIf { it in requesters } ?: rows.first().key).requestFocus() }
     }
     Column(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 27.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        rows.forEach { (key, label) -> PanelLink(label, requesters.getValue(key)) { onOpen(key) } }
+        rows.forEach { row -> PanelLink(row.label, requesters.getValue(row.key), row.external) { onOpen(row.key) } }
     }
 }
 
-/** One row that opens a list or a page: its name, and › on the right. */
+/** One row that opens a list or a page: its name, and › on the right (↗ for one of Android's screens). */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun PanelLink(label: String, focusRequester: FocusRequester, onClick: () -> Unit) {
+private fun PanelLink(label: String, focusRequester: FocusRequester, external: Boolean, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(8.dp)
@@ -222,16 +272,26 @@ private fun PanelLink(label: String, focusRequester: FocusRequester, onClick: ()
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, color = if (focused) ColorOnBrand else ColorText, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Text("›", color = if (focused) ColorOnBrand else ColorMuted, fontSize = 20.sp)
+        Text(if (external) "↗" else "›", color = if (focused) ColorOnBrand else ColorMuted, fontSize = if (external) 16.sp else 20.sp)
     }
 }
 
 /** A Settings page in the panel: its choices as rows, scrolling, with focus on its first one. */
 @Composable
-private fun PanelPage(pane: SettingsPane) {
+private fun PanelPage(pane: SettingsPane) = PanelPage(pane) { SettingsPageContent(pane) }
+
+/**
+ * A page's rows, scrolling, with focus on the first. A row that reopens a level (a [SettingsLink])
+ * takes focus back itself when the page is returned to.
+ */
+@Composable
+private fun PanelPage(page: Any, content: @Composable () -> Unit) {
     val first = remember { FocusRequester() }
-    LaunchedEffect(pane) {
-        delay(60)
+    val nav = LocalPanelNav.current
+    LaunchedEffect(page) {
+        // Coming back: the row it was left from takes focus; the first row only if that one has gone.
+        delay(if (nav?.returnTo != null) 160 else 60)
+        if (nav?.focusClaimed?.invoke() == true) return@LaunchedEffect
         runCatching { first.requestFocus() }
     }
     Column(
@@ -243,7 +303,7 @@ private fun PanelPage(pane: SettingsPane) {
             .padding(bottom = 27.dp),
     ) {
         CompositionLocalProvider(LocalSettingsPanel provides true) {
-            SettingsPageContent(pane)
+            content()
         }
     }
 }

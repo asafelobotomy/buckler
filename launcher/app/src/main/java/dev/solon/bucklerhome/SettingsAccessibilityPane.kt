@@ -36,50 +36,41 @@ fun AccessibilityPane() {
     Column {
         SectionTitle("Accessibility")
 
-        PickerTitle("Vision")
+        PickerTitle("Buckler")
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            SettingsAction("High contrast", selected = a11y.highContrast) {
+            SettingsToggle("High contrast", a11y.highContrast) {
                 update { it.copy(highContrast = !it.highContrast) }
             }
-            SettingsAction("Strong focus outline", selected = a11y.strongFocus) {
+            SettingsToggle("Strong focus outline", a11y.strongFocus) {
                 update { it.copy(strongFocus = !it.strongFocus) }
             }
-            SettingsAction("Reduce motion", selected = a11y.reduceMotion) {
+            SettingsToggle("Reduce motion", a11y.reduceMotion) {
                 update { it.copy(reduceMotion = !it.reduceMotion) }
             }
-            SettingsAction("Speak focused item", selected = a11y.spokenFocus) {
+            SettingsToggle("Speak focused item", a11y.spokenFocus) {
                 if (a11y.spokenFocus) SpokenFocus.stop()
                 update { it.copy(spokenFocus = !it.spokenFocus) }
             }
-            SettingsAction("Screen reader (TalkBack)") {
-                SystemScreen.ACCESSIBILITY.open(context)
-            }
+            SystemScreenLink("Screen reader (TalkBack)", SystemScreen.ACCESSIBILITY)
         }
         Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("Text size")
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            TextSize.entries.forEach { size ->
-                SettingsAction(size.label, selected = size == a11y.textSize) {
-                    update { it.copy(textSize = size) }
-                }
-            }
+        SettingsChoice("Text size", TextSize.entries, a11y.textSize, { it.label }) { size ->
+            update { it.copy(textSize = size) }
         }
         Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("Hearing")
+        PickerTitle("Whole TV")
         if (!SystemSettings.canWriteSystem(context)) {
             SettingsRow("Mono audio needs a one-time permission: ${SystemSettings.GRANT_COMMAND}")
         }
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            SettingsAction("Mono audio", selected = mono) {
+            SettingsToggle("Mono audio", mono) {
                 if (SystemSettings.setMonoAudio(context, !mono)) {
                     tick++
                 } else {
                     Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
                 }
             }
-            SettingsAction("Captions") {
-                SystemScreen.CAPTIONS.open(context)
-            }
+            SystemScreenLink("Captions", SystemScreen.CAPTIONS)
         }
     }
 }

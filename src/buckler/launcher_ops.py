@@ -129,7 +129,7 @@ def grant_media_access(adb: Adb) -> str:
 
 SECURE_SETTINGS_PERMISSION = "android.permission.WRITE_SECURE_SETTINGS"
 # WRITE_SETTINGS: screensaver delay and mono audio. REQUEST_INSTALL_PACKAGES: Buckler's own
-# updates install without Android stopping to ask. GET_USAGE_STATS: Settings → Clean up (unused apps, app sizes).
+# updates install without Android stopping to ask. GET_USAGE_STATS: Settings → Apps & storage (unused apps, app sizes).
 GRANTED_APPOPS = ("WRITE_SETTINGS", "REQUEST_INSTALL_PACKAGES", "GET_USAGE_STATS")
 
 

@@ -1,20 +1,12 @@
 package dev.solon.bucklerhome
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -23,34 +15,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
- * Settings → Remote: the remote drawn with what each button does. Netflix, Back and the media
- * keys are Buckler's (an accessibility service it switches on itself); ≡ uses SHIELD's own option.
+ * Settings → Remote & accessories: the remote drawn with what each button does. Netflix, Back and
+ * the media keys are Buckler's (an accessibility service it switches on itself); ≡ uses SHIELD's
+ * own option. OK on a button opens its page: Press, Double press and Hold, each a list of its own.
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun RemotePane() {
     val context = LocalContext.current
+    val nav = LocalPanelNav.current
     var tick by remember { mutableIntStateOf(0) }
-    var picking by remember { mutableStateOf<RemoteButton?>(null) }
-    // After a dialog closes, focus goes back to the row that opened it.
     val requesters = remember { RemoteButton.entries.associateWith { FocusRequester() } }
-    var refocus by remember { mutableStateOf<RemoteButton?>(null) }
-    LaunchedEffect(refocus) {
-        val button = refocus ?: return@LaunchedEffect
-        delay(50)
-        runCatching { requesters.getValue(button).requestFocus() }
-        refocus = null
+    // Back from a button's page: focus goes to that button again.
+    LaunchedEffect(Unit) {
+        val button = RemoteButton.entries.firstOrNull { it.name == nav?.returnTo } ?: return@LaunchedEffect
+        delay(80)
+        if (runCatching { requesters.getValue(button).requestFocus() }.isSuccess) nav?.claimFocus?.invoke()
     }
     val on = remember(tick) { RemoteMap.serviceOn(context) }
     val stalled = remember(tick) { RemoteMap.needsRestart(context) }
@@ -71,12 +56,11 @@ fun RemotePane() {
     }
 
     Column {
-        SectionTitle("Remote")
+        SectionTitle("Remote & accessories")
         SettingsRow(
             "Choose what your remote's buttons do on a press, a double press or a hold (≡ through SHIELD's " +
                 "own option). Only a button with a double press waits for a second press.",
         )
-        PickerTitle("Your remote")
         SettingsRow(
             when {
                 chosen != null -> "Set to: ${chosen.label}."
@@ -85,45 +69,33 @@ fun RemotePane() {
                 else -> "Buckler could not tell which remote this is. Choose it:"
             },
         )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SettingsAction("Find automatically", selected = chosen == null) {
-                RemoteModels.choose(context, null)
-                tick++
-            }
-            RemoteModel.entries.forEach { m ->
-                SettingsAction(m.short, selected = chosen == m) {
-                    RemoteModels.choose(context, m)
-                    tick++
-                }
-            }
+        SettingsChoice("Your remote", listOf<RemoteModel?>(null) + RemoteModel.entries, chosen, { it?.short ?: "Find automatically" }) {
+            RemoteModels.choose(context, it)
+            tick++
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            when {
-                restarting -> SettingsAction("Turning on…") {}
-                stalled -> SettingsAction("Turn on again") {
-                    restarting = true
-                    RemoteMap.restartService(context) {
-                        restarting = false
-                        tick++
-                    }
-                }
-                else -> SettingsAction(if (on) "Remote buttons: on" else "Turn on remote buttons", selected = on) {
-                    if (!RemoteMap.setServiceOn(context, !on)) {
-                        Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
-                    }
+        when {
+            restarting -> SettingsAction("Remote buttons", value = "Turning on…") {}
+            stalled -> SettingsAction("Remote buttons", value = "Stopped: turn on again") {
+                restarting = true
+                RemoteMap.restartService(context) {
+                    restarting = false
                     tick++
                 }
+            }
+            else -> SettingsToggle("Remote buttons", on) {
+                if (!RemoteMap.setServiceOn(context, !on)) {
+                    Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
+                }
+                tick++
             }
         }
         if (stalled && !restarting) {
-            SettingsRow("Remote buttons stopped: Android stops them when Buckler is force-stopped or crashes.")
+            SettingsRow("Remote buttons stopped and Buckler could not turn them on again by itself.")
         }
         if (!on && !stalled) SettingsRow("Off: every button does what it always does. ≡ still follows SHIELD's option.")
         Spacer(modifier = Modifier.height(16.dp))
-        if (model == null) return@Column
-        if (!model.drawn) SettingsRow("Buttons Buckler can change on most remotes:")
-        key(tick) {
+        if (model != null) {
+            if (!model.drawn) SettingsRow("Buttons Buckler can change on most remotes:")
             RemoteMapper(
                 model = model,
                 describe = ::describe,
@@ -133,81 +105,49 @@ fun RemotePane() {
                     if (button.mapping == RemoteButton.Mapping.FIXED) {
                         Toast.makeText(context, "${button.label}: ${button.fixedReason}", Toast.LENGTH_LONG).show()
                     } else {
-                        picking = button
+                        nav?.open(button.name, "${button.label} button") { ButtonPage(button) }
                     }
                 },
             )
         }
-    }
-    picking?.let { button ->
-        ButtonDialog(
-            button,
-            onDismiss = {
-                picking = null
-                tick++
-                refocus = button
-            },
-        )
+        Spacer(modifier = Modifier.height(16.dp))
+        PickerTitle("Accessories")
+        SystemScreenLink("Pair a remote or accessory", SystemScreen.ACCESSORIES)
     }
 }
 
-/** One button's three presses; each opens the list of what it can do. */
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
+/** One button's three presses, each showing what it does and opening the list to change it. */
 @Composable
-private fun ButtonDialog(button: RemoteButton, onDismiss: () -> Unit) {
+private fun ButtonPage(button: RemoteButton) {
     val context = LocalContext.current
-    var tick by remember { mutableIntStateOf(0) }
-    var kind by remember { mutableStateOf<PressKind?>(null) }
-    Dialog(onDismissRequest = onDismiss) {
-        DialogPanel(minWidth = 520.dp, maxWidth = 820.dp, modifier = Modifier.autoFocus(kind)) {
-            Column {
-                Text(button.label, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = ColorText)
-                val chosen = kind
-                if (chosen == null) {
-                    Text(
-                        if (button.mapping == RemoteButton.Mapping.SHIELD) "SHIELD's own ≡ options." else "OK on a row to change it.",
-                        fontSize = 14.sp, color = ColorMuted, modifier = Modifier.padding(top = 6.dp, bottom = 14.dp),
-                    )
-                    key(tick) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            PressKind.entries.forEach { k ->
-                                val now = if (button.mapping == RemoteButton.Mapping.SHIELD) {
-                                    ShieldMenuButton.label(context, k)
-                                } else {
-                                    RemoteMap.action(context, button, k).label
-                                }
-                                SettingsAction("${k.label}: $now") { kind = k }
-                            }
-                            SettingsAction("Done", onClick = onDismiss)
-                        }
-                    }
-                } else {
-                    Text(chosen.label, fontSize = 15.sp, color = ColorMuted, modifier = Modifier.padding(top = 6.dp, bottom = 14.dp))
-                    ActionChoices(button, chosen) {
-                        kind = null
-                        tick++
-                    }
-                }
-            }
+    SettingsRow(if (button.mapping == RemoteButton.Mapping.SHIELD) "SHIELD's own ≡ options." else "OK on a press to change it.")
+    PressKind.entries.forEach { kind ->
+        val now = if (button.mapping == RemoteButton.Mapping.SHIELD) {
+            ShieldMenuButton.label(context, kind)
+        } else {
+            RemoteMap.action(context, button, kind).label
         }
+        SettingsLink(kind.label, value = now, title = "${button.label}: ${kind.label}") { ActionList(button, kind) }
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalLayoutApi::class)
+/** What one press can do; choosing goes back to the button's page. */
 @Composable
-private fun ActionChoices(button: RemoteButton, kind: PressKind, onDone: () -> Unit) {
+private fun ActionList(button: RemoteButton, kind: PressKind) {
     val context = LocalContext.current
-    var pickApp by remember { mutableStateOf(false) }
-    val flow = Arrangement.spacedBy(10.dp)
+    val nav = LocalPanelNav.current
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        delay(80)
+        runCatching { first.requestFocus() }
+    }
     if (button.mapping == RemoteButton.Mapping.SHIELD) {
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            ShieldMenuButton.CHOICES.forEach { (value, label) ->
-                SettingsAction(label, selected = ShieldMenuButton.isChosen(context, kind, value)) {
-                    if (!ShieldMenuButton.set(context, kind, value)) {
-                        Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
-                    }
-                    onDone()
+        ShieldMenuButton.CHOICES.forEachIndexed { i, (value, label) ->
+            SettingsAction(label, focusRequester = first.takeIf { i == 0 }, selected = ShieldMenuButton.isChosen(context, kind, value)) {
+                if (!ShieldMenuButton.set(context, kind, value)) {
+                    Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
                 }
+                nav?.back()
             }
         }
         return
@@ -215,29 +155,39 @@ private fun ActionChoices(button: RemoteButton, kind: PressKind, onDone: () -> U
     val current = RemoteMap.action(context, button, kind)
     fun choose(action: RemoteAction) {
         RemoteMap.set(context, button, kind, action)
-        onDone()
+        nav?.back()
     }
-    if (pickApp) {
-        val apps by produceState<List<LaunchableApp>>(emptyList()) {
-            value = withContext(Dispatchers.IO) { loadLaunchableApps(context, icons = false) }
-        }
-        FlowRow(
-            horizontalArrangement = flow,
-            verticalArrangement = flow,
-            modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
-        ) {
-            apps.forEach { app -> SettingsAction(app.label) { choose(RemoteAction.OpenApp(app.packageName, app.label)) } }
-        }
+    SettingsAction("Default (${defaultName(button)})", focusRequester = first, selected = current == RemoteAction.Default) {
+        choose(RemoteAction.Default)
+    }
+    RemoteAction.FIXED_CHOICES.forEach { action ->
+        SettingsAction(action.label, selected = current == action) { choose(action) }
+    }
+    SettingsLink("An app", value = (current as? RemoteAction.OpenApp)?.appLabel, title = "${button.label}: ${kind.label}") {
+        AppList(button, kind)
+    }
+}
+
+/** Every app with a TV entry, for a press that opens one; choosing goes back to the button's page. */
+@Composable
+private fun AppList(button: RemoteButton, kind: PressKind) {
+    val context = LocalContext.current
+    val nav = LocalPanelNav.current
+    val apps by produceState<List<LaunchableApp>?>(null) {
+        value = withContext(Dispatchers.IO) { loadLaunchableApps(context, icons = false) }
+    }
+    val list = apps
+    if (list == null) {
+        SettingsRow("Loading apps…")
         return
     }
-    FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        val default = "Default (${defaultName(button)})"
-        SettingsAction(default, selected = current == RemoteAction.Default) { choose(RemoteAction.Default) }
-        RemoteAction.FIXED_CHOICES.forEach { action ->
-            SettingsAction(action.label, selected = current == action) { choose(action) }
+    list.forEach { app ->
+        SettingsAction(app.label) {
+            RemoteMap.set(context, button, kind, RemoteAction.OpenApp(app.packageName, app.label))
+            // Past the press's list, back to the button's page.
+            nav?.back()
+            nav?.back()
         }
-        val appLabel = (current as? RemoteAction.OpenApp)?.let { "App: ${it.appLabel}" } ?: "An app…"
-        SettingsAction(appLabel, selected = current is RemoteAction.OpenApp) { pickApp = true }
     }
 }
 

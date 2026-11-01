@@ -42,6 +42,10 @@ enum class SystemScreen(val label: String, private val activity: String?, privat
 
     // Android's developer options, where Network debugging is; SHIELD's own are NvDevelopmentActivity.
     DEVELOPER("Developer options", ".system.development.DevelopmentActivity", Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, "Device Preferences → Developer options"),
+    SHIELD_DEVELOPER("SHIELD developer options", ".system.development.NvDevelopmentActivity", null, "Device Preferences → Developer options"),
+    ADD_ACCOUNT("accounts", null, Settings.ACTION_ADD_ACCOUNT),
+    ACCESSORIES("accessory pairing", ".accessories.AddAccessoryActivity", "com.google.android.intent.action.CONNECT_INPUT"),
+    SYSTEM_UPDATE("system update", null, "android.settings.SYSTEM_UPDATE_SETTINGS", "Device Preferences → About → System upgrade"),
     VPN("VPN settings", null, Settings.ACTION_VPN_SETTINGS),
     ABOUT("About this TV", ".about.AboutActivity", Settings.ACTION_DEVICE_INFO_SETTINGS),
     ALL("Settings", ".MainSettings", Settings.ACTION_SETTINGS),

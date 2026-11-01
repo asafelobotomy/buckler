@@ -70,7 +70,7 @@ fun WeatherMapStage(place: Place?, stageFocus: FocusRequester, onDown: () -> Uni
                 .background(ColorTile),
         ) {
             if (place == null) {
-                StageHeading("Set a city in Settings → Appearance → Main Stage to show the map.")
+                StageHeading("Set a city in Settings → Widgets → Weather to show the map.")
             } else {
                 WeatherMap(place, grid, hour, Modifier.fillMaxSize())
             }

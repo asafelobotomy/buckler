@@ -24,7 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Settings → Clean up → Apps: apps not opened for a while, busiest in the background first, each with a way
+ * Settings → Apps & storage → Unused apps: apps not opened for a while, busiest in the background first, each with a way
  * to remove it. Your own apps uninstall; stock apps open Android's app page, where Disable is
  * (Buckler cannot disable apps itself; `buckler unused --apply` does it from a computer).
  */
@@ -47,7 +47,7 @@ fun AppsPane() {
     val flow = Arrangement.spacedBy(12.dp)
 
     Column {
-        SectionTitle("Apps")
+        SectionTitle("Unused apps")
         SettingsRow(
             "Apps you have not opened for a while, from this TV's own usage records. Those still busy " +
                 "in the background come first.",
@@ -64,7 +64,7 @@ fun AppsPane() {
                     changed++
                 }
             }
-            SettingsAction("Tell me on Home", selected = notice) {
+            SettingsToggle("Tell me on Home", notice) {
                 UnusedApps.setNoticeOn(context, !notice)
                 changed++
             }

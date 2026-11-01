@@ -61,7 +61,7 @@ def launcher_install(ctx: click.Context) -> None:
 
 @launcher_group.group("iconpack")
 def iconpack_group() -> None:
-    """Open icon packs for Settings → Appearance → App Thumbnails."""
+    """Open icon packs for Settings → Appearance → Icons & artwork."""
 
 
 @iconpack_group.command("list")
@@ -81,7 +81,7 @@ def iconpack_install(ctx: click.Context, pack_id: str) -> None:
         install_iconpack(make_adb(ctx.obj["host"]), pack)
     except (AdbError, CatalogError) as exc:
         raise click.ClickException(str(exc)) from exc
-    click.echo(f"installed {pack.label}; choose it in Settings → Appearance → App Thumbnails")
+    click.echo(f"installed {pack.label}; choose it in Settings → Appearance → Icons & artwork")
 
 
 @launcher_group.command("photos")
@@ -109,7 +109,7 @@ def launcher_media_access(ctx: click.Context) -> None:
 @launcher_group.command("grant-settings")
 @click.pass_context
 def launcher_grant_settings(ctx: click.Context) -> None:
-    """One-time grants: screensaver and audio settings, self-updates, and app usage (Settings → Clean up)."""
+    """One-time grants: screensaver and audio settings, self-updates, and app usage (Settings → Apps & storage)."""
     try:
         for command in grant_settings_access(make_adb(ctx.obj["host"])):
             click.echo(f"ok: {command}")

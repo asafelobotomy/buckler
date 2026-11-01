@@ -88,7 +88,7 @@ fun IconPackSection() {
     Spacer(modifier = Modifier.height(14.dp))
     SettingsRow("Icon packs are not apps to open, so they stay out of the Library unless shown.")
     FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-        SettingsAction("Show in Library", selected = inLibrary) {
+        SettingsToggle("Show in Library", inLibrary) {
             IconPackStore.setPacksInLibrary(context, !inLibrary)
             changed++
         }
@@ -103,11 +103,11 @@ fun IconPackSection() {
                 "icon for can be drawn to match it: in its line style, or in its shape for full-colour packs.",
         )
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            SettingsAction("Fill missing icons", selected = fillGaps) {
+            SettingsToggle("Fill missing icons", fillGaps) {
                 IconPackStore.setFillGaps(context, !fillGaps)
                 changed++
             }
-            SettingsAction("Theme colour", selected = tinted) {
+            SettingsToggle("Theme colour", tinted) {
                 IconPackStore.setTinted(context, !tinted)
                 changed++
             }

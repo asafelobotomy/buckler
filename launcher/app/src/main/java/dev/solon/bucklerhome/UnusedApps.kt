@@ -257,7 +257,7 @@ object UnusedApps {
     internal fun noticeMessage(labels: List<String>, days: Int): String {
         val names = labels.take(3).joinToString(", ") + if (labels.size > 3) " and ${labels.size - 3} more" else ""
         val count = if (labels.size == 1) "1 app" else "${labels.size} apps"
-        return "$count unused for $days days: $names. See Settings → Clean up → Apps."
+        return "$count unused for $days days: $names. See Settings → Apps & storage → Unused apps."
     }
 
     /** "never opened", "last opened 45 days ago". */

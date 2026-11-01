@@ -9,20 +9,28 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import java.time.LocalDate
 
 /**
- * Settings → Appearance → Global: colour scheme and font, each shown as a picture. Each part of
- * Home (Header, Main Stage, Shelves) has its own page in Appearance's list.
+ * Settings → Appearance → Global: colour scheme and font, each shown as a picture, then the clock
+ * and date (the header's, the screensaver clock's and weather times). Each part of Home (Header,
+ * Main Stage, Shelves) has its own page in Appearance's list.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AppearancePane() {
     val context = LocalContext.current
     val appearance = AppearanceStore.config
+    var tick by remember { mutableIntStateOf(0) }
+    val cfg = remember(tick) { DisplayPrefs.load(context) }
 
     Column {
         SectionTitle("Appearance")
@@ -51,6 +59,18 @@ fun AppearancePane() {
                 ) { FontMiniature(font) }
             }
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
+        PickerTitle("Clock and date")
+        SettingsChoice("Clock", listOf(false, true), cfg.use24h, { if (it) "24-hour" else "12-hour" }) {
+            DisplayPrefs.setUse24h(context, it)
+            tick++
+        }
+        SettingsChoice("Date", DateStyle.entries, cfg.dateStyle, { DisplayFormat.date(LocalDate.now(), it) }) {
+            DisplayPrefs.setDateStyle(context, it)
+            tick++
+        }
+        SettingsRow("Also the screensaver clock and weather times.")
     }
 }
 

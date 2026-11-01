@@ -70,7 +70,7 @@ fun CalendarStage(
         ) {
             when {
                 agenda?.canRead == false -> Text(
-                    "Allow calendar access in Settings → Appearance → Main Stage → Calendar.",
+                    "Allow calendar access in Settings → Widgets → Calendar & reminders.",
                     color = ColorMuted,
                     fontSize = 16.sp,
                     modifier = Modifier.align(Alignment.CenterVertically),

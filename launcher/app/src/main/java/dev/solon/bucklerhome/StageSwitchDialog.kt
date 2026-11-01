@@ -74,7 +74,7 @@ fun StageSwitchDialog(
                     }
                 }
                 StageOptions(current, onOptionsChanged)
-                HoldMenuFooter(SettingsPane.MAIN_STAGE, onDismiss) {
+                HoldMenuFooter(SettingsPane.forStage(current), onDismiss) {
                     if (pinLabel != null && onPin != null) SettingsAction(pinLabel, onClick = onPin)
                 }
             }

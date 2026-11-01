@@ -34,7 +34,7 @@ fun ScreensaverPane() {
     val flow = Arrangement.spacedBy(12.dp)
 
     SectionTitle("Screensaver")
-    SettingsRow("Each screensaver has its own page with its own options, in the Screensaver list (Back). The highlighted card runs.")
+    SettingsRow("Each screensaver has a page of its own with its options. The highlighted card runs.")
     PickerTitle("In use")
     ScreensaverPicker(cfg.mode) {
         ScreensaverPrefs.setMode(context, it)
@@ -43,7 +43,7 @@ fun ScreensaverPane() {
     Spacer(modifier = Modifier.height(18.dp))
     StartAfterSection(tick = tick, onChanged = { tick++ }, onCustom = { customTimeout = true })
     Spacer(modifier = Modifier.height(12.dp))
-    SettingsAction("System screensaver settings") {
+    SettingsAction("Android's screensaver settings", value = "↗") {
         SystemScreen.SCREENSAVER.open(context)
     }
     if (customTimeout) {
@@ -105,7 +105,7 @@ fun ScreensaverModePane(mode: ScreensaverMode) {
         SettingsRow("Slides take turns between the ones that are on.")
         FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
             PhotoCategory.entries.forEach { category ->
-                SettingsAction(category.label, selected = category in cfg.categories) {
+                SettingsCheck(category.label, category in cfg.categories) {
                     if (ScreensaverPrefs.toggleCategory(context, cfg.categories, category)) {
                         tick++
                     } else {

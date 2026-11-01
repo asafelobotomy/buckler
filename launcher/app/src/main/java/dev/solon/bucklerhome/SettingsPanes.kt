@@ -3,8 +3,6 @@ package dev.solon.bucklerhome
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -32,14 +30,13 @@ fun openEditHome(context: android.content.Context) {
     safeLaunch(context, intent, "Edit Home")
 }
 
+/** Settings → Updates: Buckler's own from GitHub, and SHIELD's system update. */
 @Composable
 fun UpdatesPane(
     accountTick: Int,
     updateResult: UpdateCheckResult?,
     onResult: (UpdateCheckResult) -> Unit,
     onAvailable: (GitHubRelease) -> Unit,
-    onConnectGithub: () -> Unit,
-    onAccountChanged: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -47,15 +44,8 @@ fun UpdatesPane(
         // Read once per account change: the token lives in encrypted preferences.
         val linked = remember { !CoverAccounts.githubToken(context).isNullOrBlank() }
         SectionTitle("Updates")
-        SettingsRow("Current: ${BuildConfig.VERSION_NAME}")
-        SettingsRow(
-            "GitHub token: " +
-                if (!linked) {
-                    "not set (optional: raises GitHub's hourly limit)"
-                } else {
-                    "linked"
-                },
-        )
+        SettingsRow("Buckler ${BuildConfig.VERSION_NAME}, from GitHub.")
+        if (!linked) SettingsRow("A GitHub token (optional, under Accounts) raises GitHub's hourly limit.")
         updateResult?.let { result ->
             val msg = when (result) {
                 is UpdateCheckResult.Available -> "Update ${result.release.tag} available"
@@ -65,60 +55,124 @@ fun UpdatesPane(
             }
             SettingsRow(msg)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SettingsAction("Check now") {
-                scope.launch {
-                    val result = withContext(Dispatchers.IO) {
-                        UpdateChecker.check(context, force = true)
-                    }
-                    onResult(result)
-                    if (result is UpdateCheckResult.Available) {
-                        onAvailable(result.release)
-                    }
+        SettingsAction("Check now") {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    UpdateChecker.check(context, force = true)
                 }
-            }
-            // Only while an update prompt is snoozed; otherwise there is nothing to clear.
-            var snoozed by remember { mutableStateOf(UpdatePrefs.snoozeUntil(context) > System.currentTimeMillis()) }
-            if (snoozed) {
-                SettingsAction("Clear snooze") {
-                    UpdatePrefs.clearSnooze(context)
-                    snoozed = false
-                    Toast.makeText(context, "Snooze cleared", Toast.LENGTH_SHORT).show()
+                onResult(result)
+                if (result is UpdateCheckResult.Available) {
+                    onAvailable(result.release)
                 }
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (!linked) {
-                SettingsAction("Link GitHub token") { onConnectGithub() }
+        // Only while an update prompt is snoozed; otherwise there is nothing to clear.
+        var snoozed by remember { mutableStateOf(UpdatePrefs.snoozeUntil(context) > System.currentTimeMillis()) }
+        if (snoozed) {
+            SettingsAction("Clear snooze") {
+                UpdatePrefs.clearSnooze(context)
+                snoozed = false
+                Toast.makeText(context, "Snooze cleared", Toast.LENGTH_SHORT).show()
+            }
+        }
+        Spacer(modifier = Modifier.height(18.dp))
+        PickerTitle("SHIELD")
+        SystemScreenLink("System update", SystemScreen.SYSTEM_UPDATE)
+    }
+}
+
+/** Settings → Appearance → Icons & artwork: icon packs, the curated pack, custom thumbnails. */
+@Composable
+fun CoversPane() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var confirmClearCovers by remember { mutableStateOf(false) }
+    SectionTitle("Icons & artwork")
+    IconPackSection()
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("Artwork")
+    SettingsRow(
+        "SteamGridDB: ${CoverAccounts.statusLabel(context, CoverProvider.STEAMGRIDDB)}. IGDB: " +
+            if (CoverAccounts.isLinked(context, CoverProvider.IGDB)) "linked." else "not linked.",
+    )
+    SettingsPaneLink("Link artwork accounts", SettingsPane.ACCOUNTS)
+    SettingsAction("Refresh curated pack") {
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                CuratedCovers.refresh(context)
+            }
+            Toast.makeText(
+                context,
+                if (ok) {
+                    "Curated thumbnails updated"
+                } else {
+                    "Refresh failed — keeping current thumbnails"
+                },
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+    // Only when there are custom covers to clear.
+    var customCount by remember { mutableIntStateOf(CoverStore.all(context).size) }
+    if (customCount > 0) {
+        SettingsAction(
+            if (confirmClearCovers) "Press again to clear $customCount" else "Clear custom thumbnails",
+        ) {
+            if (confirmClearCovers) {
+                CoverStore.clearAll(context)
+                confirmClearCovers = false
+                customCount = 0
+                Toast.makeText(context, "Custom thumbnails cleared", Toast.LENGTH_SHORT).show()
             } else {
-                SettingsAction("Disconnect GitHub") {
-                    CoverAccounts.setGithubToken(context, null)
-                    onAccountChanged()
-                }
+                confirmClearCovers = true
             }
         }
     }
 }
 
+/**
+ * Settings → Accounts: every service Buckler signs in to, in one place, and Android's own screen
+ * for the TV's Google account (Buckler cannot see or change other apps' accounts).
+ */
 @Composable
-fun CoversPane(
+fun AccountsPane(
     accountTick: Int,
+    onConnectGithub: () -> Unit,
     onConnectSgdb: () -> Unit,
     onConnectIgdb: () -> Unit,
     onAccountChanged: () -> Unit,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var confirmClearCovers by remember { mutableStateOf(false) }
+    SectionTitle("Accounts")
+    SettingsRow("Sign-ins are kept encrypted on this TV and used only for the service named.")
+    PickerTitle("This TV")
+    SettingsRow("The Google account (Play Store, calendar) and other apps' accounts are Android's.")
+    SystemScreenLink("Add or sync an account", SystemScreen.ADD_ACCOUNT)
     key(accountTick) {
-        SectionTitle("App Thumbnails")
-        IconPackSection()
         Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("Online artwork")
-        SettingsRow(
-            "SteamGridDB: ${CoverAccounts.statusLabel(context, CoverProvider.STEAMGRIDDB)}",
-        )
+        PickerTitle("GitHub")
+        val github = remember { !CoverAccounts.githubToken(context).isNullOrBlank() }
+        SettingsRow(if (github) "Token linked: updates check with it." else "Optional token: raises GitHub's hourly limit for updates.")
+        if (github) {
+            SettingsAction("Disconnect GitHub") {
+                CoverAccounts.setGithubToken(context, null)
+                onAccountChanged()
+            }
+        } else {
+            SettingsAction("Link GitHub token") { onConnectGithub() }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+        PickerTitle("Artwork")
+        SettingsRow("SteamGridDB: ${CoverAccounts.statusLabel(context, CoverProvider.STEAMGRIDDB)}")
+        if (CoverAccounts.isLinked(context, CoverProvider.STEAMGRIDDB)) {
+            SettingsAction("Disconnect SteamGridDB") {
+                CoverAccounts.disconnect(context, CoverProvider.STEAMGRIDDB)
+                onAccountChanged()
+            }
+        } else {
+            SettingsAction("Connect SteamGridDB") { onConnectSgdb() }
+        }
         val igdbLinked = CoverAccounts.isLinked(context, CoverProvider.IGDB)
         val igdbAvailable = igdbLinked || TwitchDeviceAuth.clientIdConfigured()
         SettingsRow(
@@ -128,60 +182,21 @@ fun CoversPane(
                 "not available in this build (no Twitch client ID)"
             },
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (CoverAccounts.isLinked(context, CoverProvider.STEAMGRIDDB)) {
-                SettingsAction("Disconnect SteamGridDB") {
-                    CoverAccounts.disconnect(context, CoverProvider.STEAMGRIDDB)
-                    onAccountChanged()
-                }
-            } else {
-                SettingsAction("Connect SteamGridDB") { onConnectSgdb() }
+        if (igdbLinked) {
+            SettingsAction("Disconnect IGDB") {
+                CoverAccounts.disconnect(context, CoverProvider.IGDB)
+                onAccountChanged()
             }
-            if (igdbLinked) {
-                SettingsAction("Disconnect IGDB") {
-                    CoverAccounts.disconnect(context, CoverProvider.IGDB)
-                    onAccountChanged()
-                }
-            } else if (igdbAvailable) {
-                SettingsAction("Connect IGDB") { onConnectIgdb() }
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SettingsAction("Refresh curated pack") {
-                scope.launch {
-                    val ok = withContext(Dispatchers.IO) {
-                        CuratedCovers.refresh(context)
-                    }
-                    Toast.makeText(
-                        context,
-                        if (ok) {
-                            "Curated thumbnails updated"
-                        } else {
-                            "Refresh failed — keeping current thumbnails"
-                        },
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-            }
-            // Only when there are custom covers to clear.
-            var customCount by remember { mutableIntStateOf(CoverStore.all(context).size) }
-            if (customCount > 0) {
-                SettingsAction(
-                    if (confirmClearCovers) "Press again to clear $customCount" else "Clear custom thumbnails",
-                ) {
-                    if (confirmClearCovers) {
-                        CoverStore.clearAll(context)
-                        confirmClearCovers = false
-                        customCount = 0
-                        Toast.makeText(context, "Custom thumbnails cleared", Toast.LENGTH_SHORT).show()
-                    } else {
-                        confirmClearCovers = true
-                    }
-                }
-            }
+        } else if (igdbAvailable) {
+            SettingsAction("Connect IGDB") { onConnectIgdb() }
         }
     }
+
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("Multiview")
+    JellyfinSection {}
+    Spacer(modifier = Modifier.height(16.dp))
+    StremioSection {}
 }
 
 @Composable
@@ -196,16 +211,7 @@ fun AboutPane() {
             "Merriweather: their authors, via Google Fonts (SIL Open Font License)",
     )
     Spacer(modifier = Modifier.height(18.dp))
-    PickerTitle("Android TV")
-    SettingsRow("Shortcuts to the system's own screens.")
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        SettingsAction("Network") { SystemScreen.NETWORK.open(context) }
-        SettingsAction("Apps") { SystemScreen.APPS.open(context) }
-        SettingsAction("Display & Sound") { SystemScreen.DISPLAY_SOUND.open(context) }
-        SettingsAction("About this TV") { SystemScreen.ABOUT.open(context) }
-        SettingsAction("All settings") { SystemScreen.ALL.open(context) }
-    }
-    Spacer(modifier = Modifier.height(18.dp))
+    SystemScreenLink("About this TV", SystemScreen.ABOUT)
     SettingsAction("Open releases") {
         val intent = Intent(
             Intent.ACTION_VIEW,

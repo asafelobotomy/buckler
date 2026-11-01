@@ -33,9 +33,14 @@ import androidx.tv.material3.Text
  */
 val LocalSettingsPanel = compositionLocalOf { false }
 
+/** What a [SettingsAction] row shows on its right in the panel. */
+enum class RowMark { NONE, DOT, CHECK }
+
 /**
  * Text button used across Settings and dialogs. [selected] marks the current choice of a group
- * (a brand-coloured outline plus a dot) so it is readable without relying on colour alone.
+ * (a brand-coloured outline plus a dot) so it is readable without relying on colour alone. In the
+ * panel a row can instead show a [value] on its right (On / Off, or the current choice of a list
+ * it opens), and [mark] CHECK marks one of several chosen, as SHIELD's lists do.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -44,12 +49,14 @@ fun SettingsAction(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     selected: Boolean = false,
+    value: String? = null,
+    mark: RowMark = RowMark.DOT,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(8.dp)
-    AnnounceOnFocus(focused, label)
+    AnnounceOnFocus(focused, if (value != null) "$label, $value" else label)
 
     val panel = LocalSettingsPanel.current
     var actionModifier = modifier
@@ -76,6 +83,12 @@ fun SettingsAction(
         .focusable(interactionSource = interactionSource)
         .onSelectKeyUp(onClick)
 
+    val sign = when {
+        !selected -> ""
+        mark == RowMark.CHECK -> "✓"
+        mark == RowMark.DOT -> "●"
+        else -> ""
+    }
     if (panel) {
         Row(modifier = actionModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -84,10 +97,18 @@ fun SettingsAction(
                 fontSize = 15.sp,
                 color = if (focused) ColorOnBrand else ColorText,
             )
+            if (value != null) {
+                Text(
+                    text = value,
+                    modifier = Modifier.padding(start = 12.dp, end = if (sign.isEmpty()) 16.dp else 0.dp),
+                    fontSize = 14.sp,
+                    color = if (focused) ColorOnBrand else ColorMuted,
+                )
+            }
             Text(
-                text = if (selected) "●" else "",
-                modifier = Modifier.padding(horizontal = 16.dp),
-                fontSize = 13.sp,
+                text = sign,
+                modifier = Modifier.padding(horizontal = if (sign.isEmpty() && value != null) 0.dp else 16.dp),
+                fontSize = if (mark == RowMark.CHECK) 15.sp else 13.sp,
                 color = if (focused) ColorOnBrand else ColorBrand,
             )
         }
@@ -95,7 +116,7 @@ fun SettingsAction(
     }
     Box(modifier = actionModifier) {
         Text(
-            text = if (selected) "● $label" else label,
+            text = listOfNotNull(sign.ifEmpty { null }, label + (value?.let { ": $it" } ?: "")).joinToString(" "),
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
             fontSize = 15.sp,
             color = if (focused) ColorOnBrand else ColorText,

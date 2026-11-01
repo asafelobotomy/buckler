@@ -38,7 +38,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 
 - Settings → Appearance → Header → Thin / Medium / Large scales the logo, clock, icons and Now Playing together
 - Settings → Appearance → Header → News ticker: pick one source or several (world, gaming, business, tech). Several are interleaved, each story from the next source with that source's mark. Ticker speed Slow / Normal / Fast. No Hacker News and no Shuffle toggle
-- Settings → Appearance → Main Stage → News changes every 30 / 60 / 90 seconds. OK on the News stage opens a reader with the article text
+- Settings → Widgets → News: the News stage changes story every 30 / 60 / 90 seconds. OK on the News stage opens a reader with the article text
 - OK on Now Playing opens the app that is playing. OK on Weather opens the weather app. OK on Suggested opens that title's app. The stage stays on screen while shelves scroll
 - Header: logo + clock with date and weather, Now Playing (only while playing, and hidden while the stage is Now Playing), network / VPN icons (country code while VPN is up), pencil / bag / gear icons, news ticker line
 - Header gear → Buckler Settings (not only stock); stock Settings still reachable inside
@@ -57,7 +57,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - ◀ on the first tile of a shelf reveals the shelf button. OK opens Move shelf (▲ ▼ / OK / Back) and Hide shelf. Up Next also offers Sources (at most three cards per app)
 - Long-press / Menu: Open, Change cover, Remove, Move, Pin to Apps, Uninstall (user apps), Info
 - Change cover works **without** linking accounts (icon / banner / curated)
-- Settings → Appearance → App Thumbnails: Connect SteamGridDB (QR) / Connect IGDB (device code when `TWITCH_CLIENT_ID` set)
+- Settings → Accounts: Connect SteamGridDB (QR) / Connect IGDB (device code when `TWITCH_CLIENT_ID` set)
 - Refresh curated pack succeeds via **bundled asset** even if GitHub is unreachable
 - Update dialog appears when a newer GitHub release has an APK asset; Snooze / Dismiss work (release-signed install only)
 - A debug or `optimized` install never shows the update dialog; Settings → Updates → Check now says it is a dev build
@@ -66,14 +66,14 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - `buckler dns status` prints mode + specifier
 - Open an app, press Home, then open the recents view (≡) and press Home: each goes back to a clean Home at once (no recents cards left over it, no dropped keys); `adb logcat | grep "Launch timeout"` stays quiet
 - Force-stop buckler-home on Home: the ticker shows the last headlines within a couple of seconds
-- Settings → Clean up → Apps lists apps unopened for the chosen period (never Settings, Play Store, the update service or Files); Keep removes one; `buckler unused` prints the same list
-- Settings → Remote: *Found* names the connected remote (2019: triangular); the drawing matches it; Netflix press / double / hold each run their choice (`adb logcat -s RemoteButtons`)
+- Settings → Apps & storage → Unused apps lists apps unopened for the chosen period (never Settings, Play Store, the update service or Files); Keep removes one; `buckler unused` prints the same list
+- Settings → Remote & accessories: *Found* names the connected remote (2019: triangular); the drawing matches it; Netflix press / double / hold each run their choice (`adb logcat -s RemoteButtons`)
 - Force-stop buckler-home with remote buttons on: about 10 s later they are back by themselves (`settings get secure enabled_accessibility_services` lists the service again, `dumpsys accessibility` shows it bound); Home says they stopped only if that fails, and Settings → Remote → *Turn on again* then brings them back
 - `am crash` Home's process (not `:remote`): remote buttons keep working, `dumpsys accessibility` still shows the service bound
 - Turn Buckler remote buttons off in Android's Accessibility settings, then restart Buckler: they stay off
-- Settings → Clean up shows free space and app sizes; Cache and Largest apps list apps; *Clear Buckler's cache* drops it to a few kB; `buckler clean` reports MB freed
+- Settings → Apps & storage shows free space and app sizes; Cache and Largest apps list apps; *Clear Buckler's cache* drops it to a few kB; `buckler clean` reports MB freed
 - Every layout (Icon / Poster / Banner) and app size (Thin to Large): the focused shelf sits whole under the stage, its title showing, the next one fading in; no tile cut at a shelf's edge
-- Settings → Appearance → App Thumbnails: choose an icon pack; apps it lacks get icons drawn in its style (line packs) or its shape (full-colour packs); a newly installed app shows up and is styled without leaving Home
+- Settings → Appearance → Icons & artwork: choose an icon pack; apps it lacks get icons drawn in its style (line packs) or its shape (full-colour packs); a newly installed app shows up and is styled without leaving Home
 - Appearance shows colour schemes and fonts three to a row; picking Slate … Saffron changes the app-list icon to match
 
 ## Known sticky processes

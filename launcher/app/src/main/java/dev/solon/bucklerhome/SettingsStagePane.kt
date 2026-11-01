@@ -1,6 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -16,18 +15,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /**
- * Settings → Appearance → Main Stage: which widget, how tall, then only that widget's own options
- * (sources and pace for News, city and span for Weather, timing for Lyrics, media access for those
- * that follow what is playing). News and Weather can sync with the header or stand apart.
+ * Settings → Appearance → Main Stage: which widget and how tall. The widget's own options are its
+ * page under Widgets, one row away.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MainStagePane() {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
     val layout = remember(tick) { HomeLayout.stored(context) }
-    val cfg = remember(tick) { DisplayPrefs.load(context) }
-    val flow = Arrangement.spacedBy(12.dp)
 
     fun persist(next: HomeLayout) {
         HomeLayout.save(context, next)
@@ -36,121 +31,10 @@ fun MainStagePane() {
 
     SectionTitle("Main Stage")
     SettingsRow("The band under the header. On Home, hold OK on it to switch widget.")
-    MainStagePicker(layout.mainStage, title = "Shows") { persist(layout.copy(mainStage = it)) }
+    SettingsChoice("Shows", MainStage.entries, layout.mainStage, { it.label }) { persist(layout.copy(mainStage = it)) }
+    SettingsPaneLink("${layout.mainStage.label} options", SettingsPane.forStage(layout.mainStage))
     Spacer(modifier = Modifier.height(18.dp))
     StageSizePicker(layout.stageSize, title = "Size") { persist(layout.copy(stageSize = it)) }
-    Spacer(modifier = Modifier.height(18.dp))
-
-    when (layout.mainStage) {
-        MainStage.NEWS -> {
-            SectionTitle("News")
-            if (cfg.stageNews.isNotEmpty()) {
-                SettingsRow("◀ ▶ on the stage step through stories. Otherwise it changes every:")
-                FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-                    NewsPace.entries.forEach { pace ->
-                        SettingsAction(pace.label, selected = pace == cfg.newsPace) {
-                            DisplayPrefs.setNewsPace(context, pace)
-                            tick++
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-            }
-            NewsSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
-        }
-        MainStage.WEATHER -> {
-            SectionTitle("Weather")
-            FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-                WeatherSpan.entries.forEach { span ->
-                    SettingsAction(span.label, selected = span == cfg.weatherSpan) {
-                        DisplayPrefs.setWeatherSpan(context, span)
-                        tick++
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-            WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
-        }
-        MainStage.NOW_PLAYING -> {
-            SectionTitle("Now Playing")
-            SettingsRow("The playing app with its controls. The header's Side Stage hides while this is on.")
-            ScrollTitlesToggle(cfg.scrollTitles) { tick++ }
-            Spacer(modifier = Modifier.height(12.dp))
-            MediaAccessSection()
-        }
-        MainStage.LYRICS -> {
-            SectionTitle("Lyrics")
-            SettingsRow(
-                "Lyrics for the song in the header's Now Playing, filled as they are sung with a bouncing dot. " +
-                    "Word timing comes from NetEase when it has the song, otherwise LRCLIB lines with estimated words.",
-            )
-            val route = rememberAudioRoute()
-            val offset = remember(tick, route.kind) { LyricsPrefs.offset(context, route.kind) }
-            val songs = remember(tick) { LyricsPrefs.songOffsetCount(context) }
-            SettingsRow(
-                "Audio is going to ${route.kind.label}. Lyrics allow ${"%.1f".format(route.delayMs / 1000.0)} s " +
-                    "for its delay automatically.",
-            )
-            SettingsRow(
-                "${route.kind.label} fine-tune: ${LyricsPrefs.describe(offset)}. For the device; ◀ ▶ on the " +
-                    "Lyrics stage nudge just the song playing and are remembered for it.",
-            )
-            FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-                SettingsAction("Earlier") {
-                    LyricsPrefs.setOffset(context, route.kind, offset + LyricsPrefs.STEP_MS)
-                    tick++
-                }
-                SettingsAction("Later") {
-                    LyricsPrefs.setOffset(context, route.kind, offset - LyricsPrefs.STEP_MS)
-                    tick++
-                }
-                if (offset != 0L) {
-                    SettingsAction("Reset") {
-                        LyricsPrefs.setOffset(context, route.kind, 0)
-                        tick++
-                    }
-                }
-                if (songs > 0) {
-                    SettingsAction("Clear $songs song nudge${if (songs == 1) "" else "s"}") {
-                        LyricsPrefs.clearSongOffsets(context)
-                        tick++
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            MediaAccessSection()
-        }
-        MainStage.SUGGESTED -> {
-            SectionTitle("Suggested")
-            SettingsRow("Cards for what you played recently. Hold OK on a card to pin or unpin it.")
-            MediaAccessSection()
-        }
-        MainStage.GLANCE -> {
-            SectionTitle("At a Glance")
-            SettingsRow(
-                "What matters next, by plain rules: an event under way or coming up, reminders due, a change in " +
-                    "the weather, sunrise or sunset, and tomorrow's first event in the evening. No ads, nothing promoted.",
-            )
-            WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
-            Spacer(modifier = Modifier.height(14.dp))
-            CalendarSection()
-        }
-        MainStage.CALENDAR -> CalendarSection()
-        MainStage.WEATHER_MAP -> {
-            SectionTitle("Weather map")
-            SettingsRow(
-                "Pressure (isobars, with highs and lows), wind and rain around the city for the next day, from " +
-                    "Open-Meteo over Natural Earth's coastlines. ◀ ▶ on the stage step through the hours.",
-            )
-            WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
-        }
-        MainStage.MULTIVIEW -> MultiviewSettings()
-        MainStage.COMPANION -> {
-            CompanionPicker(cfg.companion) { tick++ }
-            Spacer(modifier = Modifier.height(14.dp))
-            WeatherSection(HomeSection.MAIN_STAGE, cfg, onChanged = { tick++ })
-        }
-    }
 }
 
 /** Which companion the stages draw; it goes about its day by the clock and the weather. */

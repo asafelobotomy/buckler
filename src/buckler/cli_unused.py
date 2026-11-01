@@ -16,7 +16,7 @@ from buckler.unused import clear_caches, disable_unused, read_report
 @click.option("--dry-run", is_flag=True, help="With --apply: show what would change.")
 @click.pass_context
 def unused_cmd(ctx: click.Context, packages: tuple[str, ...], apply_: bool, dry_run: bool) -> None:
-    """Show apps not opened for a while (from Buckler Settings → Clean up → Apps); --apply disables them."""
+    """Show apps not opened for a while (from Buckler Settings → Apps & storage → Unused apps); --apply disables them."""
     adb = make_adb(ctx.obj["host"])
     try:
         report = read_report(adb)

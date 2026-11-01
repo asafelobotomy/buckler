@@ -96,7 +96,7 @@ class MainActivity : ComponentActivity() {
             runOnUiThread {
                 Toast.makeText(
                     this,
-                    "The update turned ${appCount(back.size)} back on. Settings → Setup turns ${if (back.size == 1) "it" else "them"} off again.",
+                    "The update turned ${appCount(back.size)} back on. Settings → Device → SHIELD clean-up turns ${if (back.size == 1) "it" else "them"} off again.",
                     Toast.LENGTH_LONG,
                 ).show()
             }

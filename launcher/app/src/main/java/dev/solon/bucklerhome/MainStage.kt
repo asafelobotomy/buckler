@@ -195,7 +195,7 @@ private fun NewsStage(
                 if (story == null) {
                     Text(
                         text = if (newsSources.isEmpty()) {
-                            "Choose news sources in Settings → Appearance → Main Stage."
+                            "Choose news sources in Settings → Widgets → News."
                         } else {
                             "No story yet."
                         },

@@ -82,7 +82,7 @@ fun MultiviewStage(stageFocus: FocusRequester, onDown: () -> Unit, onHold: () ->
                         .onFocusChanged { if (it.hasFocus) heard = i else if (heard == i) heard = null }
                         .stageTarget(requesters[i], onDown, tile?.title ?: "Empty tile ${i + 1}", onLongPress = onHold) {
                             if (tile == null || url == null) {
-                                BucklerSettingsActivity.open(context, SettingsPane.MAIN_STAGE)
+                                BucklerSettingsActivity.open(context, SettingsPane.MULTIVIEW)
                             } else {
                                 context.startActivity(
                                     Intent(context, MultiviewPlayerActivity::class.java)

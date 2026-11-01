@@ -1,4 +1,4 @@
-"""Decluttering from a computer: apps Buckler's Settings → Clean up → Apps found unused (read from
+"""Decluttering from a computer: apps Buckler's Settings → Apps & storage → Unused apps found unused (read from
 the TV and optionally disabled), and clearing every app's cache, which only adb is allowed to do."""
 
 from __future__ import annotations
@@ -47,9 +47,9 @@ def parse_report(text: str) -> UnusedReport:
     try:
         data = json.loads(text)
     except ValueError as exc:
-        raise AdbError(f"The unused-apps list on the TV is unreadable ({exc}); open Settings → Clean up → Apps again") from exc
+        raise AdbError(f"The unused-apps list on the TV is unreadable ({exc}); open Settings → Apps & storage → Unused apps again") from exc
     if not isinstance(data, dict) or "days" not in data:
-        raise AdbError("The unused-apps list on the TV is incomplete; open Settings → Clean up → Apps again")
+        raise AdbError("The unused-apps list on the TV is incomplete; open Settings → Apps & storage → Unused apps again")
     apps = [
         UnusedApp(
             package=a["package"],
@@ -67,12 +67,12 @@ def parse_report(text: str) -> UnusedReport:
 
 
 def read_report(adb: Adb) -> UnusedReport:
-    """The list Buckler last wrote (on returning Home, or opening Settings → Clean up → Apps)."""
+    """The list Buckler last wrote (on returning Home, or opening Settings → Apps & storage → Unused apps)."""
     adb.connect()
     text = adb.shell("cat", EXPORT_PATH, check=False)
     if not text.lstrip().startswith("{"):
         raise AdbError(
-            "No unused-apps list on the TV yet: open Buckler Settings → Clean up → Apps once "
+            "No unused-apps list on the TV yet: open Buckler Settings → Apps & storage → Unused apps once "
             "(after `buckler launcher grant-settings`)."
         )
     return parse_report(text)
