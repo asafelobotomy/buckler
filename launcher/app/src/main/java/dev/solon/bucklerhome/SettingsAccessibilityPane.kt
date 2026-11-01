@@ -59,18 +59,31 @@ fun AccessibilityPane() {
         }
         Spacer(modifier = Modifier.height(18.dp))
         PickerTitle("Whole TV")
-        if (!SystemSettings.canWriteSystem(context)) {
-            SettingsRow("Mono audio needs a one-time permission: ${SystemSettings.GRANT_COMMAND}")
-        }
-        FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-            SettingsToggle("Mono audio", mono) {
-                if (SystemSettings.setMonoAudio(context, !mono)) {
-                    tick++
-                } else {
-                    Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
-                }
+        GrantNote()
+        SystemToggle("High contrast text", SystemKeys.HIGH_TEXT_CONTRAST)
+        SettingsToggle("Mono audio", mono) {
+            if (SystemSettings.setMonoAudio(context, !mono)) {
+                tick++
+            } else {
+                Toast.makeText(context, "Run: ${SystemSettings.GRANT_COMMAND}", Toast.LENGTH_LONG).show()
             }
-            SystemScreenLink("Captions", SystemScreen.CAPTIONS)
         }
+        SystemChoice(
+            "Speech rate",
+            SystemKeys.TTS_RATE,
+            listOf("50" to "0.5×", "75" to "0.75×", "100" to "Normal", "150" to "1.5×", "200" to "2×", "300" to "3×"),
+            note = "For the screen reader and Speak focused item.",
+            other = { "${(it.toIntOrNull() ?: 100) / 100.0}×" },
+        )
+        SystemChoice(
+            "Animations",
+            SystemKeys.ANIMATOR_SCALE,
+            ANIMATIONS.map { (scale, label) -> scale.toString() to label },
+            note = "How fast Android's screens open and close; Reduce motion above is Buckler's own.",
+            also = listOf(SystemKeys.WINDOW_SCALE, SystemKeys.TRANSITION_SCALE),
+            other = { "${it}×" },
+        )
+        Spacer(modifier = Modifier.height(18.dp))
+        CaptionsSection()
     }
 }

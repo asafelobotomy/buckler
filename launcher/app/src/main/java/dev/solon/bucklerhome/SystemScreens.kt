@@ -31,6 +31,9 @@ enum class SystemScreen(val label: String, private val activity: String?, privat
     DISPLAY_SOUND("display and sound settings", ".device.displaysound.DisplaySoundActivity", Settings.ACTION_DISPLAY_SETTINGS),
     SCREENSAVER("screensaver settings", ".device.display.daydream.DaydreamActivity", Settings.ACTION_DREAM_SETTINGS),
     STORAGE("storage settings", ".device.StorageResetActivity", Settings.ACTION_INTERNAL_STORAGE_SETTINGS),
+    DATE_TIME("date and time settings", ".system.DateTimeActivity", Settings.ACTION_DATE_SETTINGS),
+    KEYBOARD("keyboard settings", ".inputmethod.KeyboardActivity", Settings.ACTION_INPUT_METHOD_SETTINGS),
+    POWER("power settings", ".system.PowerSettingsActivity", null, "Device Preferences → Power"),
     CAPTIONS("caption settings", ".system.CaptionSetupActivity", Settings.ACTION_CAPTIONING_SETTINGS),
     ACCESSIBILITY("accessibility settings", null, Settings.ACTION_ACCESSIBILITY_SETTINGS, "Device Preferences → Accessibility"),
     NOTIFICATION_ACCESS(

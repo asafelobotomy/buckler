@@ -65,6 +65,12 @@ fun ShieldPane() {
     val runner = rememberShieldRunner()
 
     SectionTitle("Device")
+    GrantNote()
+    DateTimeSection()
+    Spacer(modifier = Modifier.height(18.dp))
+    KeyboardSection()
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("Setup")
     SettingsRow("The setup wizard walks through Buckler's look and, on a SHIELD, its clean-up, showing every change before making it.")
     SettingsAction("Run setup wizard") { openSetupWizard(context) }
     if (!SetupState.isShield()) return

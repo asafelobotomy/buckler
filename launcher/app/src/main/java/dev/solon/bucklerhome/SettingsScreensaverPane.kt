@@ -43,6 +43,15 @@ fun ScreensaverPane() {
     Spacer(modifier = Modifier.height(18.dp))
     StartAfterSection(tick = tick, onChanged = { tick++ }, onCustom = { customTimeout = true })
     Spacer(modifier = Modifier.height(12.dp))
+    SystemChoice(
+        "Turn off display after",
+        SystemKeys.SLEEP_TIMEOUT,
+        SleepChoices,
+        note = "Counted from the last button press, the screensaver's time included.",
+        other = { "${(it.toLongOrNull() ?: 0) / 60_000} minutes" },
+    )
+    SystemToggle("Stay awake on music", SystemKeys.AWAKE_ON_MUSIC)
+    Spacer(modifier = Modifier.height(12.dp))
     SettingsAction("Android's screensaver settings", value = "↗") {
         SystemScreen.SCREENSAVER.open(context)
     }

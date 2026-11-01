@@ -208,7 +208,11 @@ object DisplayPrefs {
         val region = NewsRegion.fromName(p.getString(KEY_NEWS_REGION, null))
         val fahrenheit = p.getBoolean(KEY_FAHRENHEIT, false)
         return DisplayConfig(
-            use24h = p.getBoolean(KEY_24H, true),
+            use24h = when (SystemSettings.get(context, SystemKeys.TIME_12_24)) {
+                "24" -> true
+                "12" -> false
+                else -> p.getBoolean(KEY_24H, true)
+            },
             dateStyle = DateStyle.fromName(p.getString(KEY_DATE_STYLE, null)),
             place = place,
             fahrenheit = fahrenheit,
@@ -244,8 +248,11 @@ object DisplayPrefs {
         return Place(label, p.getFloat(lat, 0f).toDouble(), p.getFloat(lon, 0f).toDouble())
     }
 
-    fun setUse24h(context: Context, value: Boolean) =
+    /** Buckler's clocks, and the whole TV's too when Buckler may write it, so the two agree. */
+    fun setUse24h(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_24H, value).apply()
+        SystemSettings.put(context, SystemKeys.TIME_12_24, if (value) "24" else "12")
+    }
 
     fun setDateStyle(context: Context, style: DateStyle) =
         prefs(context).edit().putString(KEY_DATE_STYLE, style.name).apply()

@@ -62,10 +62,7 @@ fun AppearancePane() {
 
         Spacer(modifier = Modifier.height(20.dp))
         PickerTitle("Clock and date")
-        SettingsChoice("Clock", listOf(false, true), cfg.use24h, { if (it) "24-hour" else "12-hour" }) {
-            DisplayPrefs.setUse24h(context, it)
-            tick++
-        }
+        ClockChoice()
         SettingsChoice("Date", DateStyle.entries, cfg.dateStyle, { DisplayFormat.date(LocalDate.now(), it) }) {
             DisplayPrefs.setDateStyle(context, it)
             tick++

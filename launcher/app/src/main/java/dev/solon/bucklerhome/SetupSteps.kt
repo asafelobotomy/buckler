@@ -166,8 +166,8 @@ fun ScreensaverStep(choices: SetupChoices, onChange: (SetupChoices) -> Unit) {
     }
 }
 
-private val ANIMATIONS = listOf(1f to "Normal", 0.5f to "Fast", 0f to "Off")
-private val DNS = listOf(
+internal val ANIMATIONS = listOf(1f to "Normal", 0.5f to "Fast", 0f to "Off")
+internal val DNS = listOf(
     DnsChoice.AUTOMATIC to "Automatic",
     DnsChoice.OFF to "Off",
     DnsChoice("hostname", "dns.adguard-dns.com") to "AdGuard (blocks ads)",

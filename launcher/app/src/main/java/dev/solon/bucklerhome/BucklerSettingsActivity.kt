@@ -98,6 +98,8 @@ enum class SettingsPane(
     SAVER_STARFIELD(ScreensaverMode.STARFIELD.label, SCREENSAVER, ScreensaverMode.STARFIELD),
     ACCESSIBILITY("Accessibility"),
     REMOTE("Remote & accessories"),
+    NETWORK("Network"),
+    DISPLAY_SOUND("Display & sound"),
     STORAGE("Apps & storage", ownPage = "Overview"),
     UNUSED_APPS("Unused apps", STORAGE),
     CACHE("Cache", STORAGE),
@@ -152,6 +154,8 @@ fun SettingsPageContent(pane: SettingsPane) {
         SettingsPane.SAVER_PIPES, SettingsPane.SAVER_MYSTIFY, SettingsPane.SAVER_STARFIELD,
         -> ScreensaverModePane(pane.saver ?: ScreensaverMode.CLOCK)
         SettingsPane.REMOTE -> RemotePane()
+        SettingsPane.NETWORK -> NetworkPane()
+        SettingsPane.DISPLAY_SOUND -> DisplaySoundPane()
         SettingsPane.STORAGE -> CleanUpPane()
         SettingsPane.UNUSED_APPS -> AppsPane()
         SettingsPane.CACHE -> CachePane()

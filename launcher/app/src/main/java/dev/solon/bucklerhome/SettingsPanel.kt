@@ -64,10 +64,6 @@ private sealed interface PanelNode {
     }
 }
 
-/** Android's own screens in the first list, after the Buckler section they follow (SHIELD's order). */
-private val RootLinks = mapOf(
-    SettingsPane.REMOTE to listOf("Network" to SystemScreen.NETWORK, "Display & sound" to SystemScreen.DISPLAY_SOUND),
-)
 private const val ALL_SETTINGS_ROW = "android:all"
 
 private fun SettingsPane.hasPages() = SettingsPane.entries.any { it.parent == this }
@@ -185,15 +181,11 @@ private fun PanelScreen(node: PanelNode, above: PanelNode?, returnTo: String?, o
             PanelNode.Root -> {
                 val context = LocalContext.current
                 PanelTitle("Buckler Settings", "buckler-home ${BuildConfig.VERSION_NAME}")
-                val links = RootLinks.values.flatten().associate { (label, screen) -> "android:${screen.name}" to screen }
-                val rows = SettingsPane.entries.filter { it.parent == null }.flatMap { pane ->
-                    listOf(PanelRow(pane.name, pane.label)) +
-                        RootLinks[pane].orEmpty().map { (label, screen) -> PanelRow("android:${screen.name}", label, external = true) }
-                } + PanelRow(ALL_SETTINGS_ROW, "All Android settings", external = true)
+                val rows = SettingsPane.entries.filter { it.parent == null }.map { PanelRow(it.name, it.label) } +
+                    PanelRow(ALL_SETTINGS_ROW, "All Android settings", external = true)
                 PanelList(rows, returnTo) { key ->
-                    when {
-                        key == ALL_SETTINGS_ROW -> SystemScreen.ALL.open(context)
-                        key in links -> links.getValue(key).open(context)
+                    when (key) {
+                        ALL_SETTINGS_ROW -> SystemScreen.ALL.open(context)
                         else -> {
                             val pane = SettingsPane.valueOf(key)
                             onOpen(key, if (pane.hasPages()) PanelNode.Section(pane) else PanelNode.Page(pane))
