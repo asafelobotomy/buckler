@@ -162,6 +162,11 @@ private fun DrawScope.drawSaver(mode: ScreensaverMode, p: Palette) {
                 drawCircle(Color.White.copy(alpha = 0.3f + (i % 7) / 10f), radius = 1f + (i % 3), center = Offset(x, y))
             }
         }
+        ScreensaverMode.WEATHER -> {
+            listOf(Color(0xFF3A6FD8) to 0f, Color(0xFF8FD6A0) to 0.3f, Color(0xFFF2E27A) to 0.55f, Color(0xFFE8573B) to 0.8f)
+                .forEach { (c, x) -> drawRect(c.copy(alpha = 0.75f), Offset(w * x, 0f), Size(w * 0.21f, h)) }
+            drawCircle(Color.White, radius = h * 0.05f, center = Offset(w * 0.5f, h * 0.5f))
+        }
         else -> Unit
     }
 }

@@ -46,6 +46,8 @@ object MediaCards {
         }
     }
 
+    // Each is a read-modify-write of one key, run from the listener and the stages alike.
+    @Synchronized
     fun remember(context: Context, info: NowPlayingInfo) {
         if (info.packageName.isBlank() || info.title.isBlank()) return
         val incoming = MediaCard(
@@ -60,6 +62,7 @@ object MediaCards {
         save(context, merge(load(context), incoming, incoming.seenAt))
     }
 
+    @Synchronized
     fun togglePin(context: Context, card: MediaCard): List<MediaCard> {
         val next = order(load(context).map { if (it.sameAs(card)) it.copy(pinned = !it.pinned) else it })
         save(context, next)

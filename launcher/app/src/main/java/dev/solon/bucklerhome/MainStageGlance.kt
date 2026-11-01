@@ -58,11 +58,15 @@ fun rememberGlance(place: Place?, use24h: Boolean, fahrenheit: Boolean): Glance 
     val weather by rememberGlanceWeather(place)
     val agenda by rememberAgenda(days = 2)
     val now by rememberNow()
-    return Glance(now, weather, GlanceRules.lines(now, agenda?.events.orEmpty(), agenda?.tasks.orEmpty(), weather, use24h, fahrenheit))
+    val lines = GlanceRules.lines(now, agenda?.events.orEmpty(), agenda?.tasks.orEmpty(), weather, use24h, fahrenheit)
+    return Glance(now, weather, lines, canReadCalendar = agenda?.canRead != false)
 }
 
-/** What At a Glance shows: the time it was worked out, the weather, and its lines. */
-data class Glance(val now: ZonedDateTime, val weather: GlanceWeather?, val lines: List<GlanceLine>)
+/**
+ * What At a Glance shows: the time it was worked out, the weather, and its lines. [canReadCalendar]
+ * is false once the calendar is known to be out of reach (no access), so the stage can say why.
+ */
+data class Glance(val now: ZonedDateTime, val weather: GlanceWeather?, val lines: List<GlanceLine>, val canReadCalendar: Boolean = true)
 
 /**
  * Main Stage → At a Glance: the date and the weather now on the left, then what matters next
@@ -79,7 +83,7 @@ fun GlanceStage(
     onHold: () -> Unit,
     metrics: StageMetrics,
 ) {
-    val (now, weather, lines) = rememberGlance(place, use24h, fahrenheit)
+    val (now, weather, lines, canReadCalendar) = rememberGlance(place, use24h, fahrenheit)
     val tight = metrics.cardHeight < 130.dp
     val shown = lines.take(if (tight) 2 else if (metrics.cardHeight < 190.dp) 3 else 4)
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -126,6 +130,9 @@ fun GlanceStage(
                     Text("Nothing coming up.", color = ColorMuted, fontSize = 17.sp)
                 }
                 shown.forEach { line -> GlanceRow(line, if (tight) 16.sp else 19.sp) }
+                if (!canReadCalendar && shown.size < 2) {
+                    Text("Allow calendar access in Settings → Widgets → Calendar & reminders for events.", color = ColorHint, fontSize = 14.sp)
+                }
             }
         }
     }
@@ -151,7 +158,8 @@ fun GlanceSide(config: DisplayConfig, modifier: Modifier = Modifier) {
             value = (value + 1) % pool.size
         }
     }
-    val line = pool.getOrNull(index % pool.size.coerceAtLeast(1)) ?: return
+    // With nothing to say it still shows a line, so the Side Stage stays a stop with its menu.
+    val line = pool.getOrNull(index % pool.size.coerceAtLeast(1)) ?: GlanceLine("◷", "Nothing coming up", 0)
     AnimatedContent(targetState = line, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "glance", modifier = modifier) {
         GlanceRow(it, 17.sp)
     }

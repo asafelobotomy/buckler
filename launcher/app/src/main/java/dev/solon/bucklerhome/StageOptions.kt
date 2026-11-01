@@ -108,6 +108,14 @@ fun StageOptions(stage: MainStage, onChanged: () -> Unit) {
         MainStage.GLANCE, MainStage.CALENDAR -> CalendarsShown(tick) { changed() }
         MainStage.WEATHER_MAP -> OptionsNote("◀ ▶ on the map step through the hours.")
         MainStage.COMPANION -> CompanionChoice(cfg.companion) { changed() }
+        MainStage.COMICS -> StageTurnChoice("A new strip every:", StagePrefs.comicTurn(context)) {
+            StagePrefs.setComicTurn(context, it)
+            changed()
+        }
+        MainStage.SPURIOUS -> StageTurnChoice("A new correlation every:", StagePrefs.spuriousTurn(context)) {
+            StagePrefs.setSpuriousTurn(context, it)
+            changed()
+        }
         MainStage.MULTIVIEW -> {
             val tiles = MultiviewStore.tiles
             OptionsNote(
@@ -292,5 +300,16 @@ internal fun HoldMenuFooter(pane: SettingsPane, onDismiss: () -> Unit, extra: @C
             BucklerSettingsActivity.open(context, pane)
         }
         SettingsAction("Close", onClick = onDismiss)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StageTurnChoice(note: String, current: StageTurn, onPick: (StageTurn) -> Unit) {
+    OptionsNote(note)
+    FlowRow(horizontalArrangement = Flow, verticalArrangement = Flow) {
+        StageTurn.entries.forEach { turn ->
+            SettingsAction(turn.label, selected = turn == current) { onPick(turn) }
+        }
     }
 }

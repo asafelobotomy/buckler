@@ -107,7 +107,17 @@ fun NewsPane() {
     val cfg = remember(tick) { DisplayPrefs.load(context) }
     SectionTitle("News")
     SettingsRow("Headlines for the header's ticker (a dim line under it) and the News stage. No sources turns one off.")
-    SettingsChoice("Ticker speed", TickerSpeed.entries, cfg.tickerSpeed, { it.label }) {
+    SettingsChoice("Ticker", TickerStyle.entries, cfg.tickerStyle, { it.label }) {
+        DisplayPrefs.setTickerStyle(context, it)
+        tick++
+    }
+    SettingsChoice(
+        "Ticker speed",
+        TickerSpeed.entries,
+        cfg.tickerSpeed,
+        { it.label },
+        note = if (cfg.tickerStyle == TickerStyle.SINGLE) "How long each story stays." else null,
+    ) {
         DisplayPrefs.setTickerSpeed(context, it)
         tick++
     }
@@ -259,4 +269,33 @@ fun CompanionPane() {
     CompanionPicker(cfg.companion) { tick++ }
     Spacer(modifier = Modifier.height(12.dp))
     SettingsPaneLink("Weather", SettingsPane.WEATHER, value = cfg.place?.name)
+}
+
+/** Settings → Widgets → Comics & correlations: how often each of those Main Stages moves on. */
+@Composable
+fun CuriositiesPane() {
+    val context = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    val comic = remember(tick) { StagePrefs.comicTurn(context) }
+    val spurious = remember(tick) { StagePrefs.spuriousTurn(context) }
+    SectionTitle("Comics & correlations")
+    SettingsRow(
+        "Comics: newspaper strips from the 1910s and 1920s, now in the public domain (Wikimedia Commons). " +
+            "Spurious correlations: two unrelated things that rose and fell together, from Tyler Vigen's " +
+            "collection (CC BY 4.0). On either stage ◀ ▶ step through them.",
+    )
+    SettingsChoice("Comics: new strip every", StageTurn.entries, comic, { it.label }) {
+        StagePrefs.setComicTurn(context, it)
+        tick++
+    }
+    SettingsChoice(
+        "Spurious correlations: new one every",
+        StageTurn.entries,
+        spurious,
+        { it.label },
+        note = "OK on the stage fetches another straight away.",
+    ) {
+        StagePrefs.setSpuriousTurn(context, it)
+        tick++
+    }
 }

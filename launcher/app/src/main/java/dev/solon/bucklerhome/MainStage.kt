@@ -50,6 +50,8 @@ enum class MainStage(val label: String) {
     WEATHER_MAP("Weather map"),
     COMPANION("Companion"),
     MULTIVIEW("Multiview"),
+    COMICS("Comics"),
+    SPURIOUS("Spurious correlations"),
     ;
 
     fun wire(): String = name.lowercase()
@@ -98,6 +100,8 @@ fun MainStage(
         MainStage.WEATHER_MAP -> WeatherMapStage(place, stageFocus, onDown, onHold, metrics)
         MainStage.COMPANION -> CompanionStage(companion, place, stageFocus, onDown, onHold, metrics)
         MainStage.MULTIVIEW -> MultiviewStage(stageFocus, onDown, onHold, metrics)
+        MainStage.COMICS -> ComicsStage(stageFocus, onDown, onHold, metrics)
+        MainStage.SPURIOUS -> SpuriousStage(stageFocus, onDown, onHold, metrics)
     }
 }
 

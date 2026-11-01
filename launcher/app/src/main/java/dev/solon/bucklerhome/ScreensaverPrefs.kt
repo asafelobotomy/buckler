@@ -12,6 +12,7 @@ enum class ScreensaverMode(val label: String) {
     PIPES("3D Pipes"),
     MYSTIFY("Mystify"),
     STARFIELD("Starfield"),
+    WEATHER("Rolling weather"),
     ;
 
     companion object {

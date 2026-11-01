@@ -78,7 +78,7 @@ fun HomeHeader(
         }
         if (headlines.isNotEmpty()) {
             Spacer(modifier = Modifier.height(metrics.tickerGap))
-            NewsTicker(headlines, metrics, config.tickerSpeed)
+            NewsTicker(headlines, metrics, config.tickerSpeed, config.tickerStyle)
         }
     }
 }

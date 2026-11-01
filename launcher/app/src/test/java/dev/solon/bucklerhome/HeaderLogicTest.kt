@@ -221,6 +221,18 @@ class HeaderLogicTest {
     }
 
     @Test
+    fun forecastHoursAreMovedToTheTvsClock() {
+        // New York (UTC-4) seen from a TV in London (UTC+0 in late October 2026 after the change).
+        val body = """
+            {"utc_offset_seconds":-14400,"hourly":{"time":["2026-10-26T04:00","2026-10-26T05:00","2026-10-26T06:00"],
+            "temperature_2m":[1.0,2.0,3.0],"weather_code":[0,0,0],"is_day":[0,0,1]}}
+        """.trimIndent()
+        val forecast = WeatherClient.parseForecast(body, 8, 5, LocalDateTime.of(2026, 10, 26, 9, 15), java.time.ZoneOffset.UTC)
+        assertEquals(listOf("09:00", "10:00"), forecast.hours.map { it.label })
+        assertEquals(LocalDateTime.of(2026, 10, 26, 9, 0), forecast.hours[0].at)
+    }
+
+    @Test
     fun forecastSkipsPastHoursAndKeepsHighsAndLows() {
         val body = """
             {"hourly":{"time":["2026-10-26T08:00","2026-10-26T09:00","2026-10-26T10:00"],
