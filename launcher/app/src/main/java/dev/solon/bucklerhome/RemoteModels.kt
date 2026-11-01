@@ -77,7 +77,6 @@ enum class RemoteModel(
 
 /** Which remote is in use: found from the connected input devices, or chosen in Settings. */
 object RemoteModels {
-    private const val PREFS = "bucklerhome_remote"
     private const val KEY_CHOICE = "model"
     private const val KEY_LAST_SEEN = "model_seen"
 
@@ -108,5 +107,6 @@ object RemoteModels {
 
     private fun named(name: String?): RemoteModel? = RemoteModel.entries.firstOrNull { it.name == name }
 
-    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    // The same file as RemoteMap's, which the remote buttons process writes too.
+    private fun prefs(context: Context) = RemoteMap.prefs(context)
 }

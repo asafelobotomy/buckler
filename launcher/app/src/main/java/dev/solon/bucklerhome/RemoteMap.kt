@@ -5,7 +5,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
+import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityManager
 
@@ -76,22 +78,40 @@ sealed class RemoteAction(val code: String, val label: String) {
     }
 }
 
-/** Saved choices for the buttons Buckler handles, plus switching the service on and off. */
+/**
+ * Saved choices for the buttons Buckler handles, plus switching the service on and off. The
+ * service runs in its own process (so a crash in Home leaves the remote working), and each process
+ * keeps its own copy of SharedPreferences: [prefs] re-reads the file when the other one changed it.
+ */
 object RemoteMap {
     private const val PREFS = "bucklerhome_remote"
     private const val KEY_WANTED = "service_wanted"
+    private const val KEY_RELISTING_UNTIL = "relisting_until"
     private const val RELIST_DELAY_MS = 3_000L
+    private const val HEAL_DELAY_MS = 10_000L
+    private const val HEAL_DELAY_AFTER_BOOT_MS = 60_000L
+    private const val BOOT_WINDOW_MS = 120_000L
     private val SERVICE = ComponentName(OUR_PACKAGE, RemoteButtonsService::class.java.name).flattenToString()
+
+    /** True from Buckler's start until [healOnStart] has looked, so Home's notice waits for it. */
+    @Volatile
+    var healing = false
+        private set
+
+    // MODE_MULTI_PROCESS is deprecated because two writers can lose edits; here the service only
+    // ever writes KEY_WANTED off when Android's own list has already dropped it.
+    @Suppress("DEPRECATION")
+    internal fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_MULTI_PROCESS)
 
     private fun key(button: RemoteButton, kind: PressKind) = "${button.name}.${kind.name}"
 
     fun action(context: Context, button: RemoteButton, kind: PressKind): RemoteAction {
-        val code = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(key(button, kind), null)
+        val code = prefs(context).getString(key(button, kind), null)
         return RemoteAction.parse(code) { pkg -> appLabel(context, pkg) }
     }
 
     fun set(context: Context, button: RemoteButton, kind: PressKind, action: RemoteAction) {
-        val edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        val edit = prefs(context).edit()
         if (action == RemoteAction.Default) edit.remove(key(button, kind)) else edit.putString(key(button, kind), action.code)
         edit.apply()
     }
@@ -110,18 +130,42 @@ object RemoteMap {
 
     /** Adds or removes the service from Android's list, keeping any others; false without permission. */
     fun setServiceOn(context: Context, on: Boolean): Boolean {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_WANTED, on).apply()
+        prefs(context).edit().putBoolean(KEY_WANTED, on).apply()
         return writeService(context, on)
     }
 
     /**
-     * When Buckler's process is killed (Settings → Force stop, a crash) Android marks the service
-     * crashed and will not bind it again, though it stays listed. Nothing changes the list on its
-     * own to fix that: on Android 11, editing it while Android is still binding the service can
-     * crash the system itself (seen on SHIELD). Settings → Remote offers [restartService] instead.
+     * When Buckler is force-stopped (Settings → Force stop, adb, or Android after repeated crashes)
+     * Android takes the service off its list; after a crash it can stay listed but marked crashed,
+     * and is not bound again. An update is fine: Android binds it again by itself.
      */
     fun needsRestart(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_WANTED, false) && !serviceRunning(context)
+        prefs(context).getBoolean(KEY_WANTED, false) && !serviceRunning(context)
+
+    /**
+     * Brings remote buttons you turned on back by themselves when Buckler starts, which it does
+     * straight after a force-stop since it is Home. It waits first (longer just after boot), so it
+     * never edits Android's list while Android is still binding the service: on Android 11 that can
+     * leave it bound twice, or restart the whole system (seen on SHIELD).
+     */
+    fun healOnStart(context: Context) {
+        val app = context.applicationContext
+        if (!prefs(app).getBoolean(KEY_WANTED, false)) return
+        Log.i(TAG, "Checking remote buttons after start")
+        healing = true
+        val wait = if (SystemClock.elapsedRealtime() < BOOT_WINDOW_MS) HEAL_DELAY_AFTER_BOOT_MS else HEAL_DELAY_MS
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (!needsRestart(app)) {
+                healing = false
+                return@postDelayed
+            }
+            Log.i(TAG, "Remote buttons stopped; turning them on again")
+            restartService(app) {
+                healing = false
+                Log.i(TAG, if (serviceRunning(app)) "Remote buttons back" else "Remote buttons still stopped")
+            }
+        }, wait)
+    }
 
     /**
      * Brings stopped remote buttons back. After a force-stop Android first takes the service off the
@@ -138,12 +182,33 @@ object RemoteMap {
                 onDone()
                 return@postDelayed
             }
+            // Tells the service its unbinding now is Buckler's, not someone turning it off.
+            prefs(context).edit().putLong(KEY_RELISTING_UNTIL, System.currentTimeMillis() + 3 * RELIST_DELAY_MS).commit()
             writeService(context, false)
             handler.postDelayed({
                 writeService(context, true)
                 handler.postDelayed(onDone, RELIST_DELAY_MS)
             }, RELIST_DELAY_MS)
         }, RELIST_DELAY_MS)
+    }
+
+    /** Called by the service once bound, however it was turned on, so Buckler keeps it on from here. */
+    fun serviceConnected(context: Context) {
+        val p = prefs(context)
+        if (p.getBoolean(KEY_WANTED, false)) return
+        p.edit().putBoolean(KEY_WANTED, true).commit()
+        Log.i(TAG, "Remote buttons turned on outside Buckler; keeping them on")
+    }
+
+    /**
+     * Called by the service when Android unbinds it. Off Android's list, and not Buckler's own
+     * restart, means someone turned it off in Android's Accessibility settings: stop bringing it back.
+     */
+    fun serviceUnbound(context: Context) {
+        val p = prefs(context)
+        if (enabledServices(context).contains(SERVICE) || System.currentTimeMillis() < p.getLong(KEY_RELISTING_UNTIL, 0)) return
+        p.edit().putBoolean(KEY_WANTED, false).commit()
+        Log.i(TAG, "Remote buttons turned off in Android's settings; leaving them off")
     }
 
     /** Bound and taking keys (listed is not enough: a crashed service stays listed). */
@@ -162,6 +227,8 @@ object RemoteMap {
         Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, list.joinToString(":"))
         Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, if (list.isEmpty()) 0 else 1)
     }.isSuccess
+
+    private const val TAG = "RemoteMap"
 
     private fun enabledServices(context: Context): List<String> =
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)

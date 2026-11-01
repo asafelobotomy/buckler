@@ -301,6 +301,7 @@
         <service
             android:name=".RemoteButtonsService"
             android:exported="true"
+            android:process=":remote"
             android:label="@string/remote_buttons_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>

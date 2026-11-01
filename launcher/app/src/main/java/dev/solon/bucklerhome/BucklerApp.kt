@@ -23,15 +23,18 @@ class BucklerApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        // The remote buttons service has a process of its own; Home's start-up work is not for it.
+        if (getProcessName() != packageName) return
         // Feeds and weather send ETag / Last-Modified: unchanged ones then come back as a short 304.
         installHttpCache(this)
         SelfCompile.afterUpdate(this)
+        RemoteMap.healOnStart(this)
     }
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         // UI_HIDDEN: every Buckler screen has left the display (an app or the screensaver is up).
-        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) imageLoader.memoryCache?.clear()
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN && getProcessName() == packageName) imageLoader.memoryCache?.clear()
     }
 
     private companion object {

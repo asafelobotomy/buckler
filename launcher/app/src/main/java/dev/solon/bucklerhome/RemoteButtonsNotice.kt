@@ -16,6 +16,8 @@ fun RemoteButtonsNotice(resumeTick: Int) {
     LaunchedEffect(resumeTick) {
         if (shown) return@LaunchedEffect
         delay(SETTLE_MS)
+        // Buckler tries to bring them back by itself first; only say so if that did not work.
+        while (RemoteMap.healing) delay(SETTLE_MS)
         if (!RemoteMap.needsRestart(context)) return@LaunchedEffect
         shown = true
         Toast.makeText(context, "Remote buttons stopped. Settings → Remote → Turn on again.", Toast.LENGTH_LONG).show()

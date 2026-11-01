@@ -14,7 +14,8 @@ import android.view.accessibility.AccessibilityEvent
  * Does what Settings → Remote chose for Netflix, Back and the media keys. A button with nothing
  * remapped passes straight through. Once any of its presses is remapped Buckler takes the button
  * over, and its default press is done for it (Back, the media key, opening Netflix). Only a button
- * with a double press waits for a second press, so the others react at once.
+ * with a double press waits for a second press, so the others react at once. It runs in its own
+ * process (":remote"), so Home crashing or being cleared for memory does not stop it.
  */
 class RemoteButtonsService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
@@ -106,6 +107,16 @@ class RemoteButtonsService : AccessibilityService() {
     override fun onInterrupt() {
         handler.removeCallbacksAndMessages(null)
         pendingPress = null
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        RemoteMap.serviceConnected(this)
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        RemoteMap.serviceUnbound(this)
+        return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
