@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Artwork / optional suggested feed / GitHub updates. Still no ads or account telemetry. -->
+    <!-- Covers, news, weather, updates, bucklerStore and media sources. Still no ads or account telemetry. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- At a Glance and Calendar read what the TV's accounts and DAVx⁵/OpenTasks already sync. -->
@@ -297,7 +297,7 @@
             android:name=".InstallResultReceiver"
             android:exported="false" />
 
-        <!-- Lets the header Now Playing panel read and control media sessions (user grants access). -->
+        <!-- Remote buttons: remaps the remote's keys once the user turns it on in Accessibility. -->
         <service
             android:name=".RemoteButtonsService"
             android:exported="true"
@@ -312,6 +312,7 @@
                 android:resource="@xml/remote_buttons" />
         </service>
 
+        <!-- Lets the header Now Playing panel read and control media sessions (user grants access). -->
         <service
             android:name=".NowPlayingListener"
             android:exported="true"

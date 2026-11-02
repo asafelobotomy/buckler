@@ -5,15 +5,12 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import kotlin.concurrent.thread
 
 private enum class RootScreen {
@@ -48,20 +45,12 @@ class MainActivity : ComponentActivity() {
         showSetup.value = isFirstRunPending(this) || intent.getBooleanExtra(EXTRA_SETUP, false) || SetupState.resume(this) != null
         setContent {
             BucklerHomeTheme {
-                var resumeTick by remember { mutableIntStateOf(0) }
+                // A pushed layout is imported by HomeLayout.load(), on IO, which this triggers.
+                val resumeTick = rememberResumeTick()
                 var layoutVersion by remember { mutableIntStateOf(0) }
                 var screen by remember { mutableStateOf(RootScreen.HOME) }
                 LaunchedEffect(editRequests.intValue) {
                     if (editRequests.intValue > 0) screen = RootScreen.EDIT
-                }
-
-                DisposableEffect(this) {
-                    val observer = LifecycleEventObserver { _, event ->
-                        // A pushed layout is imported by HomeLayout.load(), on IO, which this triggers.
-                        if (event == Lifecycle.Event.ON_RESUME) resumeTick += 1
-                    }
-                    lifecycle.addObserver(observer)
-                    onDispose { lifecycle.removeObserver(observer) }
                 }
 
                 when {

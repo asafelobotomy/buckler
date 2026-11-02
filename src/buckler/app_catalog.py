@@ -71,23 +71,6 @@ class Catalog:
             self.require("suggestions", app_id)
 
 
-def apply_dock(dock: list[str], chosen: list[CatalogEntry]) -> list[str]:
-    """Return a new dock. Stock packages are unpinned, never marked for disable."""
-    result = list(dock)
-    for entry in chosen:
-        if entry.dock == "replace-pin":
-            if entry.stock_package in result:
-                index = result.index(entry.stock_package)
-                result[index] = entry.package
-            elif entry.package not in result:
-                result.append(entry.package)
-        elif entry.dock == "unpin-only":
-            result = [pkg for pkg in result if pkg != entry.stock_package]
-        elif entry.package not in result:
-            result.append(entry.package)
-    return result
-
-
 def load_catalog(root: Path | None = None) -> Catalog:
     base = root if root is not None else catalog_dir()
     swaps = _load_group(base / "alternatives.yaml", "swaps")

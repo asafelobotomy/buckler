@@ -37,7 +37,7 @@ object HeadlineStore {
         .put("published", published ?: JSONObject.NULL)
 
     private fun JSONObject.toHeadline(): Headline? {
-        val source = NewsSource.entries.firstOrNull { it.name == optString("source") } ?: return null
+        val source = NewsSource.fromName(optString("source")) ?: return null
         fun text(name: String) = if (isNull(name)) null else optString(name).ifBlank { null }
         val published = if (isNull("published")) null else optLong("published").takeIf { it > 0 }
         return Headline(source, optString("title").ifBlank { return null }, text("summary"), text("image"), text("link"), published)

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
 import urllib.request
 from pathlib import Path
 
+from buckler.digest import sha256_file
 from buckler.paths import apk_cache_dir
 
 REPO = "asafelobotomy/buckler"
@@ -58,13 +58,13 @@ def latest_apk(cache: Path | None = None) -> Path:
 
     folder = cache if cache is not None else apk_cache_dir()
     dest = folder / apk["name"]
-    if dest.is_file() and _sha256(dest) == digest:
+    if dest.is_file() and sha256_file(dest) == digest:
         return dest
     partial = dest.with_suffix(".partial")
     try:
         with _get(apk["browser_download_url"], timeout=300) as response, partial.open("wb") as out:
             shutil.copyfileobj(response, out)
-        got = _sha256(partial)
+        got = sha256_file(partial)
         if got != digest:
             raise ReleaseError(f"{apk['name']}: sha256 mismatch (got {got})")
         partial.replace(dest)
@@ -76,10 +76,3 @@ def latest_apk(cache: Path | None = None) -> Path:
         raise ReleaseError(f"{apk['name']}: download failed: {exc}") from exc
     return dest
 
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()

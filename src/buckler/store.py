@@ -12,7 +12,6 @@ files, so `installed` can say what is behind and `update` can bring it up to dat
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import shutil
@@ -24,6 +23,7 @@ from typing import Any
 
 from buckler.adb import Adb
 from buckler.app_catalog import CatalogError
+from buckler.digest import sha256_file
 from buckler.iconpacks import IconPackEntry, install_iconpack
 from buckler.paths import DATA, apk_cache_dir
 
@@ -119,17 +119,10 @@ def find(items: list[StoreItem], ident: str) -> StoreItem:
     raise StoreError(f"bucklerStore has no {ident!r} (see `buckler store list`)")
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1 << 16), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
 
 def fetch_verified(url: str, sha256: str, dest: Path) -> Path:
     """Download [url] to [dest] (reused when already there and matching), refusing a sha256 mismatch."""
-    if dest.is_file() and _sha256(dest) == sha256:
+    if dest.is_file() and sha256_file(dest) == sha256:
         return dest
     if not url.startswith("https://"):
         raise StoreError(f"refusing a non-https download: {url}")
@@ -142,7 +135,7 @@ def fetch_verified(url: str, sha256: str, dest: Path) -> Path:
     except OSError as exc:
         partial.unlink(missing_ok=True)
         raise StoreError(f"download failed: {url}: {exc}") from exc
-    if (digest := _sha256(partial)) != sha256:
+    if (digest := sha256_file(partial)) != sha256:
         partial.unlink(missing_ok=True)
         raise StoreError(f"sha256 mismatch for {url} (got {digest})")
     partial.replace(dest)
@@ -351,15 +344,16 @@ def installed(adb: Adb) -> dict[str, list[str]]:
         out = adb.shell("ls", f"{DEVICE_ROOT}/{path}", check=False)
         return sorted(n.removesuffix(suffix) for n in out.split() if n.endswith(suffix) and "No such" not in out)
 
+    widgets, savers, schemes = (read_widgets(adb, k) for k in ("widgets", "screensavers", "schemes"))
     return {
         "themes": names("themes", ".json"),
         "fonts": names("fonts"),
-        "widgets added": read_widgets(adb)["added"],
-        "widgets removed": read_widgets(adb)["removed"],
-        "screensavers added": read_widgets(adb, "screensavers")["added"],
-        "screensavers removed": read_widgets(adb, "screensavers")["removed"],
-        "schemes added": read_widgets(adb, "schemes")["added"],
-        "schemes removed": read_widgets(adb, "schemes")["removed"],
+        "widgets added": widgets["added"],
+        "widgets removed": widgets["removed"],
+        "screensavers added": savers["added"],
+        "screensavers removed": savers["removed"],
+        "schemes added": schemes["added"],
+        "schemes removed": schemes["removed"],
         "behind the store": [
             f"{o.item.id} (needs Buckler {o.item.requires})" if o.needs_buckler else f"{o.item.id} (revision {o.have} → {o.item.revision})"
             for o in outdated(adb, load_index())

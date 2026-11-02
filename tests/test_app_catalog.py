@@ -8,11 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from buckler.app_catalog import CatalogEntry, CatalogError, apply_dock, load_catalog
-from buckler.home_layout import DEFAULT_DOCK
+from buckler.app_catalog import CatalogEntry, CatalogError, load_catalog
 from buckler.profiles import load_never
 from buckler.setup_wizard import WizardReport
-from buckler.wizard_apps import fetch_verified_apk, run_app_phases
+from buckler.wizard_apps import dock_ops, fetch_verified_apk, run_app_phases
 from buckler.wizard_phases import PHASES
 
 _SHA = "ab" * 32
@@ -79,21 +78,18 @@ def test_catalog_pins_known_packages() -> None:
         assert entry.package not in blocked
 
 
-def test_dock_swaps_pins_without_dropping_other_apps() -> None:
+def test_dock_swaps_become_pin_ops() -> None:
     catalog = load_catalog()
     chosen = [
         catalog.require("swaps", "smarttube"),
         catalog.require("swaps", "google-tv"),
         catalog.require("swaps", "moonlight"),
     ]
-    dock = apply_dock(list(DEFAULT_DOCK), chosen)
-    youtube_at = DEFAULT_DOCK.index("com.google.android.youtube.tv")
-    assert dock[youtube_at] == "org.smarttube.stable"
-    assert "com.google.android.youtube.tv" not in dock
-    assert "com.google.android.videos" not in dock
-    assert dock[-1] == "com.limelight"
-    assert "org.jellyfin.androidtv" in dock
-    assert "org.videolan.vlc" in dock
+    assert dock_ops(chosen) == [
+        {"op": "replace", "from": "com.google.android.youtube.tv", "to": "org.smarttube.stable"},
+        {"op": "remove", "package": "com.google.android.videos"},
+        {"op": "append", "package": "com.limelight"},
+    ]
 
 
 def test_batch_setup_installs_nothing() -> None:

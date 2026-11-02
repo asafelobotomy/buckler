@@ -63,14 +63,6 @@ def audit(adb: Adb) -> list[AuditRow]:
     for name in list_profiles() + ["never"]:
         profile = load_profile(name)
         for pkg in profile.packages:
-            if name == "never":
-                state = (
-                    "MISSING"
-                    if not adb.package_present(pkg)
-                    else ("DISABLED" if adb.package_disabled(pkg) else "ENABLED")
-                )
-                rows.append(AuditRow(pkg, "never", state))
-                continue
             if not adb.package_present(pkg):
                 rows.append(AuditRow(pkg, name, "MISSING"))
             elif adb.package_disabled(pkg):
@@ -116,7 +108,7 @@ def apply_packages(adb: Adb, profile: Profile, *, dry_run: bool = False) -> Appl
     home_pkg = adb.home_package()
 
     try:
-        _apply_packages(adb, allowed, home_pkg, profile, profile_name, dry_run, journal,
+        _apply_packages(adb, allowed, home_pkg, profile, dry_run, journal,
                         blocked, skipped_missing, skipped_already, changed)
     except BaseException:
         # Any stop (adb error, Ctrl-C) keeps a record of what was already disabled, so restore works.
@@ -153,7 +145,6 @@ def _apply_packages(
     allowed: list[str],
     home_pkg: str,
     profile: Profile,
-    profile_name: str,
     dry_run: bool,
     journal: Journal,
     blocked: list[str],
@@ -161,6 +152,7 @@ def _apply_packages(
     skipped_already: list[str],
     changed: list[str],
 ) -> None:
+    reason = profile.description or profile.name
     for pkg in allowed:
         if not adb.package_present(pkg):
             skipped_missing.append(pkg)
@@ -176,7 +168,7 @@ def _apply_packages(
             skipped_already.append(pkg)
             continue
         if dry_run:
-            journal.add(pkg, before_disabled=False, after_disabled=True, reason=profile.description)
+            journal.add(pkg, before_disabled=False, after_disabled=True, reason=reason)
             changed.append(pkg)
             continue
         adb.disable_user(pkg)
@@ -185,7 +177,7 @@ def _apply_packages(
             pkg,
             before_disabled=False,
             after_disabled=after,
-            reason=profile.description or profile_name,
+            reason=reason,
         )
         if after:
             changed.append(pkg)
@@ -287,7 +279,10 @@ def _journal_events() -> tuple[dict[str, str], dict[str, str], set[str]]:
     restores: dict[str, str] = {}
     applied: set[str] = set()
     for path in iter_journals():
-        j = Journal.load(path)
+        try:
+            j = Journal.load(path)
+        except (OSError, ValueError):
+            continue  # a stray or broken file in journals/ is not a journal
         applied.add(j.profile)
         for e in j.entries:
             if e.action != "disable-user":

@@ -7,7 +7,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.provider.Settings
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
@@ -163,13 +162,4 @@ fun openVpn(context: Context) {
     if (appIntent != null && runCatching { context.startActivity(appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
     // SHIELD has no VPN screen; the network screen is the nearest.
     SystemScreen.VPN.open(context, orElse = SystemScreen.NETWORK)
-}
-
-/** Settings screens vary by TV vendor, so fall through the candidates until one starts. */
-fun launchFirstThatWorks(context: Context, label: String, intents: List<Intent>) {
-    for (intent in intents) {
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (runCatching { context.startActivity(intent) }.isSuccess) return
-    }
-    Toast.makeText(context, "Could not open $label", Toast.LENGTH_SHORT).show()
 }

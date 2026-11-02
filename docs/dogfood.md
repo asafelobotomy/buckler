@@ -46,7 +46,7 @@ On TV: first-run picks cover layout + shelves; the pencil icon in the Home heade
 - Settings → Appearance → Header: each element toggles on its own. Header: Off leaves the Main Stage and shelves. Edit Home and Settings are the header pencil and gear
 - Settings → Screensaver → Now Playing with music playing (album art) and over a paused YouTube video (thumbnail, Paused)
 - Settings → Screensaver: Preview 3D Maze, 3D Pipes, Mystify, Starfield (clock overlay toggles)
-- Settings → Appearance → Header: 12/24 h and date format apply to Home; set a city and weather appears; chosen news sources or none apply
+- Settings → Appearance (Global): 12/24 h and date format apply to Home; Settings → Widgets → Weather: set a city and weather appears; chosen news sources or none apply
 - Play music in any app: Now Playing shows title and prev / play-pause / next work (after media access is granted)
 - Network icon opens network settings; VPN icon opens the VPN app
 - Menu → Move: menu closes, ◀ ▶ slide the tile, OK places it (does not launch), Back cancels

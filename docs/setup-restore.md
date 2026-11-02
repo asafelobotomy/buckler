@@ -52,7 +52,7 @@ JSON with device identity, policy flags (keep AI / Chromecast, disable mics), pr
 
 ## On-TV first-run
 
-`buckler-home` opens its setup wizard the first time it starts, and again from Settings → Device → *Run setup wizard*. It is the on-TV counterpart of `buckler setup`: *Simple* or *Advanced*, then a *Review* of only what will change, applied over the TV's own Network debugging (the same profiles and never-list as the CLI, journaled so Settings → Device → *Restore everything* undoes them). See [install.md](install.md) for the steps. No account, no registration telemetry.
+`buckler-home` opens its setup wizard the first time it starts, and again from Settings → Device → *Run setup wizard*. It is the on-TV counterpart of `buckler setup`: *Simple* or *Advanced*, then a *Review* of only what will change, applied over the TV's own Network debugging (the same profiles and never-list as the CLI, journaled so Settings → Device → SHIELD clean-up → *Restore everything* undoes them). See [install.md](install.md) for the steps. No account, no registration telemetry.
 
 ## Disaster path
 

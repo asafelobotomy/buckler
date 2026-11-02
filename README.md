@@ -45,8 +45,8 @@ uv run buckler probe
 Bump the version in `pyproject.toml`, `src/buckler/__init__.py` and `launcher/app/build.gradle.kts`
 (`versionCode` and `versionName`) and push to main. The `release` workflow sees a version with no
 tag yet and runs `scripts/release.py --publish`: it builds `buckler-home.apk`, its `.sha256` and the
-CLI wheel, refuses an APK not signed by the release key (its certificate SHA-256 is pinned in the
-script), tags `v<version>` and creates the GitHub release. It needs two repository secrets,
+CLI wheel, refuses an APK not signed by the release key (its certificate SHA-256 is `releaseCertSha256` in
+`launcher/app/build.gradle.kts`, which the script reads), tags `v<version>` and creates the GitHub release. It needs two repository secrets,
 `BUCKLER_KEYSTORE_B64` (the keystore, base64) and `BUCKLER_KEYSTORE_PASSWORD`. Running
 `python scripts/release.py` locally builds and checks the same files without publishing.
 
@@ -69,7 +69,7 @@ buckler check                      # after OTAs: check --fix
 buckler unused                     # apps Buckler found unused; --apply disables them
 buckler clean                      # free app cache space on the TV
 buckler launcher iconpack install lawnicons   # an open icon pack (or arcticons)
-buckler store list                 # bucklerStore: widgets, colour schemes, fonts, icon packs
+buckler store list                 # bucklerStore: widgets, screensavers, colour schemes, fonts, icon packs
 buckler store install sakura lexend
 # Optional Private DNS (you choose the DoT host):
 # buckler dns set --hostname family.cloudflare-dns.com
@@ -104,15 +104,17 @@ src/buckler/  CLI (Click + system adb)
   data/schema/    desired-state.v1.json (stock ↔ kitetvOS contract)
 launcher/     Compose-for-TV app (buckler-home)
 covers/       Curated cover index (keyless Change cover pack)
-journals/     restore journals + snapshots (gitignored JSON; ~/.local/state/buckler when installed)
-docs/         install guide, safety, OTA, setup/restore, kitetvOS bridge
-tests/        policy / handover / journal / schema unit tests
+journals/     restore journals + snapshots (gitignored JSON; ~/.local/state/buckler/journals when installed)
+docs/         install guide, launcher reference, safety, OTA, setup/restore, dogfood checklist,
+              kitetvOS bridge
+tests/        Python unit tests (policy, handover, journals, schema, store, parity, release…)
 ```
 
 ## Launcher (buckler-home)
 
 A Compose-for-TV Home with a live header and Side Stage, a Main Stage (News, Now Playing, Lyrics,
-Weather, Suggested, At a Glance, Calendar, Weather map, Companion), shelves in three cover layouts,
+Weather, Suggested, At a Glance, Calendar, Weather map, Companion, Multiview, Comics, Spurious
+correlations), shelves in three cover layouts,
 icon packs, add-ons from [bucklerStore](https://github.com/asafelobotomy/bucklerStore) (widgets, screensavers, colour schemes, fonts, icon packs), Buckler Settings, a setup wizard that makes the SHIELD changes from the TV itself, and
 GitHub updates. The full reference is [docs/launcher.md](docs/launcher.md).
 
@@ -133,7 +135,7 @@ is never offered GitHub updates: update it from this machine). On SHIELD it hold
 build when you need `run-as` or a debugger.
 
 Most `scripts/` run with the project's own dependencies. `gen_fonts.py` also needs `fontTools`,
-`gen_comic_panels.py` needs `pillow`, and `scripts/lyrics_bench/` (a retired benchmark, kept for its results) needs `torch` and `demucs`.
+`gen_comic_panels.py` needs `pillow`, and `scripts/lyrics_bench/` (a retired benchmark, kept for its results) needs `torch`, `torchaudio`, `demucs`, `numpy` and `scipy` (see its README).
 
 **Dev tip:** run tests with the project venv (`uv run pytest` or `.venv/bin/python -m pytest` — `pythonpath = ["src"]` is set in `pyproject.toml`).
 

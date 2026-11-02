@@ -3,6 +3,7 @@ package dev.solon.bucklerhome
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,4 +26,17 @@ fun rememberLifecycleAtLeast(state: Lifecycle.State): Boolean {
         onDispose { lifecycle.removeObserver(observer) }
     }
     return atLeast
+}
+
+/** A counter that goes up each time the screen comes back to the front (after an uninstall, an app page or a pushed layout). */
+@Composable
+fun rememberResumeTick(): Int {
+    var tick by remember { mutableIntStateOf(0) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) tick++ }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    return tick
 }

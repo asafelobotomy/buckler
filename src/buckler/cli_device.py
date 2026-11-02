@@ -88,14 +88,7 @@ def setup_cmd(
         raise click.ClickException(str(exc)) from exc
     click.echo("")
     click.echo(f"setup ok={report.ok} runtime={report.runtime}")
-    for step in report.steps:
-        if step.skipped:
-            mark = "skip"
-        elif step.ok:
-            mark = "ok"
-        else:
-            mark = "FAIL"
-        click.echo(f"  [{mark}] {step.name}: {step.detail}")
+    _print_report(report)
     if report.snapshot_path:
         click.echo(f"snapshot: {report.snapshot_path}")
     if not report.ok:

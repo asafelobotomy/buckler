@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+
+Echo = Callable[[str], None]
+Ask = Callable[[str, bool], bool]
 
 
 @dataclass(frozen=True)
@@ -53,3 +57,8 @@ def banner(phase: Phase, index: int, total: int) -> str:
 def banner_for(phase_id: str) -> str:
     index = phase_index(phase_id)
     return banner(PHASES[index], index, len(PHASES))
+
+
+def echo_to(echo: Echo | None, msg: str) -> None:
+    if echo:
+        echo(msg)

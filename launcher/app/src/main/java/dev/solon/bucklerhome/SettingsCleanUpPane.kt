@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -20,10 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -32,19 +28,6 @@ import kotlinx.coroutines.withContext
 /** Smaller caches than this are not worth a trip to an app's page. */
 private const val CACHE_WORTH_BYTES = 5L * 1024 * 1024
 private const val LARGEST_SHOWN = 15
-
-/** A counter that goes up each time Settings comes back to the front (after an uninstall or an app page). */
-@Composable
-fun rememberResumeTick(): Int {
-    var tick by remember { mutableIntStateOf(0) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) tick++ }
-        lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
-    }
-    return tick
-}
 
 /** Android's page for [packageName], where Clear cache, Clear storage and Disable are. */
 fun openAppInfo(context: Context, packageName: String) {

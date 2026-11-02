@@ -194,6 +194,10 @@ val SleepChoices = listOf(
     "-1" to "Never",
 )
 
+/** [SleepChoices]' label for a sleep timeout in ms, or the minutes for one set elsewhere. */
+fun sleepTimeoutLabel(ms: String): String =
+    SleepChoices.firstOrNull { it.first == ms }?.second ?: "${(ms.toLongOrNull() ?: 0) / 60_000} minutes"
+
 /**
  * Settings → Power: sleep and restart now (over Network debugging), when SHIELD sleeps by itself,
  * and whether the TV follows it on and off over HDMI-CEC. Android's own Power screen has only the
@@ -225,7 +229,7 @@ fun PowerPane() {
         SystemKeys.SLEEP_TIMEOUT,
         SleepChoices,
         note = "Counted from the last button press, the screensaver's time included.",
-        other = { "${(it.toLongOrNull() ?: 0) / 60_000} minutes" },
+        other = ::sleepTimeoutLabel,
     )
     SystemToggle("Stay awake on music", SystemKeys.AWAKE_ON_MUSIC)
     SettingsPaneLink("Screensaver", SettingsPane.SCREENSAVER)

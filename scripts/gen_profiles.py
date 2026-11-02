@@ -29,7 +29,7 @@ OUT = ROOT / "launcher/app/src/main/assets/shield_profiles.json"
 def build() -> dict:
     profiles = {}
     for name in list_profiles():
-        if name in ("never", "home-clean"):
+        if name == "home-clean":
             continue
         profile = load_profile(name)
         profiles[name] = {"description": profile.description, "packages": list(profile.packages)}

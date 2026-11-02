@@ -63,8 +63,7 @@ fun ScreensaverPane() {
 
 /** The TV's sleep time as Power shows it. */
 private fun sleepLabel(context: Context): String {
-    val ms = SystemSettings.get(context, SystemKeys.SLEEP_TIMEOUT)
-    return SleepChoices.firstOrNull { it.first == ms }?.second ?: "${(ms.toLongOrNull() ?: 0) / 60_000} minutes"
+    return sleepTimeoutLabel(SystemSettings.get(context, SystemKeys.SLEEP_TIMEOUT))
 }
 
 /**

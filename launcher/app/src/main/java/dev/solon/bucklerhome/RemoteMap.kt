@@ -1,6 +1,7 @@
 package dev.solon.bucklerhome
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.os.Handler
@@ -100,6 +101,7 @@ object RemoteMap {
 
     // MODE_MULTI_PROCESS is deprecated because two writers can lose edits; here the service only
     // ever writes KEY_WANTED off when Android's own list has already dropped it.
+    // Writes use commit(), not apply(): the service runs in :remote and reads these from disk.
     @Suppress("DEPRECATION")
     internal fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_MULTI_PROCESS)
 
@@ -174,6 +176,7 @@ object RemoteMap {
      * off the list binds now and that is the end of it), and only if it is still not running a few
      * seconds later, when nothing can be binding, take it off and put it back.
      */
+    @SuppressLint("ApplySharedPref")
     fun restartService(context: Context, onDone: () -> Unit) {
         val handler = Handler(Looper.getMainLooper())
         writeService(context, true)
@@ -193,6 +196,7 @@ object RemoteMap {
     }
 
     /** Called by the service once bound, however it was turned on, so Buckler keeps it on from here. */
+    @SuppressLint("ApplySharedPref")
     fun serviceConnected(context: Context) {
         val p = prefs(context)
         if (p.getBoolean(KEY_WANTED, false)) return
@@ -204,6 +208,7 @@ object RemoteMap {
      * Called by the service when Android unbinds it. Off Android's list, and not Buckler's own
      * restart, means someone turned it off in Android's Accessibility settings: stop bringing it back.
      */
+    @SuppressLint("ApplySharedPref")
     fun serviceUnbound(context: Context) {
         val p = prefs(context)
         if (enabledServices(context).contains(SERVICE) || System.currentTimeMillis() < p.getLong(KEY_RELISTING_UNTIL, 0)) return

@@ -67,11 +67,7 @@ def build_launcher() -> BuildResult:
         raise RuntimeError(f"Gradle build failed:\n{log[-4000:]}")
     apk = root / "app" / "build" / "outputs" / "apk" / "release" / "app-release.apk"
     if not apk.is_file():
-        # debug keystore signed release might be app-release-unsigned — we sign with debug
-        candidates = list((root / "app" / "build" / "outputs" / "apk" / "release").glob("*.apk"))
-        if not candidates:
-            raise RuntimeError(f"APK not found after build. Log:\n{log[-2000:]}")
-        apk = candidates[0]
+        raise RuntimeError(f"APK not found after build. Log:\n{log[-2000:]}")
     return BuildResult(apk=apk)
 
 

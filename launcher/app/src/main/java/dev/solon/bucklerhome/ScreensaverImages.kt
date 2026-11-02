@@ -6,8 +6,6 @@ import android.graphics.BitmapFactory
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import java.io.File
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -75,7 +73,7 @@ object ScreensaverImages {
     private fun fetchPage(category: PhotoCategory, offset: Int): List<CommonsImage> {
         val search = "${category.query} incategory:Featured_pictures_on_Wikimedia_Commons filetype:bitmap"
         val url = "$COMMONS?action=query&generator=search&gsrnamespace=6&gsrlimit=50&gsroffset=$offset" +
-            "&gsrsearch=${enc(search)}&prop=imageinfo&iiprop=url%7Csize%7Cextmetadata&iiurlwidth=1920&format=json"
+            "&gsrsearch=${HttpJson.encode(search)}&prop=imageinfo&iiprop=url%7Csize%7Cextmetadata&iiurlwidth=1920&format=json"
         val res = runCatching { HttpJson.get(url, headers = UA) }.getOrNull() ?: return emptyList()
         return if (res.code in 200..299) parseCommons(res.body) else emptyList()
     }
@@ -169,8 +167,6 @@ object ScreensaverImages {
             BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
         }.getOrNull()
     }
-
-    private fun enc(v: String): String = URLEncoder.encode(v, StandardCharsets.UTF_8.name())
 
     private fun sha1(v: String): String =
         MessageDigest.getInstance("SHA-1").digest(v.toByteArray()).joinToString("") { "%02x".format(it) }

@@ -5,8 +5,8 @@
 
    ```bash
    cd ~/Projects/buckler
-   source .venv/bin/activate   # or: uv run --python /usr/bin/python3
-   buckler --host <IP>:5555 probe
+   uv sync --extra dev   # once; then prefix commands with `uv run` (or: source .venv/bin/activate)
+   uv run buckler --host <IP>:5555 probe
    ```
 
 3. Check drift against what Buckler disabled: every journal entry, plus the full list of each setup profile you applied (`privacy-core`, `speech`, `minimal`, `extras`). Profiles you skipped and packages you restored since are left alone, and `--fix` only disables a stock launcher while buckler-home is HOME:

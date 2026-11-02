@@ -16,7 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.security.MessageDigest
 
 /** A font installed from the store: its Regular and Bold files, and the store [revision] they came from. */
 class InstalledFont(val id: String, val label: String, val regular: File, val bold: File, val revision: Int = 1)
@@ -306,26 +305,13 @@ object StoreLibrary {
         val part = File(dest.parentFile, dest.name + ".part")
         val code = runCatching { HttpJson.downloadTo(file.url, part) }
             .onFailure { Log.w(TAG, "Download failed: ${file.url}", it) }.getOrDefault(-1)
-        if (code !in 200..299 || sha256(part) != file.sha256) {
+        if (code !in 200..299 || runCatching { sha256Hex(part) }.getOrNull() != file.sha256) {
             Log.w(TAG, "Refusing ${file.url}: HTTP $code or checksum mismatch")
             part.delete()
             return false
         }
         return part.renameTo(dest) || run { part.delete(); false }
     }
-
-    fun sha256(file: File): String? = runCatching {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(64 * 1024)
-            while (true) {
-                val n = input.read(buffer)
-                if (n < 0) break
-                digest.update(buffer, 0, n)
-            }
-        }
-        digest.digest().joinToString("") { "%02x".format(it) }
-    }.getOrNull()
 
     fun themeJson(theme: StoreTheme): JSONObject {
         val p = theme.palette

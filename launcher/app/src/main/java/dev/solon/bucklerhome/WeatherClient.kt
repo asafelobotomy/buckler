@@ -31,7 +31,7 @@ data class Weather(val temperatureC: Double, val code: Int, val isDay: Boolean)
 /** Open-Meteo: free, open-source, no API key and no account. */
 object WeatherClient {
     private const val GEOCODE = "https://geocoding-api.open-meteo.com/v1/search"
-    private const val FORECAST = "https://api.open-meteo.com/v1/forecast"
+    const val FORECAST = "https://api.open-meteo.com/v1/forecast"
 
     fun search(query: String): List<Place> {
         val q = URLEncoder.encode(query.trim(), StandardCharsets.UTF_8.name())

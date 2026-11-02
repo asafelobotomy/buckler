@@ -379,8 +379,7 @@ fun StoreIconPacksPane() {
 /** Download, check against the index's SHA-256, and hand to Android; false when any step fails. */
 private fun installIconPack(context: Context, pack: StoreIconPack): Boolean = InstallGate.withGate(pack.label) {
     // In the folder the FileProvider shares, should Android's installer need to open it.
-    val dir = File(context.cacheDir, "updates").also { it.mkdirs() }
-    val apk = File(dir, "${pack.id}.apk")
+    val apk = File(ApkInstaller.updatesDir(context), "${pack.id}.apk")
     StoreLibrary.download(pack.apk, apk) && ApkInstaller.installPackage(context, apk, pack.packageName)
 }?.getOrDefault(false) ?: false
 

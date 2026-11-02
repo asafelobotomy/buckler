@@ -20,10 +20,9 @@ data class GlanceWeather(
 
 /** Open-Meteo again (no key): one request with the extra fields the header's weather lacks. */
 object GlanceWeatherClient {
-    private const val FORECAST = "https://api.open-meteo.com/v1/forecast"
 
     fun fetch(place: Place): GlanceWeather? {
-        val url = "$FORECAST?latitude=${place.lat}&longitude=${place.lon}" +
+        val url = "${WeatherClient.FORECAST}?latitude=${place.lat}&longitude=${place.lon}" +
             "&current=temperature_2m,weather_code,is_day" +
             "&hourly=temperature_2m,weather_code,precipitation_probability" +
             "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset" +

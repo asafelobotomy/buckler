@@ -18,7 +18,7 @@ object VpnCountry {
             readTimeout = 4_000
             instanceFollowRedirects = true
             setRequestProperty("Accept", "text/plain")
-            setRequestProperty("User-Agent", "buckler-home/${BuildConfig.VERSION_NAME}")
+            setRequestProperty("User-Agent", HttpJson.USER_AGENT)
         }
         try {
             if (conn.responseCode !in 200..299) return null

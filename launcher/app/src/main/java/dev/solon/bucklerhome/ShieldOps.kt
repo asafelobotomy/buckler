@@ -187,9 +187,6 @@ class ShieldOps(private val context: Context, private val adb: AdbSelf) {
         return adb.shell("getprop persist.sys.timezone").output.trim() == zone
     }
 
-    /** Packages currently disabled for the TV's user. */
-    fun disabledPackages(): Set<String> = packageSet("pm list packages -d")
-
     private fun packageSet(command: String): Set<String> =
         adb.shell(command).output.lines().mapNotNull { it.trim().removePrefix("package:").takeIf(::isPackageName) }.toSet()
 

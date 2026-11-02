@@ -63,8 +63,6 @@ def audit_cmd(ctx: click.Context) -> None:
 @click.pass_context
 def apply_cmd(ctx: click.Context, profile_name: str, dry_run: bool) -> None:
     """Disable packages in a profile with journaled restore."""
-    if profile_name == "home-clean":
-        raise click.ClickException("Use: buckler launcher handover")
     try:
         result = apply_profile(make_adb(ctx.obj["host"]), profile_name, dry_run=dry_run)
     except (AdbError, ValueError) as exc:
@@ -120,11 +118,7 @@ def restore_cmd(ctx: click.Context, journal_path: Path | None, restore_all: bool
             if not results:
                 raise click.ClickException(f"No journals found in {journals_dir()}")
             for path, restored in results:
-                click.echo(f"restored from {path}:")
-                for pkg in restored:
-                    click.echo(f"  + enabled {pkg}")
-                if not restored:
-                    click.echo("  (nothing to enable)")
+                _echo_restored(path, restored)
             return
         path = journal_path or latest_journal()
         if path is None:
@@ -132,6 +126,10 @@ def restore_cmd(ctx: click.Context, journal_path: Path | None, restore_all: bool
         restored = restore_journal(make_adb(ctx.obj["host"]), path)
     except AdbError as exc:
         raise click.ClickException(str(exc)) from exc
+    _echo_restored(path, restored)
+
+
+def _echo_restored(path: Path, restored: list[str]) -> None:
     click.echo(f"restored from {path}:")
     for pkg in restored:
         click.echo(f"  + enabled {pkg}")
@@ -178,6 +176,8 @@ def check_cmd(ctx: click.Context, profile_name: str | None, do_fix: bool) -> Non
 def profiles_cmd() -> None:
     """List applyable profiles."""
     for name in list_profiles():
+        if name == "home-clean":
+            continue
         click.echo(name)
 
 

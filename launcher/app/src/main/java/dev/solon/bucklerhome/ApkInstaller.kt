@@ -51,8 +51,11 @@ object InstallGate {
 object ApkInstaller {
     private const val TAG = "ApkInstaller"
 
+    /** Where downloaded APKs go: the folder res/xml/file_paths.xml shares with Android's installer. */
+    fun updatesDir(context: Context): File = File(context.cacheDir, "updates").also { it.mkdirs() }
+
     fun downloadApk(context: Context, url: String, fileName: String): File? {
-        val dir = File(context.cacheDir, "updates").also { it.mkdirs() }
+        val dir = updatesDir(context)
         // The name comes from GitHub: keep only its last path part, so it can't leave the folder.
         val dest = File(dir, fileName.substringAfterLast('/').substringAfterLast('\\').ifBlank { "update.apk" })
         val headers = CoverAccounts.githubAuthHeaders(context).toMutableMap()

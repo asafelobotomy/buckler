@@ -49,9 +49,6 @@ object CuratedCovers {
     fun get(context: Context, packageName: String): CuratedCoverEntry? =
         loadMap(context)[packageName]
 
-    fun urlFor(context: Context, packageName: String, layout: CoverLayout): String? =
-        get(context, packageName)?.urlFor(layout)
-
     /** Parsed curated index (cached until the stored JSON changes). */
     fun entries(context: Context): Map<String, CuratedCoverEntry> = loadMap(context)
 
@@ -99,7 +96,7 @@ object CuratedCovers {
         }.getOrNull()
     }
 
-    fun reloadFromAssets(context: Context): Boolean {
+    private fun reloadFromAssets(context: Context): Boolean {
         val asset = readAsset(context) ?: return false
         prefs(context).edit()
             .putString(KEY_CACHE, asset)

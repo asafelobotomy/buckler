@@ -6,7 +6,6 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.security.MessageDigest
 
 /**
  * An open app the wizard can install, from the CLI's catalog (scripts/gen_profiles.py bundles
@@ -75,7 +74,7 @@ object SetupApps {
         require(app.installable) { "${app.label} has nothing to download" }
         val dir = File(context.cacheDir, "setup-apks").apply { mkdirs() }
         val dest = File(dir, "${app.id}-${app.sha256}.apk")
-        if (dest.isFile && sha256(dest) == app.sha256) return dest
+        if (dest.isFile && sha256Hex(dest) == app.sha256) return dest
         val partial = File(dir, dest.name + ".partial")
         var connection: HttpURLConnection? = null
         try {
@@ -87,7 +86,7 @@ object SetupApps {
                     instanceFollowRedirects = false
                     connectTimeout = 15_000
                     readTimeout = 60_000
-                    setRequestProperty("User-Agent", "buckler")
+                    setRequestProperty("User-Agent", HttpJson.USER_AGENT)
                 }
                 connection = c
                 if (c.responseCode !in 300..399) break
@@ -117,7 +116,7 @@ object SetupApps {
                     }
                 }
             }
-            val got = sha256(partial)
+            val got = sha256Hex(partial)
             check(got == app.sha256) { "the download does not match its pinned checksum" }
             check(partial.renameTo(dest)) { "could not keep the download" }
             return dest
@@ -138,18 +137,5 @@ object SetupApps {
         val result = adb.install(apk)
         apk.delete()
         return if (result.ok) "Installed ${app.label} ${app.version}." else "${app.label} not installed: ${result.output.take(120)}"
-    }
-
-    fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(1 shl 16)
-            while (true) {
-                val n = input.read(buffer)
-                if (n < 0) break
-                digest.update(buffer, 0, n)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 }

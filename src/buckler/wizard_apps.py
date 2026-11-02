@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-import hashlib
 import shutil
 import urllib.request
-from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
 from buckler.adb import Adb
 from buckler.app_catalog import CatalogEntry, CatalogError, load_catalog
+from buckler.digest import sha256_file
 from buckler.home_layout import push_pins_patch
 from buckler.paths import apk_cache_dir
-from buckler.wizard_phases import banner_for
-
-Echo = Callable[[str], None]
-Ask = Callable[[str, bool], bool]
+from buckler.wizard_phases import Ask, Echo, banner_for, echo_to
 
 
 class Reporter(Protocol):
@@ -53,7 +49,7 @@ def run_app_phases(
     except CatalogError as exc:
         report.add("alternatives", False, str(exc))
         report.add("suggestions", False, "skipped after catalog error", skipped=True)
-        _echo(echo, f"  {exc}")
+        echo_to(echo, f"  {exc}")
         return empty
 
     chosen_swaps = _choose_group(
@@ -96,7 +92,7 @@ def fetch_verified_apk(entry: CatalogEntry, cache: Path | None = None) -> Path:
     folder = cache if cache is not None else apk_cache_dir()
     folder.mkdir(parents=True, exist_ok=True)
     dest = folder / f"{entry.id}-{entry.sha256}.apk"
-    if dest.is_file() and _sha256(dest) == entry.sha256:
+    if dest.is_file() and sha256_file(dest) == entry.sha256:
         return dest
     partial = dest.with_suffix(".partial")
     try:
@@ -106,7 +102,7 @@ def fetch_verified_apk(entry: CatalogEntry, cache: Path | None = None) -> Path:
             partial.open("wb") as handle,
         ):
             shutil.copyfileobj(response, handle)
-        digest = _sha256(partial)
+        digest = sha256_file(partial)
         if digest != entry.sha256:
             raise CatalogError(f"{entry.id}: sha256 mismatch (got {digest})")
         partial.replace(dest)
@@ -133,9 +129,9 @@ def _choose_group(
     echo: Echo | None,
     intro: str,
 ) -> list[CatalogEntry]:
-    _echo(echo, banner_for(phase_id))
+    echo_to(echo, banner_for(phase_id))
     if intro:
-        _echo(echo, f"  {intro}")
+        echo_to(echo, f"  {intro}")
     wanted = set(explicit)
     chosen: list[CatalogEntry] = []
     for entry in pool:
@@ -145,7 +141,7 @@ def _choose_group(
         name = f"{step_prefix}:{entry.id}"
         if not take:
             report.add(name, True, kept_detail, skipped=True)
-            _echo(echo, f"  {entry.label}: {kept_detail}")
+            echo_to(echo, f"  {entry.label}: {kept_detail}")
             continue
         if _install_entry(adb, report, entry, name=name, dry_run=dry_run, echo=echo):
             chosen.append(entry)
@@ -165,14 +161,14 @@ def _install_entry(
         detail = f"unpin {entry.stock_package}"
         if dry_run:
             report.add(name, True, f"would {detail}", skipped=True)
-            _echo(echo, f"  {entry.label}: would {detail}")
+            echo_to(echo, f"  {entry.label}: would {detail}")
             return True
         report.add(name, True, detail)
-        _echo(echo, f"  {entry.label}: {detail}")
+        echo_to(echo, f"  {entry.label}: {detail}")
         return True
     if dry_run:
         report.add(name, True, f"would install {entry.package}", skipped=True)
-        _echo(echo, f"  {entry.label}: would install {entry.package}")
+        echo_to(echo, f"  {entry.label}: would install {entry.package}")
         return True
     try:
         if adb.package_present(entry.package):
@@ -183,10 +179,10 @@ def _install_entry(
             detail = f"installed {entry.package}"
     except Exception as exc:  # noqa: BLE001 — one app must not abort the wizard
         report.add(name, False, str(exc))
-        _echo(echo, f"  {entry.label}: FAIL {exc}")
+        echo_to(echo, f"  {entry.label}: FAIL {exc}")
         return False
     report.add(name, True, detail)
-    _echo(echo, f"  {entry.label}: {detail}")
+    echo_to(echo, f"  {entry.label}: {detail}")
     return True
 
 
@@ -219,31 +215,19 @@ def _push_dock(
     if dry_run or not push_layout:
         why = "dry-run" if dry_run else "home layout not pushed"
         report.add("home_layout_apps", True, f"skipped ({why}): {shown}", skipped=True)
-        _echo(echo, f"  dock skipped ({why})")
+        echo_to(echo, f"  dock skipped ({why})")
         return
     try:
         remote = push_pins_patch(adb, ops)
     except Exception as exc:  # noqa: BLE001
         report.add("home_layout_apps", False, str(exc))
-        _echo(echo, f"  dock FAIL {exc}")
+        echo_to(echo, f"  dock FAIL {exc}")
         return
     # Only the Apps pins change; the rest of the TV's Home stays as it is.
     report.add("home_layout_apps", True, f"{shown} → {remote}")
-    _echo(echo, f"  dock: {shown}")
+    echo_to(echo, f"  dock: {shown}")
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
-def _echo(echo: Echo | None, msg: str) -> None:
-    if echo:
-        echo(msg)
-
-
-# Re-export so callers can catch catalog failures without a second import.
-__all__ = ["Ask", "CatalogError", "fetch_verified_apk", "run_app_phases"]
+__all__ = ["dock_ops", "fetch_verified_apk", "run_app_phases"]

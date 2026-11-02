@@ -5,7 +5,6 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
-import java.net.URLEncoder
 import org.json.JSONObject
 
 /** A Jellyfin video that can go on a Multiview tile. */
@@ -78,7 +77,7 @@ object JellyfinClient {
 
     /** Signed in once the code is approved; null while it is still waiting. */
     fun finishQuickConnect(context: Context, pending: QuickConnect): JellyfinAccount? = runCatching {
-        val state = HttpJson.get("${pending.server}/QuickConnect/Connect?secret=${enc(pending.secret)}", auth(context))
+        val state = HttpJson.get("${pending.server}/QuickConnect/Connect?secret=${HttpJson.encode(pending.secret)}", auth(context))
         if (state.code !in 200..299 || !JSONObject(state.body).optBoolean("Authenticated")) return null
         val res = HttpJson.postJson(
             "${pending.server}/Users/AuthenticateWithQuickConnect",
@@ -128,7 +127,5 @@ object JellyfinClient {
 
     /** The file as it is, untouched: no transcoding, so three at once stay light on the server. */
     fun streamUrl(account: JellyfinAccount, itemId: String): String =
-        "${account.server}/Videos/$itemId/stream?static=true&api_key=${enc(account.token)}"
-
-    private fun enc(value: String) = URLEncoder.encode(value, "UTF-8")
+        "${account.server}/Videos/$itemId/stream?static=true&api_key=${HttpJson.encode(account.token)}"
 }

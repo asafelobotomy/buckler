@@ -13,23 +13,15 @@ object HttpJson {
     /** [etag] and [lastModified] let a caller ask next time for the body only if it changed (304). */
     data class Response(val code: Int, val body: String, val etag: String? = null, val lastModified: String? = null)
 
+    /** How Buckler names itself to the servers it calls. */
+    val USER_AGENT = "buckler-home/${BuildConfig.VERSION_NAME}"
+
     fun get(
         url: String,
         headers: Map<String, String> = emptyMap(),
         connectTimeoutMs: Int = 12_000,
         readTimeoutMs: Int = 20_000,
-    ): Response {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
-            instanceFollowRedirects = true
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "buckler-home/${BuildConfig.VERSION_NAME}")
-            headers.forEach { (k, v) -> setRequestProperty(k, v) }
-        }
-        return read(conn)
-    }
+    ): Response = read(open(url, "GET", headers, connectTimeoutMs, readTimeoutMs, accept = "application/json"))
 
     fun postForm(
         url: String,
@@ -38,21 +30,8 @@ object HttpJson {
         connectTimeoutMs: Int = 12_000,
         readTimeoutMs: Int = 20_000,
     ): Response {
-        val body = form.entries.joinToString("&") { (k, v) ->
-            "${encode(k)}=${encode(v)}"
-        }
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            doOutput = true
-            connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
-            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "buckler-home/${BuildConfig.VERSION_NAME}")
-            headers.forEach { (k, v) -> setRequestProperty(k, v) }
-        }
-        conn.outputStream.use { it.write(body.toByteArray(StandardCharsets.UTF_8)) }
-        return read(conn)
+        val body = form.entries.joinToString("&") { (k, v) -> "${encode(k)}=${encode(v)}" }
+        return post(url, body, "application/x-www-form-urlencoded", headers, connectTimeoutMs, readTimeoutMs)
     }
 
     fun postJson(
@@ -61,20 +40,7 @@ object HttpJson {
         headers: Map<String, String> = emptyMap(),
         connectTimeoutMs: Int = 12_000,
         readTimeoutMs: Int = 20_000,
-    ): Response {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            doOutput = true
-            connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
-            setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "buckler-home/${BuildConfig.VERSION_NAME}")
-            headers.forEach { (k, v) -> setRequestProperty(k, v) }
-        }
-        conn.outputStream.use { it.write(jsonBody.toByteArray(StandardCharsets.UTF_8)) }
-        return read(conn)
-    }
+    ): Response = post(url, jsonBody, "application/json", headers, connectTimeoutMs, readTimeoutMs)
 
     /** Stream a download straight to [dest]; returns the HTTP status code. */
     fun downloadTo(
@@ -84,14 +50,7 @@ object HttpJson {
         connectTimeoutMs: Int = 15_000,
         readTimeoutMs: Int = 120_000,
     ): Int {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
-            instanceFollowRedirects = true
-            setRequestProperty("User-Agent", "buckler-home/${BuildConfig.VERSION_NAME}")
-            headers.forEach { (k, v) -> setRequestProperty(k, v) }
-        }
+        val conn = open(url, "GET", headers, connectTimeoutMs, readTimeoutMs, accept = null)
         try {
             val code = conn.responseCode
             if (code in 200..299) {
@@ -103,6 +62,38 @@ object HttpJson {
         } finally {
             conn.disconnect()
         }
+    }
+
+    private fun post(
+        url: String,
+        body: String,
+        contentType: String,
+        headers: Map<String, String>,
+        connectTimeoutMs: Int,
+        readTimeoutMs: Int,
+    ): Response {
+        val conn = open(url, "POST", mapOf("Content-Type" to contentType) + headers, connectTimeoutMs, readTimeoutMs, accept = "application/json")
+        conn.doOutput = true
+        conn.outputStream.use { it.write(body.toByteArray(StandardCharsets.UTF_8)) }
+        return read(conn)
+    }
+
+    /** A connection with Buckler's defaults; [headers] are set last, so a caller's win. */
+    private fun open(
+        url: String,
+        method: String,
+        headers: Map<String, String>,
+        connectTimeoutMs: Int,
+        readTimeoutMs: Int,
+        accept: String?,
+    ): HttpURLConnection = (URL(url).openConnection() as HttpURLConnection).apply {
+        requestMethod = method
+        connectTimeout = connectTimeoutMs
+        readTimeout = readTimeoutMs
+        instanceFollowRedirects = true
+        accept?.let { setRequestProperty("Accept", it) }
+        setRequestProperty("User-Agent", USER_AGENT)
+        headers.forEach { (k, v) -> setRequestProperty(k, v) }
     }
 
     fun parseObject(body: String): JSONObject? =
@@ -132,6 +123,6 @@ object HttpJson {
 
     private const val MAX_BODY_CHARS = 2_000_000
 
-    private fun encode(value: String): String =
+    fun encode(value: String): String =
         URLEncoder.encode(value, StandardCharsets.UTF_8.name())
 }

@@ -50,7 +50,7 @@ def launcher_build() -> None:
 @launcher_group.command("install")
 @click.pass_context
 def launcher_install(ctx: click.Context) -> None:
-    """Build if needed and install APK (does not change HOME)."""
+    """Install the launcher APK: a checkout's build, else the latest release (does not change HOME)."""
     try:
         out = install_launcher(make_adb(ctx.obj["host"]))
     except (AdbError, RuntimeError) as exc:

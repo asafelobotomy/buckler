@@ -18,12 +18,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
@@ -63,22 +61,6 @@ fun Modifier.autoFocus(key: Any? = Unit): Modifier {
     }
     return focusRequester(requester).focusGroup()
 }
-
-/**
- * Keeps D-pad Up/Down inside this column instead of jumping to unrelated controls that merely sit
- * lower/higher on screen (e.g. from the last Settings button into the side navigation).
- * [onLeft], when given, picks the exact target for a Left exit.
- */
-@OptIn(ExperimentalComposeUiApi::class)
-fun Modifier.trapVerticalFocus(onLeft: (() -> FocusRequester)? = null): Modifier = focusProperties {
-    exit = { direction ->
-        when (direction) {
-            FocusDirection.Up, FocusDirection.Down -> FocusRequester.Cancel
-            FocusDirection.Left -> onLeft?.invoke() ?: FocusRequester.Default
-            else -> FocusRequester.Default
-        }
-    }
-}.focusGroup()
 
 /**
  * Dialog body. Deliberately *not* clickable/focusable itself: a clickable container

@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
-import java.security.MessageDigest
 
 data class GitHubRelease(
     val tag: String,
@@ -79,9 +78,6 @@ object UpdateChecker {
         val signers = info.signingInfo?.apkContentsSigners.orEmpty()
         signers.any { sha256Hex(it.toByteArray()).equals(BuildConfig.RELEASE_CERT_SHA256, ignoreCase = true) }
     }.getOrDefault(false)
-
-    private fun sha256Hex(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     fun shouldAutoCheck(context: Context): Boolean {
         if (!isReleaseSigned(context)) return false

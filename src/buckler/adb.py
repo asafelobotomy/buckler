@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 import shutil
 import subprocess
@@ -154,14 +153,12 @@ class Adb:
         check: bool,
         timeout: float | None = DEFAULT_TIMEOUT,
     ) -> subprocess.CompletedProcess[str]:
-        env = os.environ.copy()
         try:
             result = subprocess.run(
                 cmd,
                 check=False,
                 capture_output=True,
                 text=True,
-                env=env,
                 # adb shell reads stdin; it would swallow answers meant for click prompts.
                 stdin=subprocess.DEVNULL,
                 timeout=timeout,
