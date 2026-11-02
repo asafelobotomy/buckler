@@ -18,10 +18,10 @@ class InstallResultReceiver : BroadcastReceiver() {
         val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
         when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> launchConfirmation(context, intent)
-            PackageInstaller.STATUS_SUCCESS -> Log.i(TAG, "Update installed")
+            PackageInstaller.STATUS_SUCCESS -> Log.i(TAG, "Installed")
             else -> {
                 Log.w(TAG, "Install failed: status=$status message=$message")
-                Toast.makeText(context, "Update failed: ${message ?: "status $status"}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Install failed: ${message ?: "status $status"}", Toast.LENGTH_LONG).show()
             }
         }
     }

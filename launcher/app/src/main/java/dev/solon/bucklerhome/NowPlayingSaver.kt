@@ -318,7 +318,7 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
         text = label
         setTextColor(Color.WHITE)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-        typeface = config.font.typeface(context, light = false)
+        typeface = config.appearance.typeface(context, light = false)
         setPadding(dp(12), dp(4), dp(12), dp(4))
         background = GradientDrawable().apply {
             cornerRadius = 6 * density
@@ -329,7 +329,7 @@ class NowPlayingSaver(context: Context, private val config: ScreensaverConfig) :
     private fun text(sizeSp: Float, light: Boolean, bold: Boolean = false) = TextView(context).apply {
         setTextColor(Color.parseColor("#F2F4F7"))
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        typeface = config.font.typeface(context, light)
+        typeface = config.appearance.typeface(context, light)
         if (bold) paint.isFakeBoldText = true
         ellipsize = TextUtils.TruncateAt.END
         setShadowLayer(8f, 0f, 2f, Color.BLACK)

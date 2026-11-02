@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -86,10 +87,15 @@ private fun MiniTile(style: CoverLayout, width: Dp, height: Dp, palette: Palette
 /** The same mini Home screen painted in another theme's colours. */
 @Composable
 fun BoxScope.ThemeMiniature(theme: AppTheme, highContrast: Boolean) {
-    val palette = Palettes.resolve(AppearanceConfig(theme = theme, highContrast = highContrast))
+    PaletteMiniature(Palettes.resolve(AppearanceConfig(theme = theme, highContrast = highContrast)), theme.markRes)
+}
+
+/** The mini Home screen in [palette]'s colours, with the Buckler mark [markRes] in the corner. */
+@Composable
+fun BoxScope.PaletteMiniature(palette: Palette, markRes: Int = AppTheme.BUCKLER.markRes) {
     Column(modifier = Modifier.fillMaxSize().background(palette.background).padding(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(painter = painterResource(theme.markRes), contentDescription = null, modifier = Modifier.size(12.dp))
+            Image(painter = painterResource(markRes), contentDescription = null, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(5.dp))
             Box(Modifier.size(width = 26.dp, height = 7.dp).rounded(palette.text))
             Spacer(Modifier.width(6.dp))
@@ -130,13 +136,18 @@ fun BoxScope.StageSizeMiniature(size: StageSize) {
 /** A sample of the font, drawn in itself on the current theme. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun BoxScope.FontMiniature(font: FontChoice) {
+fun BoxScope.FontMiniature(font: FontChoice) = FontMiniature(font.family())
+
+/** A sample of [family], drawn in itself on the current theme. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun BoxScope.FontMiniature(family: FontFamily) {
     Column(
         modifier = Modifier.fillMaxSize().background(LocalPalette.current.bgTop),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = "Aa 21:30", fontFamily = font.family(), fontSize = 24.sp, fontWeight = FontWeight.Medium, color = ColorText)
-        Text(text = "Netflix · YouTube", fontFamily = font.family(), fontSize = 12.sp, color = ColorMuted)
+        Text(text = "Aa 21:30", fontFamily = family, fontSize = 24.sp, fontWeight = FontWeight.Medium, color = ColorText)
+        Text(text = "Netflix · YouTube", fontFamily = family, fontSize = 12.sp, color = ColorMuted)
     }
 }

@@ -216,9 +216,12 @@ object Palettes {
         AppTheme.SAFFRON -> SAFFRON
     }
 
+    /** The chosen scheme: a bucklerStore one while it is installed, else the built-in [AppearanceConfig.theme]. */
+    fun base(config: AppearanceConfig): Palette = config.storeTheme?.let { StoreLibrary.palette(it) } ?: of(config.theme)
+
     /** High contrast keeps the light/dark choice but drops the decorative colours. */
     fun resolve(config: AppearanceConfig): Palette {
-        val base = of(config.theme)
+        val base = base(config)
         return when {
             !config.highContrast -> base
             base.dark -> HIGH_CONTRAST_DARK

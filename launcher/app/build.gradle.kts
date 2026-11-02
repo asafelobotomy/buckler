@@ -6,6 +6,8 @@ plugins {
 }
 
 val githubRepo = "asafelobotomy/buckler"
+// bucklerStore's catalog (Settings → bucklerStore); a copy is bundled as assets/store_index.json.
+val storeRepo = "asafelobotomy/bucklerStore"
 
 // Release signing: put storeFile/storePassword/keyAlias/keyPassword in launcher/keystore.properties
 // (git-ignored). Without it the release APK falls back to the machine-local debug key, and OTA
@@ -42,6 +44,11 @@ android {
             "String",
             "GITHUB_RELEASES_URL",
             "\"https://api.github.com/repos/$githubRepo/releases/latest\"",
+        )
+        buildConfigField(
+            "String",
+            "STORE_INDEX_URL",
+            "\"https://raw.githubusercontent.com/$storeRepo/main/index.json\"",
         )
         buildConfigField(
             "String",

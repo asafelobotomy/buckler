@@ -50,8 +50,9 @@ val ColorRing: Color
 @Composable
 fun BucklerHomeTheme(content: @Composable () -> Unit) {
     val appearance = AppearanceStore.config
-    val palette = remember(appearance.theme, appearance.highContrast) { Palettes.resolve(appearance) }
-    val family = appearance.font.family()
+    val store = StoreLibrary.version
+    val palette = remember(appearance.theme, appearance.storeTheme, appearance.highContrast, store) { Palettes.resolve(appearance) }
+    val family = remember(appearance.font, appearance.storeFont, store) { appearance.fontFamily() }
     val system = LocalDensity.current
     // Scale text on top of the system font scale; layout (dp) sizes stay put.
     val density = remember(system.density, system.fontScale, appearance.textSize) {

@@ -53,11 +53,29 @@ object ApkInstaller {
             apk.delete()
             return false
         }
+        return commit(context, apk, context.packageName)
+    }
+
+    /**
+     * Install another app from bucklerStore (an icon pack): only when [apk] is the package the
+     * index names. Its SHA-256 was checked on download; Android asks the viewer to confirm.
+     */
+    fun installPackage(context: Context, apk: File, packageName: String): Boolean {
+        val archive = runCatching { context.packageManager.getPackageArchiveInfo(apk.path, 0) }.getOrNull()
+        if (archive?.packageName != packageName || packageName == context.packageName) {
+            Log.w(TAG, "Refusing ${apk.name}: it is ${archive?.packageName}, not $packageName")
+            apk.delete()
+            return false
+        }
+        return commit(context, apk, packageName)
+    }
+
+    private fun commit(context: Context, apk: File, packageName: String): Boolean {
         return runCatching {
             val installer = context.packageManager.packageInstaller
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-            params.setAppPackageName(context.packageName)
-            if (Build.VERSION.SDK_INT >= 31) {
+            params.setAppPackageName(packageName)
+            if (Build.VERSION.SDK_INT >= 31 && packageName == context.packageName) {
                 params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
             val sessionId = installer.createSession(params)

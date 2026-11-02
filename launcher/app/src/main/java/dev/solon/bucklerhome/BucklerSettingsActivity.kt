@@ -86,6 +86,11 @@ enum class SettingsPane(
     NOW_PLAYING("Now Playing & Lyrics", WIDGETS),
     MULTIVIEW("Multiview", WIDGETS),
     COMPANION("Companion", WIDGETS),
+    STORE("bucklerStore", ownPage = "Overview"),
+    STORE_WIDGETS("Widgets", STORE),
+    STORE_THEMES("Colour schemes", STORE),
+    STORE_FONTS("Fonts", STORE),
+    STORE_ICON_PACKS("Icon packs", STORE),
     SCREENSAVER("Screensaver"),
     SAVER_CLOCK(ScreensaverMode.CLOCK.label, SCREENSAVER, ScreensaverMode.CLOCK),
     SAVER_DVD(ScreensaverMode.DVD.label, SCREENSAVER, ScreensaverMode.DVD),
@@ -147,6 +152,11 @@ fun SettingsPageContent(pane: SettingsPane) {
         SettingsPane.NOW_PLAYING -> NowPlayingPane()
         SettingsPane.MULTIVIEW -> MultiviewSettings()
         SettingsPane.COMPANION -> CompanionPane()
+        SettingsPane.STORE -> StorePane()
+        SettingsPane.STORE_WIDGETS -> StoreWidgetsPane()
+        SettingsPane.STORE_THEMES -> StoreThemesPane()
+        SettingsPane.STORE_FONTS -> StoreFontsPane()
+        SettingsPane.STORE_ICON_PACKS -> StoreIconPacksPane()
         SettingsPane.ACCESSIBILITY -> AccessibilityPane()
         SettingsPane.SCREENSAVER -> ScreensaverPane()
         SettingsPane.SAVER_CLOCK, SettingsPane.SAVER_DVD, SettingsPane.SAVER_PHOTOS,
