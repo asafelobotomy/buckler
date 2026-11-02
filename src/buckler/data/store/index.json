@@ -6,84 +6,120 @@
       "label": "News",
       "about": "Headlines from the sources you pick, one story at a time.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "now_playing",
       "label": "Now Playing",
       "about": "The song or show playing on the TV, with its artwork and controls.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "lyrics",
       "label": "Lyrics",
       "about": "Time-synced lyrics for the song playing, karaoke style.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "weather",
       "label": "Weather",
       "about": "Today and the days ahead for your city (Open-Meteo).",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "suggested",
       "label": "Suggested",
       "about": "Things to watch from your apps' own recommendations.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "glance",
       "label": "At a Glance",
       "about": "The next thing on your calendar, reminders and the weather in one line.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "calendar",
       "label": "Calendar",
       "about": "The next few days side by side, with reminders, from the calendars the TV syncs.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "weather_map",
       "label": "Weather map",
       "about": "A live map around your city: pressure lines with highs and lows, wind and rain.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "companion",
       "label": "Companion",
       "about": "A little animated friend that reacts to the time and weather.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "multiview",
       "label": "Multiview",
       "about": "Several live streams side by side.",
       "default": false,
-      "since": "0.21.0"
+      "since": "0.21.0",
+      "requires": "0.21.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "comics",
       "label": "Comics",
       "about": "Public-domain newspaper strips, cleaned up, with a reader to zoom panel by panel.",
       "default": false,
-      "since": "0.23.0"
+      "since": "0.23.0",
+      "requires": "0.23.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "spurious",
       "label": "Spurious correlations",
       "about": "Two unrelated things that rose and fell together, from Tyler Vigen's charts.",
       "default": false,
-      "since": "0.23.0"
+      "since": "0.23.0",
+      "requires": "0.23.0",
+      "revision": 1,
+      "changes": ""
     }
   ],
   "screensavers": [
@@ -92,70 +128,100 @@
       "label": "Drifting clock",
       "about": "A large clock that glides to a new spot now and then, so nothing burns in.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "saver_dvd",
       "label": "DVD bounce",
       "about": "The Buckler mark and the clock bounce around, changing colour on every edge.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "saver_photos",
       "label": "Photos (online)",
       "about": "Featured pictures from Wikimedia Commons in the categories you pick, credited on screen.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "saver_uploaded",
       "label": "My photos",
       "about": "A slideshow of photos you upload from your phone.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "saver_now_playing",
       "label": "Now Playing",
       "about": "Whatever is playing, large, with its artwork; a clock when nothing plays.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "saver_maze",
       "label": "3D Maze",
       "about": "A walk through brick, stone or wood mazes, after Windows 95's 3D Maze, with gems that flip the view, the Buckler mark at each exit and the odd night walk.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.23.0",
+      "revision": 2,
+      "changes": "Sharper picture, stone and wood walls, gems that roll the view, the Buckler mark at each exit and night walks."
     },
     {
       "id": "saver_pipes",
       "label": "3D Pipes",
       "about": "Pipes grow and twist through 3D space, after the Windows 3D Pipes.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "saver_mystify",
       "label": "Mystify",
       "about": "Bouncing, colour-shifting outlines with trails, after Windows Mystify.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "saver_starfield",
       "label": "Starfield",
       "about": "Flying through a field of stars, after Windows Starfield.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "saver_weather",
       "label": "Rolling weather",
       "about": "The weather in turn - now, the next hours and days, the pressure map and a heat map.",
       "default": false,
-      "since": "0.23.0"
+      "since": "0.23.0",
+      "requires": "0.23.0",
+      "revision": 1,
+      "changes": ""
     }
   ],
   "schemes": [
@@ -164,119 +230,170 @@
       "label": "Buckler",
       "about": "Teal and sage from the Buckler mark; the default.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_light",
       "label": "Light",
       "about": "Warm paper with a bronze accent, for bright rooms.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_dark",
       "label": "Dark",
       "about": "The original gold on navy.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_shield",
       "label": "SHIELD",
       "about": "NVIDIA green on black, like the stock SHIELD interface.",
       "default": true,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_gruvbox",
       "label": "Gruvbox",
       "about": "Retro warm browns with a yellow accent.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_snes_uk",
       "label": "SNES (UK)",
       "about": "The PAL pad's grey shell with red, yellow, green and blue buttons.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_snes_us",
       "label": "SNES (US)",
       "about": "The North American pad's pale grey with lavender-purple buttons.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_slate",
       "label": "Slate",
       "about": "Cool slate blues with a sky-blue accent.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_velvet",
       "label": "Velvet",
       "about": "Deep plum with violet, mint and pink.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_ember",
       "label": "Ember",
       "about": "Warm charcoal with hot pink and lime.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_tidepool",
       "label": "Tidepool",
       "about": "Deep sea teal with clear blue and olive.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_fjord",
       "label": "Fjord",
       "about": "Arctic greys with frost blue and moss.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_marshmallow",
       "label": "Marshmallow",
       "about": "Soft night with pastel lilac and mint.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_neon",
       "label": "Neon",
       "about": "Late-night navy with electric blue and lime.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_graphite",
       "label": "Graphite",
       "about": "Near-black with bright blue and green.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_rosewood",
       "label": "Rosewood",
       "about": "Dusky purple with rose and sea-foam.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "scheme_saffron",
       "label": "Saffron",
       "about": "Ink black with saffron orange and lime.",
       "default": false,
-      "since": "0.1.0"
+      "since": "0.1.0",
+      "requires": "0.1.0",
+      "revision": 1,
+      "changes": ""
     }
   ],
   "themes": [
@@ -284,6 +401,8 @@
       "id": "sakura",
       "label": "Sakura",
       "about": "Night-time plum with cherry-blossom pink and leaf green.",
+      "revision": 1,
+      "changes": "",
       "dark": true,
       "colors": {
         "bgTop": "#1E1620",
@@ -305,6 +424,8 @@
       "id": "matcha",
       "label": "Matcha",
       "about": "Soft whisked-green tea on warm paper; a light scheme.",
+      "revision": 1,
+      "changes": "",
       "dark": false,
       "colors": {
         "bgTop": "#F3F1E6",
@@ -326,6 +447,8 @@
       "id": "arcade",
       "label": "Arcade",
       "about": "Cabinet black with hot magenta and cyan, like an 80s attract screen.",
+      "revision": 1,
+      "changes": "",
       "dark": true,
       "colors": {
         "bgTop": "#0B0A12",
@@ -347,6 +470,8 @@
       "id": "sunset",
       "label": "Sunset",
       "about": "Dusky indigo fading to coral and amber.",
+      "revision": 1,
+      "changes": "",
       "dark": true,
       "colors": {
         "bgTop": "#1A1830",
@@ -368,6 +493,8 @@
       "id": "forest",
       "label": "Forest",
       "about": "Deep pine with moss and birch-bark cream.",
+      "revision": 1,
+      "changes": "",
       "dark": true,
       "colors": {
         "bgTop": "#101A14",
@@ -389,6 +516,8 @@
       "id": "abyss",
       "label": "Abyss",
       "about": "Ocean-floor blue-black with bioluminescent aqua.",
+      "revision": 1,
+      "changes": "",
       "dark": true,
       "colors": {
         "bgTop": "#060E17",
@@ -410,6 +539,8 @@
       "id": "mono",
       "label": "Mono",
       "about": "Pure greyscale with a white accent, for a calm, colourless Home.",
+      "revision": 1,
+      "changes": "",
       "dark": true,
       "colors": {
         "bgTop": "#111111",
@@ -431,6 +562,8 @@
       "id": "parchment",
       "label": "Parchment",
       "about": "Old paper and sepia ink with an oxblood accent; a light scheme.",
+      "revision": 1,
+      "changes": "",
       "dark": false,
       "colors": {
         "bgTop": "#F6EEDC",
@@ -454,6 +587,8 @@
       "id": "lexend",
       "label": "Lexend",
       "about": "Wide, even letters designed to make reading easier.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -472,6 +607,8 @@
       "id": "lora",
       "label": "Lora",
       "about": "A calligraphic serif, warm at TV sizes.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -490,6 +627,8 @@
       "id": "space-grotesk",
       "label": "Space Grotesk",
       "about": "A quirky geometric sans with a technical edge.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -508,6 +647,8 @@
       "id": "ibm-plex-sans",
       "label": "IBM Plex Sans",
       "about": "Neutral and engineered, with distinctive details.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -526,6 +667,8 @@
       "id": "jetbrains-mono",
       "label": "JetBrains Mono",
       "about": "A coder's monospace with tall lowercase letters.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -544,6 +687,8 @@
       "id": "quicksand",
       "label": "Quicksand",
       "about": "Rounded and friendly.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -562,6 +707,8 @@
       "id": "bitter",
       "label": "Bitter",
       "about": "A sturdy slab serif made for screens.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -580,6 +727,8 @@
       "id": "outfit",
       "label": "Outfit",
       "about": "Clean geometric shapes, modern and light.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -598,6 +747,8 @@
       "id": "source-sans-3",
       "label": "Source Sans 3",
       "about": "Adobe's open, highly legible UI sans.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -616,6 +767,8 @@
       "id": "comfortaa",
       "label": "Comfortaa",
       "about": "Soft, round and playful.",
+      "revision": 1,
+      "changes": "",
       "license": "OFL-1.1",
       "files": {
         "regular": {
@@ -641,7 +794,9 @@
       "sha256": "5ed67a0338c207bd0f8c44392dedbae8d0449fef5c8d773a202451d42bbd8cdd",
       "size": 19000000,
       "license": "Apache-2.0",
-      "about": "Single-colour outline icons (about 23,000 app mappings)."
+      "about": "Single-colour outline icons (about 23,000 app mappings).",
+      "revision": 1,
+      "changes": ""
     },
     {
       "id": "arcticons",
@@ -652,7 +807,9 @@
       "sha256": "653ea050715c4d40c15da7e6cefad17e389afcd6a518636f6115de2ae1310fc1",
       "size": 71000000,
       "license": "CC BY-SA 4.0 icons, GPL-3.0 app",
-      "about": "White line icons (about 49,000 app mappings)."
+      "about": "White line icons (about 49,000 app mappings).",
+      "revision": 1,
+      "changes": ""
     }
   ]
 }
