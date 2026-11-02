@@ -43,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,8 +62,6 @@ private sealed interface PanelNode {
         override fun hashCode() = id
     }
 }
-
-private const val ALL_SETTINGS_ROW = "android:all"
 
 private fun SettingsPane.hasPages() = SettingsPane.entries.any { it.parent == this }
 
@@ -179,18 +176,11 @@ private fun PanelScreen(node: PanelNode, above: PanelNode?, returnTo: String?, o
     Column(Modifier.fillMaxSize()) {
         when (node) {
             PanelNode.Root -> {
-                val context = LocalContext.current
                 PanelTitle("Buckler Settings", "buckler-home ${BuildConfig.VERSION_NAME}")
-                val rows = SettingsPane.entries.filter { it.parent == null }.map { PanelRow(it.name, it.label) } +
-                    PanelRow(ALL_SETTINGS_ROW, "All Android settings", external = true)
+                val rows = SettingsPane.entries.filter { it.parent == null }.map { PanelRow(it.name, it.label) }
                 PanelList(rows, returnTo) { key ->
-                    when (key) {
-                        ALL_SETTINGS_ROW -> SystemScreen.ALL.open(context)
-                        else -> {
-                            val pane = SettingsPane.valueOf(key)
-                            onOpen(key, if (pane.hasPages()) PanelNode.Section(pane) else PanelNode.Page(pane))
-                        }
-                    }
+                    val pane = SettingsPane.valueOf(key)
+                    onOpen(key, if (pane.hasPages()) PanelNode.Section(pane) else PanelNode.Page(pane))
                 }
             }
             is PanelNode.Section -> {
@@ -224,8 +214,8 @@ private fun PanelTitle(title: String, subtitle: String?) {
     Spacer(Modifier.height(18.dp))
 }
 
-/** A row in a [PanelList]; [external] ones open one of Android's own screens. */
-private data class PanelRow(val key: String, val label: String, val external: Boolean = false)
+/** A row in a [PanelList]. */
+private data class PanelRow(val key: String, val label: String)
 
 /** A list of rows that each open something; focus starts on [returnTo] when coming back to it. */
 @Composable
@@ -239,14 +229,14 @@ private fun PanelList(rows: List<PanelRow>, returnTo: String?, onOpen: (String) 
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 27.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        rows.forEach { row -> PanelLink(row.label, requesters.getValue(row.key), row.external) { onOpen(row.key) } }
+        rows.forEach { row -> PanelLink(row.label, requesters.getValue(row.key)) { onOpen(row.key) } }
     }
 }
 
 /** One row that opens a list or a page: its name, and › on the right (↗ for one of Android's screens). */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun PanelLink(label: String, focusRequester: FocusRequester, external: Boolean, onClick: () -> Unit) {
+private fun PanelLink(label: String, focusRequester: FocusRequester, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(8.dp)
@@ -264,7 +254,7 @@ private fun PanelLink(label: String, focusRequester: FocusRequester, external: B
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, color = if (focused) ColorOnBrand else ColorText, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Text(if (external) "↗" else "›", color = if (focused) ColorOnBrand else ColorMuted, fontSize = if (external) 16.sp else 20.sp)
+        Text("›", color = if (focused) ColorOnBrand else ColorMuted, fontSize = 20.sp)
     }
 }
 

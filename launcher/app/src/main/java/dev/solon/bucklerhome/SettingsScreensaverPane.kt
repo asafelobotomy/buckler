@@ -43,14 +43,7 @@ fun ScreensaverPane() {
     Spacer(modifier = Modifier.height(18.dp))
     StartAfterSection(tick = tick, onChanged = { tick++ }, onCustom = { customTimeout = true })
     Spacer(modifier = Modifier.height(12.dp))
-    SystemChoice(
-        "Turn off display after",
-        SystemKeys.SLEEP_TIMEOUT,
-        SleepChoices,
-        note = "Counted from the last button press, the screensaver's time included.",
-        other = { "${(it.toLongOrNull() ?: 0) / 60_000} minutes" },
-    )
-    SystemToggle("Stay awake on music", SystemKeys.AWAKE_ON_MUSIC)
+    SettingsPaneLink("Sleep after", SettingsPane.POWER, value = sleepLabel(context))
     Spacer(modifier = Modifier.height(12.dp))
     SettingsAction("Android's screensaver settings", value = "↗") {
         SystemScreen.SCREENSAVER.open(context)
@@ -66,6 +59,12 @@ fun ScreensaverPane() {
             },
         )
     }
+}
+
+/** The TV's sleep time as Power shows it. */
+private fun sleepLabel(context: Context): String {
+    val ms = SystemSettings.get(context, SystemKeys.SLEEP_TIMEOUT)
+    return SleepChoices.firstOrNull { it.first == ms }?.second ?: "${(ms.toLongOrNull() ?: 0) / 60_000} minutes"
 }
 
 /**

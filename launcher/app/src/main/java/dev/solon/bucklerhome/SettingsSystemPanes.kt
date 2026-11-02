@@ -56,7 +56,7 @@ private fun setDns(context: Context, dns: DnsChoice): Boolean =
     (dns.mode != "hostname" || SystemSettings.put(context, SystemKeys.DNS_HOST, dns.host)) &&
         SystemSettings.put(context, SystemKeys.DNS_MODE, dns.mode)
 
-/** Settings → Display & sound: system sounds, surround formats and HDMI-CEC, then Android's own screens. */
+/** Settings → Display & sound: system sounds, surround formats and HDMI-CEC (the TV on and off are under Power), then Android's own screen. */
 @Composable
 fun DisplaySoundPane() {
     val context = LocalContext.current
@@ -78,12 +78,10 @@ fun DisplaySoundPane() {
     PickerTitle("HDMI-CEC")
     SettingsRow("How SHIELD and the TV control each other over HDMI.")
     SystemToggle("HDMI-CEC", SystemKeys.HDMI_CONTROL)
-    SystemToggle("Turn the TV on with SHIELD", SystemKeys.HDMI_TV_ON)
-    SystemToggle("Turn the TV off with SHIELD", SystemKeys.HDMI_TV_OFF)
     SystemToggle("Volume over HDMI-CEC", SystemKeys.HDMI_VOLUME)
+    SettingsPaneLink("TV on and off with SHIELD", SettingsPane.POWER)
     Spacer(modifier = Modifier.height(12.dp))
     SystemScreenLink("Resolution, HDR and more", SystemScreen.DISPLAY_SOUND)
-    SystemScreenLink("Power", SystemScreen.POWER)
 }
 
 /** Buckler's 12/24-hour clock, which the whole TV follows ([DisplayPrefs.setUse24h]). */
@@ -166,10 +164,9 @@ private fun AutofillChoice() {
     SystemChoice("Autofill", SystemKeys.AUTOFILL, listOf("" to "None") + services, other = { "None (${it.substringBefore('/')} is gone)" })
 }
 
-/** Accessibility → Whole TV's captions: on or off, size and style; language and the rest in Android's screen. */
+/** Accessibility → Hearing's captions: on or off, size and style; language and the rest in Android's screen. */
 @Composable
 fun CaptionsSection() {
-    PickerTitle("Captions")
     SystemToggle("Captions", SystemKeys.CAPTIONS)
     SystemChoice(
         "Caption size",
@@ -197,12 +194,18 @@ val SleepChoices = listOf(
     "-1" to "Never",
 )
 
-/** Device → Global's power rows, over Network debugging: sleep now, and restart (pressed twice). */
+/**
+ * Settings → Power: sleep and restart now (over Network debugging), when SHIELD sleeps by itself,
+ * and whether the TV follows it on and off over HDMI-CEC. Android's own Power screen has only the
+ * first two.
+ */
 @Composable
-fun PowerSection(runner: ShieldRunner) {
+fun PowerPane() {
+    val runner = rememberShieldRunner()
     var armed by remember { mutableStateOf(false) }
-    PickerTitle("Power")
-    SettingsAction("Sleep") { runner.run("Going to sleep") { ops -> if (ops.sleep()) "Asleep." else "Could not sleep." } }
+    SectionTitle("Power")
+    GrantNote()
+    SettingsAction("Sleep now") { runner.run("Going to sleep") { ops -> if (ops.sleep()) "Asleep." else "Could not sleep." } }
     SettingsAction(if (armed) "Press again to restart" else "Restart") {
         if (!armed) {
             armed = true
@@ -215,6 +218,22 @@ fun PowerSection(runner: ShieldRunner) {
         }
     }
     if (runner.used) SettingsRow(runner.status)
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("Sleep")
+    SystemChoice(
+        "Sleep after",
+        SystemKeys.SLEEP_TIMEOUT,
+        SleepChoices,
+        note = "Counted from the last button press, the screensaver's time included.",
+        other = { "${(it.toLongOrNull() ?: 0) / 60_000} minutes" },
+    )
+    SystemToggle("Stay awake on music", SystemKeys.AWAKE_ON_MUSIC)
+    SettingsPaneLink("Screensaver", SettingsPane.SCREENSAVER)
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("The TV")
+    SettingsRow("Over HDMI-CEC, which Display & sound turns on or off.")
+    SystemToggle("Turn the TV on with SHIELD", SystemKeys.HDMI_TV_ON)
+    SystemToggle("Turn the TV off with SHIELD", SystemKeys.HDMI_TV_OFF)
 }
 
 /** Time zone regions, in Android's own IDs (Europe/Berlin); Etc and the old aliases are left out. */

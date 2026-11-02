@@ -33,8 +33,8 @@ android {
         // 36, not 37: Android 17 puts LAN traffic (the phone upload page, maybe the loopback adb
         // link) behind a runtime permission that needs testing on an Android 17 TV first.
         targetSdk = 36
-        versionCode = 21
-        versionName = "0.21.0"
+        versionCode = 22
+        versionName = "0.22.0"
         // Public Twitch Client ID for IGDB device-code login (no secret in APK).
         // Register at https://dev.twitch.tv/console and enable Device Code Grant.
         buildConfigField("String", "TWITCH_CLIENT_ID", "\"\"")

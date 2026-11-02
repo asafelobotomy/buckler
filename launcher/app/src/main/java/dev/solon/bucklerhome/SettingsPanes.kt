@@ -76,7 +76,7 @@ fun UpdatesPane(
             }
         }
         Spacer(modifier = Modifier.height(18.dp))
-        PickerTitle("SHIELD")
+        PickerTitle("System")
         SystemScreenLink("System update", SystemScreen.SYSTEM_UPDATE)
     }
 }
@@ -145,7 +145,7 @@ fun AccountsPane(
     val context = LocalContext.current
     SectionTitle("Accounts")
     SettingsRow("Sign-ins are kept encrypted on this TV and used only for the service named.")
-    PickerTitle("This TV")
+    PickerTitle("Google & other apps")
     SettingsRow("The Google account (Play Store, calendar) and other apps' accounts are Android's.")
     SystemScreenLink("Add or sync an account", SystemScreen.ADD_ACCOUNT)
     key(accountTick) {

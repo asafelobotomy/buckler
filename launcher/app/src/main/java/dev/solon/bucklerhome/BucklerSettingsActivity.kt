@@ -62,9 +62,10 @@ class BucklerSettingsActivity : ComponentActivity() {
 }
 
 /**
- * Buckler's own sections first (Appearance with a page for each part of Home, Widgets with a page
- * for each widget wherever it shows, Screensaver with a page for each screensaver ([saver])), then
- * the TV's, in SHIELD's order, then Accounts, Updates and About. An entry with a [parent] is not in
+ * One list for Buckler and the TV together, by topic: Home's look first (Appearance with a page for
+ * each part of Home, Widgets with a page for each widget wherever it shows, Screensaver with a page
+ * for each screensaver ([saver])), then the TV's, each page holding Buckler's rows and Android's
+ * side by side, then Accounts, Updates and About. An entry with a [parent] is not in
  * the panel's first list: choosing the parent opens a list of its own, with the parent's own page
  * first as [ownPage] ("Global", or "Overview" for a summary) and then its children.
  */
@@ -101,10 +102,11 @@ enum class SettingsPane(
     SAVER_PIPES(ScreensaverMode.PIPES.label, SCREENSAVER, ScreensaverMode.PIPES),
     SAVER_MYSTIFY(ScreensaverMode.MYSTIFY.label, SCREENSAVER, ScreensaverMode.MYSTIFY),
     SAVER_STARFIELD(ScreensaverMode.STARFIELD.label, SCREENSAVER, ScreensaverMode.STARFIELD),
-    ACCESSIBILITY("Accessibility"),
+    DISPLAY_SOUND("Display & sound"),
+    POWER("Power"),
     REMOTE("Remote & accessories"),
     NETWORK("Network"),
-    DISPLAY_SOUND("Display & sound"),
+    ACCESSIBILITY("Accessibility"),
     STORAGE("Apps & storage", ownPage = "Overview"),
     UNUSED_APPS("Unused apps", STORAGE),
     CACHE("Cache", STORAGE),
@@ -166,6 +168,7 @@ fun SettingsPageContent(pane: SettingsPane) {
         SettingsPane.REMOTE -> RemotePane()
         SettingsPane.NETWORK -> NetworkPane()
         SettingsPane.DISPLAY_SOUND -> DisplaySoundPane()
+        SettingsPane.POWER -> PowerPane()
         SettingsPane.STORAGE -> CleanUpPane()
         SettingsPane.UNUSED_APPS -> AppsPane()
         SettingsPane.CACHE -> CachePane()
