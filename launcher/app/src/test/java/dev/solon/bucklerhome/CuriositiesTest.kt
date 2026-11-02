@@ -86,4 +86,68 @@ class CuriositiesTest {
         // A strip photographed on black cloth: its edge is dark, and so is the card.
         assertEquals(ink, ComicStrips.edgeColour(IntArray(32) { ink }, 8, 4, ring = 1))
     }
+
+    @Test
+    fun inkKeepsLinesAndDropsThePaper() {
+        val paper = 230
+        val ink = 20
+        assertEquals(0, ComicInk.inkAlpha(paper, paper, ink))
+        assertEquals("paper grain just off white is dropped", 0, ComicInk.inkAlpha(paper - 10, paper, ink))
+        assertEquals(255, ComicInk.inkAlpha(ink, paper, ink))
+        assertEquals(255, ComicInk.inkAlpha(0, paper, ink))
+        // A faint pencil line a third of the way to black still shows clearly.
+        assertTrue(ComicInk.inkAlpha(160, paper, ink) > 110)
+    }
+
+    @Test
+    fun otsuSplitsInkFromPaper() {
+        val lum = IntArray(1000) { if (it % 5 == 0) 30 else 225 }
+        val t = ComicInk.otsu(lum)
+        assertTrue("threshold $t lies between ink and paper", t in 30 until 225)
+        assertEquals(225, ComicInk.percentile(lum, 0.9))
+    }
+
+    @Test
+    fun inkBoundsTrimTheMargins() {
+        // 10 x 6, paper everywhere but a 4 x 2 block of ink at (3, 2).
+        val lum = IntArray(60) { 230 }
+        for (y in 2..3) for (x in 3..6) lum[y * 10 + x] = 10
+        assertEquals(listOf(3, 2, 7, 4), ComicInk.inkBounds(lum, 10, 6, 120).toList())
+    }
+
+    @Test
+    fun curatedStripsCarryTheirPanels() {
+        val json = """{"credit":"Mickey Mouse, 1930","strips":[
+            {"item":"mickey-mouse-comic-strip-1930-05","file":"1930-05-05 Mickey Mouse comic.jpg","date":"1930-05-05",
+             "panels":[[0.01,0.02,0.3,0.98],[0.32,0.02,0.6,0.98]]},
+            {"item":"mickey-mouse-comic-strip-1930-05","file":"1930-05-06 Mickey Mouse comic.jpg","date":"1930-05-06","panels":[]}]}"""
+        val strips = CuratedComics.parse(json)
+        assertEquals(2, strips.size)
+        assertEquals(2, strips[0].panels.size)
+        assertEquals(0.32f, strips[0].panels[1].left, 1e-6f)
+        assertTrue(strips[1].panels.isEmpty())
+        assertEquals("1930-05-05 · Mickey Mouse, 1930", strips[0].credit)
+        assertEquals(
+            "https://iiif.archive.org/image/iiif/3/mickey-mouse-comic-strip-1930-05%2F1930-05-05%20Mickey%20Mouse%20comic.jpg/full/1600,/0/default.jpg",
+            strips[0].url,
+        )
+    }
+
+    @Test
+    fun theReaderCutsAWholeStripAtItsGutters() {
+        // 300 wide, 100 tall: frames at 0, 98, 102, 198, 202 and 299 make three panels.
+        val runs = IntArray(300) { 10 }
+        for (x in listOf(0, 98, 102, 198, 202, 299)) runs[x] = 100
+        assertEquals(listOf(100, 200), gutterCuts(runs, 100))
+        // A tall drawn line inside a panel that stops short of the frames is not a cut...
+        runs[150] = 90
+        assertEquals(listOf(100, 200), gutterCuts(runs, 100))
+        // ...but a frame line two panels share, as tall as the frames, is.
+        runs[150] = 100
+        assertEquals(listOf(100, 150, 200), gutterCuts(runs, 100))
+        // No gutters at all: nothing to cut at, and the reader slices evenly instead.
+        assertTrue(gutterCuts(IntArray(300) { 10 }, 100).isEmpty())
+        assertEquals(3, readerSlices(3300, 1000))
+        assertEquals(1, readerSlices(900, 1000))
+    }
 }

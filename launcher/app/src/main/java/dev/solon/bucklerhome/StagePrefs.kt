@@ -23,6 +23,12 @@ enum class StageTurn(val label: String, val millis: Long) {
     }
 }
 
+/** Where the Comics stage's strips come from. */
+enum class ComicSource(val label: String) {
+    MICKEY_1930("Mickey Mouse, 1930"),
+    ASSORTED("Assorted strips, 1910s–1930"),
+}
+
 /**
  * Settings of the newer stage widgets (At a Glance, Calendar, Weather map, Companion and the Side
  * Stage's idle choice), kept apart from [DisplayPrefs] so that file stays readable. They use the
@@ -35,6 +41,7 @@ object StagePrefs {
     private const val KEY_HIDDEN_CALENDARS = "stage_hidden_calendars"
     private const val KEY_SCROLL_TITLES = "now_playing_scroll_titles"
     private const val KEY_COMIC_TURN = "stage_comic_turn"
+    private const val KEY_COMIC_SOURCE = "stage_comic_source"
     private const val KEY_SPURIOUS_TURN = "stage_spurious_turn"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -57,6 +64,12 @@ object StagePrefs {
     fun comicTurn(context: Context): StageTurn = StageTurn.fromName(prefs(context).getString(KEY_COMIC_TURN, null), StageTurn.M2)
 
     fun setComicTurn(context: Context, turn: StageTurn) = prefs(context).edit().putString(KEY_COMIC_TURN, turn.name).apply()
+
+    fun comicSource(context: Context): ComicSource =
+        prefs(context).getString(KEY_COMIC_SOURCE, null)?.let { raw -> ComicSource.entries.firstOrNull { it.name == raw } }
+            ?: ComicSource.MICKEY_1930
+
+    fun setComicSource(context: Context, source: ComicSource) = prefs(context).edit().putString(KEY_COMIC_SOURCE, source.name).apply()
 
     fun spuriousTurn(context: Context): StageTurn = StageTurn.fromName(prefs(context).getString(KEY_SPURIOUS_TURN, null), StageTurn.M10)
 
