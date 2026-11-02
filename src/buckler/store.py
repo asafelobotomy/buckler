@@ -4,8 +4,10 @@ The store's catalog is index.json in github.com/asafelobotomy/bucklerStore; a co
 Buckler (data/store/index.json, also bundled in the APK). Installing puts files where buckler-home
 looks for them, `Android/data/dev.solon.bucklerhome/files/store/` on the TV (see StoreLibrary.kt):
 `themes/<id>.json`, `fonts/<id>/{regular,bold}.ttf` with `font.json`, `widgets.json`,
-`screensavers.json` and `schemes.json`.
-Icon packs are apps and go through `adb install`. Every download is checked against its sha256.
+`screensavers.json`, `schemes.json`, and `seen.json` (the revision of each added built-in that
+people have been told about). Icon packs are apps and go through `adb install`. Every download is
+checked against its sha256. Each item has a store `revision`; downloads keep theirs in their saved
+files, so `installed` can say what is behind and `update` can bring it up to date.
 """
 
 from __future__ import annotations
@@ -32,6 +34,8 @@ KINDS = ("widgets", "screensavers", "schemes", "themes", "fonts", "iconpacks")
 # Widgets, screensavers and built-in colour schemes ship in Buckler; the store only records which
 # are added or removed.
 CHOICE_FILES = {"widgets": "widgets.json", "screensavers": "screensavers.json", "schemes": "schemes.json"}
+BUILT_INS = tuple(CHOICE_FILES)
+BUCKLER_PACKAGE = "dev.solon.bucklerhome"
 _ID = re.compile(r"^[a-z0-9][a-z0-9_-]{1,39}$")
 
 
@@ -46,6 +50,32 @@ class StoreItem:
     label: str
     about: str
     raw: dict[str, Any]
+
+    @property
+    def revision(self) -> int:
+        """The store's count of this item's versions; an index from before revisions means 1."""
+        try:
+            return max(1, int(self.raw.get("revision", 1)))
+        except (TypeError, ValueError):
+            return 1
+
+    @property
+    def changes(self) -> str:
+        return str(self.raw.get("changes", ""))
+
+    @property
+    def requires(self) -> str:
+        """For a built-in: the Buckler version that carries its current revision."""
+        return str(self.raw.get("requires") or self.raw.get("since") or "0")
+
+
+@dataclass(frozen=True)
+class Outdated:
+    """An item the TV has at an older revision than the index's; ``needs_buckler`` when only a newer Buckler brings it."""
+
+    item: StoreItem
+    have: int
+    needs_buckler: bool = False
 
 
 def bundled_index_path() -> Path:
@@ -145,17 +175,64 @@ def set_widget(adb: Adb, ident: str, on: bool, kind: str = "widgets") -> None:
     _push_text(adb, json.dumps(doc, indent=2) + "\n", f"{DEVICE_ROOT}/{CHOICE_FILES[kind]}")
 
 
+def _version_key(version: str) -> tuple[int, ...]:
+    core = version.split("-", 1)[0].split("+", 1)[0]
+    return tuple(int(p) if p.isdigit() else 0 for p in core.split("."))
+
+
+def version_at_least(have: str, need: str) -> bool:
+    """Whether Buckler ``have`` is ``need`` or newer (numeric parts only, as Buckler compares them)."""
+    a, b = _version_key(have), _version_key(need)
+    width = max(len(a), len(b))
+    return a + (0,) * (width - len(a)) >= b + (0,) * (width - len(b))
+
+
+def package_version(adb: Adb, package: str) -> str | None:
+    """An installed app's versionName, or None when it is not installed."""
+    match = re.search(r"versionName=(\S+)", adb.shell("dumpsys", "package", package, check=False))
+    return match.group(1) if match else None
+
+
+def read_seen(adb: Adb) -> dict[str, int] | None:
+    raw = adb.shell("cat", f"{DEVICE_ROOT}/seen.json", check=False)
+    try:
+        doc = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return {str(k): int(v) for k, v in doc.items()} if isinstance(doc, dict) else None
+
+
+def write_seen(adb: Adb, seen: dict[str, int]) -> None:
+    _push_text(adb, json.dumps(dict(sorted(seen.items())), indent=2) + "\n", f"{DEVICE_ROOT}/seen.json")
+
+
+def _mark_seen(adb: Adb, item: StoreItem) -> None:
+    """Record a built-in's current revision as told about, when the TV's Buckler carries it.
+
+    With no seen.json yet, Buckler records everything added the next time it looks, so nothing to do.
+    """
+    app = package_version(adb, BUCKLER_PACKAGE)
+    seen = read_seen(adb)
+    if app is None or seen is None or not version_at_least(app, item.requires):
+        return
+    if seen.get(item.id, 0) < item.revision:
+        write_seen(adb, {**seen, item.id: item.revision})
+
+
 def install(adb: Adb, item: StoreItem, cache: Path | None = None) -> str:
     """Put [item] on the TV; returns a line saying what was done."""
     adb.connect()
     if item.kind == "widgets":
         set_widget(adb, item.id, True)
+        _mark_seen(adb, item)
         return f"{item.label}: added to the Main Stage's choices"
     if item.kind == "screensavers":
         set_widget(adb, item.id, True, "screensavers")
+        _mark_seen(adb, item)
         return f"{item.label}: added to Buckler Settings → Screensaver"
     if item.kind == "schemes":
         set_widget(adb, item.id, True, "schemes")
+        _mark_seen(adb, item)
         return f"{item.label}: added to Buckler Settings → Appearance → Colour scheme"
     if item.kind == "themes":
         _push_text(adb, json.dumps(item.raw, indent=2) + "\n", f"{DEVICE_ROOT}/themes/{item.id}.json")
@@ -168,7 +245,8 @@ def install(adb: Adb, item: StoreItem, cache: Path | None = None) -> str:
             spec = item.raw["files"][style]
             local = fetch_verified(spec["url"], str(spec["sha256"]).lower(), folder / f"{style}.ttf")
             adb.push(str(local), f"{remote}/{style}.ttf")
-        _push_text(adb, json.dumps({"id": item.id, "label": item.label}) + "\n", f"{remote}/font.json")
+        meta = {"id": item.id, "label": item.label, "revision": item.revision}
+        _push_text(adb, json.dumps(meta) + "\n", f"{remote}/font.json")
         return f"{item.label}: installed; choose it in Buckler Settings → Appearance"
     pack = IconPackEntry(
         id=item.id, label=item.label, package=item.raw["package"], version=item.raw["version"],
@@ -198,6 +276,73 @@ def remove(adb: Adb, item: StoreItem) -> str:
     return f"{item.label}: removed (Buckler goes back to a built-in choice if it was in use)"
 
 
+def _saved_revision(adb: Adb, remote: str) -> int | None:
+    """The revision in a saved scheme or font.json; None when the file is not there."""
+    raw = adb.shell("cat", remote, check=False)
+    try:
+        doc = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return max(1, int(doc.get("revision", 1))) if isinstance(doc, dict) else None
+
+
+def _added(adb: Adb, item: StoreItem) -> bool:
+    state = read_widgets(adb, item.kind)
+    if item.id in state["removed"]:
+        return False
+    return item.id in state["added"] or bool(item.raw.get("default", True))
+
+
+def outdated(adb: Adb, items: list[StoreItem]) -> list[Outdated]:
+    """What the TV has at an older revision than [items] list, the way Buckler works it out."""
+    app = package_version(adb, BUCKLER_PACKAGE) or "0"
+    seen = read_seen(adb) or {}
+    out = []
+    for item in items:
+        if item.kind in BUILT_INS:
+            have = seen.get(item.id)
+            if not _added(adb, item) or (have is not None and have >= item.revision):
+                continue
+            if not version_at_least(app, item.requires):
+                out.append(Outdated(item, have or 0, needs_buckler=True))
+            elif have is not None:
+                out.append(Outdated(item, have))
+        elif item.kind == "themes":
+            have = _saved_revision(adb, f"{DEVICE_ROOT}/themes/{item.id}.json")
+            if have is not None and have < item.revision:
+                out.append(Outdated(item, have))
+        elif item.kind == "fonts":
+            have = _saved_revision(adb, f"{DEVICE_ROOT}/fonts/{item.id}/font.json")
+            if have is not None and have < item.revision:
+                out.append(Outdated(item, have))
+        else:
+            version = package_version(adb, item.raw["package"])
+            if version is not None and version != item.raw.get("version"):
+                out.append(Outdated(item, 0))
+    return out
+
+
+def update(adb: Adb, items: list[StoreItem], ids: tuple[str, ...] = (), cache: Path | None = None) -> list[str]:
+    """Bring outdated items up to date (only [ids] when given): downloads again, built-ins marked as seen."""
+    adb.connect()
+    lines = []
+    for entry in outdated(adb, items):
+        item = entry.item
+        if ids and item.id not in ids:
+            continue
+        what = f": {item.changes}" if item.changes else ""
+        if entry.needs_buckler:
+            lines.append(f"{item.label}: update Buckler to {item.requires} for the newest version{what}")
+        elif item.kind in BUILT_INS:
+            seen = read_seen(adb) or {}
+            write_seen(adb, {**seen, item.id: item.revision})
+            lines.append(f"{item.label}: updated with Buckler{what}")
+        else:
+            install(adb, item, cache)
+            lines.append(f"{item.label}: updated to revision {item.revision}{what}")
+    return lines or ["Everything from the store is up to date"]
+
+
 def installed(adb: Adb) -> dict[str, list[str]]:
     """What the TV has from the store, by kind."""
     adb.connect()
@@ -215,4 +360,8 @@ def installed(adb: Adb) -> dict[str, list[str]]:
         "screensavers removed": read_widgets(adb, "screensavers")["removed"],
         "schemes added": read_widgets(adb, "schemes")["added"],
         "schemes removed": read_widgets(adb, "schemes")["removed"],
+        "behind the store": [
+            f"{o.item.id} (needs Buckler {o.item.requires})" if o.needs_buckler else f"{o.item.id} (revision {o.have} → {o.item.revision})"
+            for o in outdated(adb, load_index())
+        ],
     }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,26 +44,77 @@ private fun rememberCatalog(): StoreCatalog {
     return remember(StoreSession.refreshed) { StoreIndex.cached(context) }
 }
 
+/** What is waiting for this TV ([StoreUpdates.pending]), worked out off the main thread, by item id. */
+@Composable
+private fun rememberUpdates(catalog: StoreCatalog): Map<String, StoreUpdate> {
+    val context = LocalContext.current
+    val updates by produceState(emptyMap<String, StoreUpdate>(), catalog, StoreLibrary.version) {
+        value = withContext(Dispatchers.IO) { StoreUpdates.pending(context, catalog).associateBy { it.item.id } }
+    }
+    return updates
+}
+
+/** ", 1 updated" and the like for an overview count, from the updates among [ids]. */
+private fun updatesNote(updates: Map<String, StoreUpdate>, ids: List<String>): String {
+    val mine = ids.mapNotNull { updates[it] }
+    val parts = listOfNotNull(
+        mine.count { it.kind == StoreUpdate.Kind.UPDATED }.takeIf { it > 0 }?.let { "$it updated" },
+        mine.count { it.kind == StoreUpdate.Kind.DOWNLOAD }.takeIf { it > 0 }?.let { "$it to update" },
+        mine.count { it.kind == StoreUpdate.Kind.NEEDS_BUCKLER }.takeIf { it > 0 }?.let { "$it need a newer Buckler" },
+    )
+    return if (parts.isEmpty()) "" else " · " + parts.joinToString(", ")
+}
+
+/** Under an item: what its update brought, or which Buckler it needs. Nothing when it has no news. */
+@Composable
+private fun UpdateLine(update: StoreUpdate?) {
+    val u = update ?: return
+    val what = u.item.changes.ifBlank { null }
+    when (u.kind) {
+        StoreUpdate.Kind.UPDATED -> SettingsRow("Updated" + (what?.let { ": $it" } ?: "."))
+        StoreUpdate.Kind.DOWNLOAD -> SettingsRow("Update available" + (what?.let { ": $it" } ?: "."))
+        StoreUpdate.Kind.NEEDS_BUCKLER -> {
+            val builtIn = u.item as? StoreBuiltIn
+            SettingsRow("Update Buckler to ${builtIn?.requires ?: "the newest version"} for the newest ${u.item.label}" + (what?.let { ": $it" } ?: "."))
+            SettingsPaneLink("Updates", SettingsPane.UPDATES)
+        }
+    }
+}
+
 /** Settings → bucklerStore: widgets, screensavers, colour schemes, fonts and icon packs to add to Buckler. */
 @Composable
 fun StorePane() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val catalog = rememberCatalog()
+    val updates = rememberUpdates(catalog)
     SectionTitle("bucklerStore")
     SettingsRow(
         "Add widgets, screensavers, colour schemes, fonts and icon packs. Each download is checked against the store's " +
             "list before Buckler uses it. From a computer: buckler store install <name>.",
     )
     val widgets = catalog.widgets.count { w -> w.stage?.let { StoreLibrary.widgetAdded(it, catalog) } == true }
-    SettingsPaneLink("Widgets", SettingsPane.STORE_WIDGETS, "$widgets of ${catalog.widgets.size} added")
+    SettingsPaneLink("Widgets", SettingsPane.STORE_WIDGETS, "$widgets of ${catalog.widgets.size} added" + updatesNote(updates, catalog.widgets.map { it.id }))
     val savers = catalog.screensavers.count { s -> s.mode?.let { StoreLibrary.saverAdded(it, catalog) } == true }
-    SettingsPaneLink("Screensavers", SettingsPane.STORE_SCREENSAVERS, "$savers of ${catalog.screensavers.size} added")
+    SettingsPaneLink(
+        "Screensavers",
+        SettingsPane.STORE_SCREENSAVERS,
+        "$savers of ${catalog.screensavers.size} added" + updatesNote(updates, catalog.screensavers.map { it.id }),
+    )
     val schemes = catalog.schemes.count { s -> s.theme?.let { StoreLibrary.schemeAdded(it, catalog) } == true } +
         catalog.themes.count { StoreLibrary.hasTheme(it.id) }
-    SettingsPaneLink("Colour schemes", SettingsPane.STORE_THEMES, "$schemes of ${catalog.schemes.size + catalog.themes.size} added")
-    SettingsPaneLink("Fonts", SettingsPane.STORE_FONTS, installedOf(catalog.fonts.count { StoreLibrary.hasFont(it.id) }, catalog.fonts.size))
-    SettingsPaneLink("Icon packs", SettingsPane.STORE_ICON_PACKS, "${catalog.iconPacks.size} open packs")
+    SettingsPaneLink(
+        "Colour schemes",
+        SettingsPane.STORE_THEMES,
+        "$schemes of ${catalog.schemes.size + catalog.themes.size} added" +
+            updatesNote(updates, catalog.schemes.map { it.id } + catalog.themes.map { it.id }),
+    )
+    SettingsPaneLink(
+        "Fonts",
+        SettingsPane.STORE_FONTS,
+        installedOf(catalog.fonts.count { StoreLibrary.hasFont(it.id) }, catalog.fonts.size) + updatesNote(updates, catalog.fonts.map { it.id }),
+    )
+    SettingsPaneLink("Icon packs", SettingsPane.STORE_ICON_PACKS, "${catalog.iconPacks.size} open packs" + updatesNote(updates, catalog.iconPacks.map { it.id }))
     Spacer(modifier = Modifier.height(12.dp))
     SettingsAction("Check for new items") {
         scope.launch {
@@ -81,6 +133,7 @@ fun StoreWidgetsPane() {
     val context = LocalContext.current
     val catalog = rememberCatalog()
     val inUse = remember(StoreLibrary.version) { StoreLibrary.inUse(HomeLayout.stored(context).mainStage, StagePrefs.sideIdle(context)) }
+    val updates = rememberUpdates(catalog)
     SectionTitle("Widgets")
     SettingsRow(
         "Added widgets are offered for the Main Stage (hold OK on it, or Appearance → Main Stage); At a Glance and " +
@@ -101,6 +154,7 @@ fun StoreWidgetsPane() {
             }
         }
         SettingsRow(widget.about)
+        UpdateLine(updates[widget.id])
     }
 }
 
@@ -110,6 +164,7 @@ fun StoreScreensaversPane() {
     val context = LocalContext.current
     val catalog = rememberCatalog()
     val inUse = remember(StoreLibrary.version) { ScreensaverPrefs.load(context).mode }
+    val updates = rememberUpdates(catalog)
     SectionTitle("Screensavers")
     SettingsRow(
         "Added screensavers are offered in Settings → Screensaver and the setup wizard, each with its own page. " +
@@ -130,6 +185,7 @@ fun StoreScreensaversPane() {
             }
         }
         SettingsRow(saver.about)
+        UpdateLine(updates[saver.id])
     }
 }
 
@@ -144,6 +200,7 @@ fun StoreThemesPane() {
     val nav = LocalPanelNav.current
     val inUse = AppearanceStore.config.storeTheme
     val builtInUse = AppearanceStore.config.theme
+    val updates = rememberUpdates(catalog)
     SectionTitle("Colour schemes")
     SettingsRow("Added and installed schemes join Appearance → Colour scheme and the setup wizard. ✓ marks those added.")
     PickerTitle("Built in")
@@ -167,12 +224,17 @@ fun StoreThemesPane() {
         }
     }
     catalog.schemes.filter { it.theme == null }.forEach { SettingsRow("${it.label}: needs Buckler ${it.since} or newer.") }
+    // Built-in schemes with news, under the cards (a card has no room for a line).
+    catalog.schemes.filter { it.id in updates }.forEach { scheme ->
+        PickerTitle(scheme.label)
+        UpdateLine(updates[scheme.id])
+    }
     Spacer(modifier = Modifier.height(18.dp))
     PickerTitle("To download")
     CardColumns { width ->
         catalog.themes.forEach { theme ->
             PreviewCard(
-                label = theme.label + if (StoreLibrary.hasTheme(theme.id)) " ✓" else "",
+                label = theme.label + if (StoreLibrary.hasTheme(theme.id)) (if (theme.id in updates) " ↑" else " ✓") else "",
                 selected = theme.id == inUse,
                 width = width,
                 onClick = { nav?.open(theme.label, theme.label) { StoreThemePage(theme) } },
@@ -184,9 +246,14 @@ fun StoreThemesPane() {
 @Composable
 private fun StoreThemePage(theme: StoreTheme) {
     val context = LocalContext.current
+    // Looked up here, not handed in, so the page drops the update as soon as it is installed.
+    val update = rememberUpdates(remember { StoreIndex.cached(context) })[theme.id]
     val installed = StoreLibrary.hasTheme(theme.id)
     val inUse = AppearanceStore.config.storeTheme == theme.id
     SettingsRow(theme.about)
+    UpdateLine(update)
+    // Saving the index's copy again is the whole update: a scheme is only its colours.
+    if (installed && update != null) SettingsAction("Update") { StoreLibrary.installTheme(context, theme) }
     if (!installed) {
         SettingsAction("Install and use") {
             StoreLibrary.installTheme(context, theme)
@@ -206,10 +273,12 @@ fun StoreFontsPane() {
     val catalog = rememberCatalog()
     val nav = LocalPanelNav.current
     val inUse = AppearanceStore.config.storeFont
+    val updates = rememberUpdates(catalog)
     SectionTitle("Fonts")
     SettingsRow("Open-licence fonts (SIL OFL). Installed fonts join Appearance → Font.")
     catalog.fonts.forEach { font ->
         val value = when {
+            font.id in updates -> "Update"
             font.id == inUse -> "In use"
             StoreLibrary.hasFont(font.id) -> "Installed"
             else -> "${(font.regular.size + font.bold.size) / 1024} KB"
@@ -221,11 +290,28 @@ fun StoreFontsPane() {
 @Composable
 private fun StoreFontPage(font: StoreFont) {
     val context = LocalContext.current
+    val update = rememberUpdates(remember { StoreIndex.cached(context) })[font.id]
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     val installed = StoreLibrary.hasFont(font.id)
     val inUse = AppearanceStore.config.storeFont == font.id
     SettingsRow(font.about)
+    UpdateLine(update)
+    if (installed && !busy && update != null) {
+        // Downloaded again and checked against the index; installFont writes the new revision.
+        SettingsAction("Update") {
+            busy = true
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) { StoreLibrary.installFont(context, font) }
+                busy = false
+                if (!ok) Toast.makeText(context, "${font.label} didn't download, or didn't match the store's list", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    if (installed && busy) {
+        SettingsRow("Downloading…")
+        return
+    }
     if (installed) {
         StoreLibrary.fontFamily(font.id)?.let { family ->
             PreviewCard(label = font.label, selected = inUse, onClick = {}) { FontMiniature(family) }
@@ -261,6 +347,7 @@ fun StoreIconPacksPane() {
     val tick = rememberResumeTick()
     var busy by remember { mutableStateOf<String?>(null) }
     val installed = remember(tick, busy) { IconPacks.installedPackages(context) }
+    val updates = rememberUpdates(catalog)
     SectionTitle("Icon packs")
     SettingsRow(
         "Open launcher icon packs. Android asks you to confirm the install (and, the first time, to let " +
@@ -270,9 +357,9 @@ fun StoreIconPacksPane() {
         val have = pack.packageName in installed
         val size = pack.apk.size.takeIf { it > 0 }?.let { " · about ${it / 1_000_000} MB" }.orEmpty()
         when {
-            have -> SettingsPaneLink(pack.label, SettingsPane.COVERS, "Installed")
             busy == pack.id -> SettingsAction(pack.label, value = "Downloading…") {}
-            else -> SettingsAction(pack.label, value = "Install") {
+            have && pack.id !in updates -> SettingsPaneLink(pack.label, SettingsPane.COVERS, "Installed")
+            else -> SettingsAction(pack.label, value = if (have) "Update" else "Install") {
                 busy = pack.id
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) { installIconPack(context, pack) }
@@ -282,6 +369,7 @@ fun StoreIconPacksPane() {
             }
         }
         SettingsRow("${pack.about} ${pack.license}$size.")
+        UpdateLine(updates[pack.id])
     }
 }
 

@@ -6,7 +6,7 @@ import click
 
 from buckler.adb import AdbError
 from buckler.cli_common import cli, make_adb
-from buckler.store import KINDS, StoreError, find, install, installed, load_index, remove
+from buckler.store import KINDS, StoreError, find, install, installed, load_index, remove, update
 
 _LIVE = click.option("--live", is_flag=True, help="Use the current catalog from GitHub, not the one Buckler ships.")
 
@@ -61,6 +61,22 @@ def store_installed(ctx: click.Context) -> None:
         raise click.ClickException(str(exc)) from exc
     for kind, names in state.items():
         click.echo(f"{kind}: {', '.join(names) if names else 'none'}")
+
+
+@store_group.command("update")
+@click.argument("ids", nargs=-1)
+@_LIVE
+@click.pass_context
+def store_update(ctx: click.Context, ids: tuple[str, ...], live: bool) -> None:
+    """Bring items behind the store up to date (all of them, or only IDS): downloads again, built-ins marked seen."""
+    try:
+        items = load_index(live=live)
+        for ident in ids:
+            find(items, ident)
+        for line in update(make_adb(ctx.obj["host"]), items, ids):
+            click.echo(line)
+    except (StoreError, AdbError) as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 def _each(ctx: click.Context, ids: tuple[str, ...], live: bool, action) -> None:

@@ -82,6 +82,7 @@ fun HomeScreen(
         homeLayout = withContext(Dispatchers.IO) { HomeLayout.load(context) }
     }
     UnusedAppsNotice(resumeTick)
+    StoreUpdateNotice(resumeTick)
     RemoteButtonsNotice(resumeTick)
     val packageChanges = rememberPackageChanges()
     LaunchedEffect(resumeTick, packageChanges) {

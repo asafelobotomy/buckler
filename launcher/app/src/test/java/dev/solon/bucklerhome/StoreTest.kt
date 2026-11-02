@@ -122,4 +122,67 @@ class StoreTest {
         val optIn = StoreCatalog(schemes = listOf(StoreScheme("scheme_gruvbox", "Gruvbox", "", default = false, since = "0.1.0")))
         assertFalse(StoreLibrary.schemeAdded(AppTheme.GRUVBOX, optIn))
     }
+
+    @Test
+    fun revisionsParseAndDefaultToOne() {
+        val raw = """{"schema": 1, "screensavers": [
+            {"id": "saver_maze", "label": "3D Maze", "since": "0.1.0", "requires": "0.23.0", "revision": 2, "changes": "Gems"},
+            {"id": "saver_dvd", "label": "DVD bounce", "since": "0.1.0"}
+        ]}"""
+        val (maze, dvd) = StoreIndex.parse(raw).screensavers
+        assertEquals(2, maze.revision)
+        assertEquals("0.23.0", maze.requires)
+        assertEquals("Gems", maze.changes)
+        // From before revisions: revision 1, and its current revision came with the version that first had it.
+        assertEquals(1, dvd.revision)
+        assertEquals("0.1.0", dvd.requires)
+        assertEquals("", dvd.changes)
+        assertTrue(bundled.builtIns.all { it.revision >= 1 })
+    }
+
+    @Test
+    fun theFirstCheckRecordsOnlyWhatThisBucklerCarries() {
+        val maze = StoreScreensaver("saver_maze", "3D Maze", "", default = false, since = "0.1.0", requires = "0.23.0", revision = 2)
+        val dvd = StoreScreensaver("saver_dvd", "DVD bounce", "", default = false, since = "0.1.0")
+        // On 0.23.0 the new Maze is already here: recorded, so it is not announced as new.
+        assertEquals(mapOf("saver_maze" to 2, "saver_dvd" to 1), StoreUpdates.firstSeen(listOf(maze, dvd), "0.23.0"))
+        // On 0.22.0 it is not: left out, so the store page can say a newer Buckler brings it.
+        assertEquals(mapOf("saver_dvd" to 1), StoreUpdates.firstSeen(listOf(maze, dvd), "0.22.0"))
+    }
+
+    @Test
+    fun aBuiltInIsUpdatedOnceAndOnlyWhenBucklerCarriesIt() {
+        val maze = StoreScreensaver("saver_maze", "3D Maze", "", default = false, since = "0.1.0", requires = "0.23.0", revision = 2)
+        assertEquals(StoreUpdate.Kind.UPDATED, StoreUpdates.builtInStatus(maze, seen = 1, appVersion = "0.23.0"))
+        assertNull("told already", StoreUpdates.builtInStatus(maze, seen = 2, appVersion = "0.23.0"))
+        assertEquals(StoreUpdate.Kind.NEEDS_BUCKLER, StoreUpdates.builtInStatus(maze, seen = 1, appVersion = "0.22.0"))
+        assertEquals(StoreUpdate.Kind.NEEDS_BUCKLER, StoreUpdates.builtInStatus(maze, seen = null, appVersion = "0.22.0"))
+        // Never recorded but carried: new to the list, not updated.
+        assertNull(StoreUpdates.builtInStatus(maze, seen = null, appVersion = "0.23.1"))
+    }
+
+    @Test
+    fun downloadsAreBehindOnlyWhenInstalledAndOlder() {
+        assertTrue(StoreUpdates.downloadBehind(installed = 1, latest = 2))
+        assertFalse(StoreUpdates.downloadBehind(installed = 2, latest = 2))
+        assertFalse("not installed: nothing to update", StoreUpdates.downloadBehind(installed = null, latest = 3))
+    }
+
+    @Test
+    fun aSchemesRevisionSurvivesItsSavedFile() {
+        val theme = bundled.themes.first().copy(revision = 3, changes = "Warmer pink")
+        val saved = StoreIndex.theme(StoreLibrary.themeJson(theme))
+        assertEquals(3, saved?.revision)
+        assertEquals("Warmer pink", saved?.changes)
+        // A file saved before revisions reads as revision 1.
+        val old = StoreLibrary.themeJson(theme).apply { remove("revision") }
+        assertEquals(1, StoreIndex.theme(old)?.revision)
+    }
+
+    @Test
+    fun theNoticeSaysWhatChanged() {
+        val maze = StoreScreensaver("saver_maze", "3D Maze", "", default = false, since = "0.1.0", requires = "0.23.0", revision = 2, changes = "Gems that roll the view.")
+        assertEquals("3D Maze was updated: Gems that roll the view.", StoreUpdates.noticeText(listOf(StoreUpdate(maze, StoreUpdate.Kind.UPDATED))))
+        assertNull(StoreUpdates.noticeText(emptyList()))
+    }
 }

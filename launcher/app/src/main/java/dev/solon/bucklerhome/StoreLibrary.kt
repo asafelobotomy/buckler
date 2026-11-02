@@ -18,17 +18,18 @@ import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
 
-/** A font installed from the store: its Regular and Bold files. */
-class InstalledFont(val id: String, val label: String, val regular: File, val bold: File)
+/** A font installed from the store: its Regular and Bold files, and the store [revision] they came from. */
+class InstalledFont(val id: String, val label: String, val regular: File, val bold: File, val revision: Int = 1)
 
 /**
  * What is installed from bucklerStore, kept in Buckler's files folder on shared storage
  * (`Android/data/dev.solon.bucklerhome/files/store/`) so `buckler store install` can put things
  * there from a computer too:
- * - `themes/<id>.json`: a colour scheme, as the index lists it;
- * - `fonts/<id>/regular.ttf`, `bold.ttf` and `font.json` (its name);
+ * - `themes/<id>.json`: a colour scheme, as the index lists it (with its revision);
+ * - `fonts/<id>/regular.ttf`, `bold.ttf` and `font.json` (its name and revision);
  * - `widgets.json`: `{"added": [...], "removed": [...]}`, widgets changed from the index's default;
- * - `screensavers.json` and `schemes.json`: the same for screensavers and built-in colour schemes.
+ * - `screensavers.json` and `schemes.json`: the same for screensavers and built-in colour schemes;
+ * - `seen.json`: the revision of each added built-in that people have been told about ([StoreUpdates]).
  * Icon packs are apps; Android keeps those. What is installed is snapshot state, so Home and
  * Settings repaint when it changes; [version] goes up with every change, for `remember` keys.
  */
@@ -71,8 +72,9 @@ object StoreLibrary {
             val regular = File(dir, "regular.ttf")
             val bold = File(dir, "bold.ttf")
             if (!regular.isFile || !bold.isFile) return@mapNotNull null
-            val label = runCatching { JSONObject(File(dir, "font.json").readText()).optString("label") }.getOrNull()
-            InstalledFont(dir.name, label?.ifBlank { null } ?: dir.name, regular, bold)
+            val meta = runCatching { JSONObject(File(dir, "font.json").readText()) }.getOrNull()
+            val label = meta?.optString("label")
+            InstalledFont(dir.name, label?.ifBlank { null } ?: dir.name, regular, bold, meta?.optInt("revision", 1)?.coerceAtLeast(1) ?: 1)
         }.associateBy { it.id }
         if (!widgetsFile(context).exists()) keepInUse(context)
         val widgets = runCatching { JSONObject(widgetsFile(context).readText()) }.getOrNull()
@@ -143,6 +145,10 @@ object StoreLibrary {
     fun hasTheme(id: String) = id in themes
     fun hasFont(id: String) = id in fonts
 
+    /** The store revision of an installed scheme or font, or null when it is not installed. */
+    fun themeRevision(id: String): Int? = themes[id]?.revision
+    fun fontRevision(id: String): Int? = fonts[id]?.revision
+
     @OptIn(ExperimentalTextApi::class)
     fun fontFamily(id: String): FontFamily? = fonts[id]?.let { font ->
         runCatching { FontFamily(Font(font.regular, FontWeight.Normal), Font(font.bold, FontWeight.Bold)) }.getOrNull()
@@ -161,7 +167,9 @@ object StoreLibrary {
         val dir = File(fontsDir(context), font.id).also { it.mkdirs() }
         val ok = download(font.regular, File(dir, "regular.ttf")) && download(font.bold, File(dir, "bold.ttf"))
         if (ok) {
-            File(dir, "font.json").writeText(JSONObject().put("id", font.id).put("label", font.label).toString())
+            File(dir, "font.json").writeText(
+                JSONObject().put("id", font.id).put("label", font.label).put("revision", font.revision).toString(),
+            )
         } else {
             dir.deleteRecursively()
         }
@@ -207,6 +215,7 @@ object StoreLibrary {
         val nextRemoved = if (on) removed - id else removed + id
         root(context).mkdirs()
         writeWidgets(context, nextAdded, nextRemoved)
+        if (on) StoreUpdates.recordAdded(context, id)
         reload(context)
     }
 
@@ -238,8 +247,15 @@ object StoreLibrary {
             if (on) saversAdded + id else saversAdded - id,
             if (on) saversRemoved - id else saversRemoved + id,
         )
+        if (on) StoreUpdates.recordAdded(context, id)
         reload(context)
     }
+
+    /** Every built-in (widget, screensaver, scheme) on offer on this TV, as the index lists them. */
+    fun addedBuiltIns(catalog: StoreCatalog): List<StoreBuiltIn> =
+        catalog.widgets.filter { w -> w.stage?.let { widgetAdded(it, catalog) } == true } +
+            catalog.screensavers.filter { s -> s.mode?.let { saverAdded(it, catalog) } == true } +
+            catalog.schemes.filter { s -> s.theme?.let { schemeAdded(it, catalog) } == true }
 
     // Built-in colour schemes: offered in Appearance and the setup wizard once added.
 
@@ -269,6 +285,7 @@ object StoreLibrary {
             if (on) schemesAdded + id else schemesAdded - id,
             if (on) schemesRemoved - id else schemesRemoved + id,
         )
+        if (on) StoreUpdates.recordAdded(context, id)
         reload(context)
     }
 
@@ -316,7 +333,7 @@ object StoreLibrary {
             .put("muted", hex(p.muted)).put("hint", hex(p.hint)).put("section", hex(p.section))
             .put("tile", hex(p.tile)).put("footer", hex(p.footer)).put("border", hex(p.border)).put("ring", hex(p.ring))
         return JSONObject().put("id", theme.id).put("label", theme.label).put("about", theme.about)
-            .put("dark", p.dark).put("colors", colors)
+            .put("dark", p.dark).put("colors", colors).put("revision", theme.revision).put("changes", theme.changes)
     }
 }
 

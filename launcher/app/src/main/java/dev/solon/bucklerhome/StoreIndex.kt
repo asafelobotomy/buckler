@@ -13,6 +13,23 @@ sealed interface StoreItem {
     val id: String
     val label: String
     val about: String
+
+    /** The store's own count of this item's versions, from 1; it goes up whenever the item changes. */
+    val revision: Int
+
+    /** What the latest [revision] brought, in a line for people; blank at revision 1. */
+    val changes: String
+}
+
+/**
+ * An item whose code or colours ship in Buckler (a widget, a screensaver, a built-in scheme): the
+ * store only adds or removes it. [requires] is the Buckler version that carries its current
+ * [StoreItem.revision]; [since] the first that had it at all.
+ */
+sealed interface StoreBuiltIn : StoreItem {
+    val default: Boolean
+    val since: String
+    val requires: String
 }
 
 /** One of Buckler's own Main Stage widgets ([stage]); its code ships in the app, the store adds or removes it. */
@@ -20,9 +37,12 @@ data class StoreWidget(
     override val id: String,
     override val label: String,
     override val about: String,
-    val default: Boolean,
-    val since: String,
-) : StoreItem {
+    override val default: Boolean,
+    override val since: String,
+    override val requires: String = since,
+    override val revision: Int = 1,
+    override val changes: String = "",
+) : StoreBuiltIn {
     val stage: MainStage? get() = MainStage.entries.firstOrNull { it.wire() == id }
 }
 
@@ -31,9 +51,12 @@ data class StoreScreensaver(
     override val id: String,
     override val label: String,
     override val about: String,
-    val default: Boolean,
-    val since: String,
-) : StoreItem {
+    override val default: Boolean,
+    override val since: String,
+    override val requires: String = since,
+    override val revision: Int = 1,
+    override val changes: String = "",
+) : StoreBuiltIn {
     val mode: ScreensaverMode? get() = ScreensaverMode.entries.firstOrNull { it.wire() == id }
 }
 
@@ -42,9 +65,12 @@ data class StoreScheme(
     override val id: String,
     override val label: String,
     override val about: String,
-    val default: Boolean,
-    val since: String,
-) : StoreItem {
+    override val default: Boolean,
+    override val since: String,
+    override val requires: String = since,
+    override val revision: Int = 1,
+    override val changes: String = "",
+) : StoreBuiltIn {
     val theme: AppTheme? get() = AppTheme.entries.firstOrNull { it.wire() == id }
 }
 
@@ -53,6 +79,8 @@ data class StoreTheme(
     override val label: String,
     override val about: String,
     val palette: Palette,
+    override val revision: Int = 1,
+    override val changes: String = "",
 ) : StoreItem
 
 data class StoreFont(
@@ -61,6 +89,8 @@ data class StoreFont(
     override val about: String,
     val regular: StoreFile,
     val bold: StoreFile,
+    override val revision: Int = 1,
+    override val changes: String = "",
 ) : StoreItem
 
 data class StoreIconPack(
@@ -71,6 +101,8 @@ data class StoreIconPack(
     val version: String,
     val apk: StoreFile,
     val license: String,
+    override val revision: Int = 1,
+    override val changes: String = "",
 ) : StoreItem
 
 data class StoreCatalog(
@@ -82,6 +114,9 @@ data class StoreCatalog(
     val iconPacks: List<StoreIconPack> = emptyList(),
 ) {
     fun theme(id: String) = themes.firstOrNull { it.id == id }
+
+    /** Every widget, screensaver and built-in scheme, for the update checks. */
+    val builtIns: List<StoreBuiltIn> get() = widgets + screensavers + schemes
     fun font(id: String) = fonts.firstOrNull { it.id == id }
 }
 
@@ -93,6 +128,8 @@ data class StoreCatalog(
 object StoreIndex {
     private const val PREFS = "buckler_store"
     private const val KEY_CACHE = "index_json"
+    private const val KEY_FETCHED_AT = "index_fetched_at"
+    private const val STALE_MS = 24 * 3_600_000L
     private const val ASSET = "store_index.json"
     private const val SCHEMA = 1
     private const val TAG = "StoreIndex"
@@ -116,8 +153,18 @@ object StoreIndex {
             .onFailure { Log.w(TAG, "Store index refresh failed", it) }.getOrNull()
         val body = response?.takeIf { it.code in 200..299 }?.body ?: return false
         if (parse(body).let { it.widgets.isEmpty() && it.themes.isEmpty() && it.fonts.isEmpty() }) return false
-        prefs(context).edit().putString(KEY_CACHE, body).apply()
+        prefs(context).edit().putString(KEY_CACHE, body).putLong(KEY_FETCHED_AT, System.currentTimeMillis()).apply()
         return true
+    }
+
+    /**
+     * [refresh] when the index held is over a day old (or was never fetched), so news of an update
+     * reaches Home without anyone opening the store. One small, cached file, at most daily.
+     */
+    fun refreshIfStale(context: Context) {
+        val at = prefs(context).getLong(KEY_FETCHED_AT, 0L)
+        if (System.currentTimeMillis() - at < STALE_MS) return
+        if (!refresh(context)) prefs(context).edit().putLong(KEY_FETCHED_AT, System.currentTimeMillis() - STALE_MS + 3_600_000L).apply()
     }
 
     /** Anything malformed is left out rather than failing the whole index. */
@@ -143,12 +190,18 @@ object StoreIndex {
 
     private fun JSONObject.id(): String? = optString("id").takeIf { ID.matches(it) }
 
+    /** An index from before revisions, or a file saved before them, counts as revision 1. */
+    fun JSONObject.revision(): Int = optInt("revision", 1).coerceAtLeast(1)
+
     private fun widget(o: JSONObject): StoreWidget? = StoreWidget(
         id = o.id() ?: return null,
         label = o.optString("label").ifBlank { return null },
         about = o.optString("about"),
         default = o.optBoolean("default", false),
         since = o.optString("since", "0"),
+        requires = o.optString("requires").ifBlank { o.optString("since", "0") },
+        revision = o.revision(),
+        changes = o.optString("changes"),
     )
 
     private fun screensaver(o: JSONObject): StoreScreensaver? = StoreScreensaver(
@@ -157,6 +210,9 @@ object StoreIndex {
         about = o.optString("about"),
         default = o.optBoolean("default", false),
         since = o.optString("since", "0"),
+        requires = o.optString("requires").ifBlank { o.optString("since", "0") },
+        revision = o.revision(),
+        changes = o.optString("changes"),
     )
 
     private fun scheme(o: JSONObject): StoreScheme? = StoreScheme(
@@ -165,6 +221,9 @@ object StoreIndex {
         about = o.optString("about"),
         default = o.optBoolean("default", false),
         since = o.optString("since", "0"),
+        requires = o.optString("requires").ifBlank { o.optString("since", "0") },
+        revision = o.revision(),
+        changes = o.optString("changes"),
     )
 
     fun theme(o: JSONObject): StoreTheme? {
@@ -186,7 +245,10 @@ object StoreIndex {
             border = color("border") ?: return null,
             ring = color("ring") ?: return null,
         )
-        return StoreTheme(o.id() ?: return null, o.optString("label").ifBlank { return null }, o.optString("about"), palette)
+        return StoreTheme(
+            o.id() ?: return null, o.optString("label").ifBlank { return null }, o.optString("about"), palette,
+            revision = o.revision(), changes = o.optString("changes"),
+        )
     }
 
     private fun font(o: JSONObject): StoreFont? {
@@ -197,6 +259,8 @@ object StoreIndex {
             about = o.optString("about"),
             regular = file(files.optJSONObject("regular")) ?: return null,
             bold = file(files.optJSONObject("bold")) ?: return null,
+            revision = o.revision(),
+            changes = o.optString("changes"),
         )
     }
 
@@ -208,6 +272,8 @@ object StoreIndex {
         version = o.optString("version"),
         apk = file(o) ?: return null,
         license = o.optString("license"),
+        revision = o.revision(),
+        changes = o.optString("changes"),
     )
 
     private fun file(o: JSONObject?): StoreFile? {

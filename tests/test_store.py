@@ -27,6 +27,7 @@ class StoreAdb:
 
     files: dict[str, str] = field(default_factory=dict)
     installed: list[str] = field(default_factory=list)
+    versions: dict[str, str] = field(default_factory=dict)
 
     def connect(self) -> str:
         return "connected"
@@ -38,6 +39,9 @@ class StoreAdb:
     def shell(self, *args: str, check: bool = True) -> str:
         if args[0] == "cat":
             return self.files.get(args[1], "cat: No such file or directory")
+        if args[:2] == ("dumpsys", "package"):
+            version = self.versions.get(args[2])
+            return f"  versionName={version}\n" if version else ""
         if args[:2] == ("rm", "-f"):
             self.files.pop(args[2], None)
         if args[:2] == ("rm", "-rf"):
@@ -152,6 +156,7 @@ def test_font_install_verifies_and_pushes(tmp_path: Path, monkeypatch: pytest.Mo
     install(adb, item, cache=tmp_path)  # type: ignore[arg-type]
     base = f"{DEVICE_ROOT}/fonts/lexend"
     assert {f"{base}/regular.ttf", f"{base}/bold.ttf", f"{base}/font.json"} <= adb.files.keys()
+    assert json.loads(adb.files[f"{base}/font.json"])["revision"] == 1
 
 
 def test_mismatched_download_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -175,3 +180,68 @@ def test_mismatched_download_is_refused(tmp_path: Path, monkeypatch: pytest.Monk
 def test_plain_http_is_refused(tmp_path: Path) -> None:
     with pytest.raises(StoreError, match="https"):
         store.fetch_verified("http://example.test/x.ttf", "0" * 64, tmp_path / "x.ttf")
+
+
+def test_revisions_default_to_one() -> None:
+    old = store.StoreItem("themes", "x", "X", "", {})
+    assert (old.revision, old.changes) == (1, "")
+    maze = find(load_index(), "saver_maze")
+    assert maze.revision >= 1 and maze.requires
+
+
+def _theme(revision: int) -> store.StoreItem:
+    sakura = find(load_index(), "sakura")
+    return store.StoreItem("themes", "sakura", sakura.label, sakura.about,
+                           {**sakura.raw, "revision": revision, "changes": "Warmer pink"})
+
+
+def test_a_scheme_behind_the_store_is_updated() -> None:
+    adb = StoreAdb()
+    install(adb, _theme(1))  # type: ignore[arg-type]
+    newer = _theme(2)
+    behind = store.outdated(adb, [newer])  # type: ignore[arg-type]
+    assert [(o.item.id, o.have) for o in behind] == [("sakura", 1)]
+    assert store.update(adb, [newer]) == ["Sakura: updated to revision 2: Warmer pink"]  # type: ignore[arg-type]
+    assert json.loads(adb.files[f"{DEVICE_ROOT}/themes/sakura.json"])["revision"] == 2
+    assert store.outdated(adb, [newer]) == []  # type: ignore[arg-type]
+
+
+def _maze(revision: int, requires: str) -> store.StoreItem:
+    maze = find(load_index(), "saver_maze")
+    return store.StoreItem("screensavers", maze.id, maze.label, maze.about,
+                           {**maze.raw, "revision": revision, "requires": requires, "changes": "Gems"})
+
+
+def test_a_built_in_is_updated_with_buckler_or_needs_a_newer_one() -> None:
+    adb = StoreAdb(versions={store.BUCKLER_PACKAGE: "0.23.0"})
+    adb.files[f"{DEVICE_ROOT}/screensavers.json"] = json.dumps({"added": ["saver_maze"], "removed": []})
+    adb.files[f"{DEVICE_ROOT}/seen.json"] = json.dumps({"saver_maze": 1})
+    carried = _maze(2, "0.23.0")
+    assert [(o.item.id, o.needs_buckler) for o in store.outdated(adb, [carried])] == [("saver_maze", False)]  # type: ignore[arg-type]
+    assert store.update(adb, [carried]) == ["3D Maze: updated with Buckler: Gems"]  # type: ignore[arg-type]
+    assert json.loads(adb.files[f"{DEVICE_ROOT}/seen.json"]) == {"saver_maze": 2}
+    # A revision only a newer Buckler carries is reported, not marked seen.
+    later = _maze(3, "0.24.0")
+    assert store.update(adb, [later]) == ["3D Maze: update Buckler to 0.24.0 for the newest version: Gems"]  # type: ignore[arg-type]
+    assert json.loads(adb.files[f"{DEVICE_ROOT}/seen.json"]) == {"saver_maze": 2}
+
+
+def test_items_the_tv_does_not_have_are_never_behind() -> None:
+    adb = StoreAdb(versions={store.BUCKLER_PACKAGE: "0.23.0"})
+    adb.files[f"{DEVICE_ROOT}/seen.json"] = "{}"
+    # 3D Maze is opt-in and not added; Sakura is not installed.
+    assert store.outdated(adb, [_maze(2, "0.23.0"), _theme(2)]) == []  # type: ignore[arg-type]
+
+
+def test_adding_a_built_in_records_what_buckler_carries() -> None:
+    adb = StoreAdb(versions={store.BUCKLER_PACKAGE: "0.23.0"})
+    adb.files[f"{DEVICE_ROOT}/seen.json"] = "{}"
+    install(adb, _maze(2, "0.23.0"))  # type: ignore[arg-type]
+    assert json.loads(adb.files[f"{DEVICE_ROOT}/seen.json"]) == {"saver_maze": 2}
+
+
+def test_versions_compare_numerically() -> None:
+    assert store.version_at_least("0.23.0", "0.23.0")
+    assert store.version_at_least("0.23.1", "0.23")
+    assert store.version_at_least("0.10.0", "0.9.9")
+    assert not store.version_at_least("0.22.0", "0.23.0")
