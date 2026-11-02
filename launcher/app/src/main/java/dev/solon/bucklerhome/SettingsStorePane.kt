@@ -58,7 +58,9 @@ fun StorePane() {
     SettingsPaneLink("Widgets", SettingsPane.STORE_WIDGETS, "$widgets of ${catalog.widgets.size} added")
     val savers = catalog.screensavers.count { s -> s.mode?.let { StoreLibrary.saverAdded(it, catalog) } == true }
     SettingsPaneLink("Screensavers", SettingsPane.STORE_SCREENSAVERS, "$savers of ${catalog.screensavers.size} added")
-    SettingsPaneLink("Colour schemes", SettingsPane.STORE_THEMES, installedOf(catalog.themes.count { StoreLibrary.hasTheme(it.id) }, catalog.themes.size))
+    val schemes = catalog.schemes.count { s -> s.theme?.let { StoreLibrary.schemeAdded(it, catalog) } == true } +
+        catalog.themes.count { StoreLibrary.hasTheme(it.id) }
+    SettingsPaneLink("Colour schemes", SettingsPane.STORE_THEMES, "$schemes of ${catalog.schemes.size + catalog.themes.size} added")
     SettingsPaneLink("Fonts", SettingsPane.STORE_FONTS, installedOf(catalog.fonts.count { StoreLibrary.hasFont(it.id) }, catalog.fonts.size))
     SettingsPaneLink("Icon packs", SettingsPane.STORE_ICON_PACKS, "${catalog.iconPacks.size} open packs")
     Spacer(modifier = Modifier.height(12.dp))
@@ -131,14 +133,42 @@ fun StoreScreensaversPane() {
     }
 }
 
-/** Settings → bucklerStore → Colour schemes: each shown in its colours; OK opens its page. */
+/**
+ * Settings → bucklerStore → Colour schemes: Buckler's own, added or removed with OK, then those to
+ * download, each shown in its colours; OK opens a download's page.
+ */
 @Composable
 fun StoreThemesPane() {
+    val context = LocalContext.current
     val catalog = rememberCatalog()
     val nav = LocalPanelNav.current
     val inUse = AppearanceStore.config.storeTheme
+    val builtInUse = AppearanceStore.config.theme
     SectionTitle("Colour schemes")
-    SettingsRow("Installed schemes join Appearance → Colour scheme. ● marks the one in use.")
+    SettingsRow("Added and installed schemes join Appearance → Colour scheme and the setup wizard. ✓ marks those added.")
+    PickerTitle("Built in")
+    SettingsRow("Buckler, Light, Dark and SHIELD come added; OK adds or removes one.")
+    CardColumns { width ->
+        catalog.schemes.forEach { scheme ->
+            val theme = scheme.theme ?: return@forEach
+            val on = StoreLibrary.schemeAdded(theme, catalog)
+            PreviewCard(
+                label = scheme.label + if (on) " ✓" else "",
+                selected = theme == builtInUse && inUse == null,
+                width = width,
+                onClick = {
+                    if (on && theme == builtInUse) {
+                        Toast.makeText(context, "${scheme.label} is in use: choose another scheme first", Toast.LENGTH_LONG).show()
+                    } else {
+                        StoreLibrary.setSchemeAdded(context, theme, !on)
+                    }
+                },
+            ) { ThemeMiniature(theme, AppearanceStore.config.highContrast) }
+        }
+    }
+    catalog.schemes.filter { it.theme == null }.forEach { SettingsRow("${it.label}: needs Buckler ${it.since} or newer.") }
+    Spacer(modifier = Modifier.height(18.dp))
+    PickerTitle("To download")
     CardColumns { width ->
         catalog.themes.forEach { theme ->
             PreviewCard(

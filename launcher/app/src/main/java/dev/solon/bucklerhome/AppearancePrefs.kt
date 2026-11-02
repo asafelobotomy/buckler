@@ -26,6 +26,9 @@ enum class AppTheme(val label: String) {
     SAFFRON("Saffron"),
     ;
 
+    /** Its id in bucklerStore, which says whether it is offered. */
+    fun wire(): String = "scheme_${name.lowercase()}"
+
     companion object {
         fun fromName(raw: String?): AppTheme = entries.firstOrNull { it.name == raw } ?: BUCKLER
     }

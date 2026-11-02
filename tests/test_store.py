@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ASSET = ROOT / "launcher/app/src/main/assets/store_index.json"
 MAIN_STAGE = ROOT / "launcher/app/src/main/java/dev/solon/bucklerhome/MainStage.kt"
 SAVER_PREFS = ROOT / "launcher/app/src/main/java/dev/solon/bucklerhome/ScreensaverPrefs.kt"
+APPEARANCE = ROOT / "launcher/app/src/main/java/dev/solon/bucklerhome/AppearancePrefs.kt"
 
 
 @dataclass
@@ -71,6 +72,14 @@ def test_every_screensaver_is_in_the_store() -> None:
     assert modes == savers
 
 
+def test_every_built_in_scheme_is_in_the_store() -> None:
+    block = re.search(r"enum class AppTheme\(.*?\{(.*?);", APPEARANCE.read_text(encoding="utf-8"), re.DOTALL)
+    assert block
+    themes = {"scheme_" + name.lower() for name in re.findall(r"^\s+([A-Z_]+)\(", block.group(1), re.MULTILINE)}
+    schemes = {item.id for item in load_index() if item.kind == "schemes"}
+    assert themes == schemes
+
+
 def test_store_icon_packs_match_the_catalog() -> None:
     catalog = {p.id: (p.package, p.url, p.sha256) for p in load_iconpacks()}
     listed = {i.id: (i.raw["package"], i.raw["url"], i.raw["sha256"]) for i in load_index() if i.kind == "iconpacks"}
@@ -104,6 +113,15 @@ def test_widgets_toggle_in_one_file() -> None:
     assert json.loads(adb.files[f"{DEVICE_ROOT}/widgets.json"]) == {"added": [], "removed": ["lyrics"]}
     install(adb, lyrics)  # type: ignore[arg-type]
     assert json.loads(adb.files[f"{DEVICE_ROOT}/widgets.json"]) == {"added": ["lyrics"], "removed": []}
+
+
+def test_schemes_toggle_in_their_own_file() -> None:
+    adb = StoreAdb()
+    gruvbox = find(load_index(), "scheme_gruvbox")
+    install(adb, gruvbox)  # type: ignore[arg-type]
+    assert json.loads(adb.files[f"{DEVICE_ROOT}/schemes.json"]) == {"added": ["scheme_gruvbox"], "removed": []}
+    remove(adb, gruvbox)  # type: ignore[arg-type]
+    assert json.loads(adb.files[f"{DEVICE_ROOT}/schemes.json"]) == {"added": [], "removed": ["scheme_gruvbox"]}
 
 
 def test_screensavers_toggle_in_their_own_file() -> None:

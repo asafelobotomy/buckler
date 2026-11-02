@@ -48,7 +48,7 @@ fun LookStep(choices: SetupChoices, onChange: (SetupChoices) -> Unit) {
     SetupSplit(items, focus, { focus = it }) { key ->
         when (key) {
             "scheme" -> CardColumns(columns = 3) { width ->
-                AppTheme.entries.forEach { theme ->
+                StoreLibrary.schemes(context, choices.theme).forEach { theme ->
                     PreviewCard(theme.label, theme == choices.theme, width = width, onClick = {
                         // Shown at once, so the scheme can be judged on the wizard itself.
                         AppearanceStore.update(context) { it.copy(theme = theme) }

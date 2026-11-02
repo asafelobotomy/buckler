@@ -28,7 +28,7 @@ class InstalledFont(val id: String, val label: String, val regular: File, val bo
  * - `themes/<id>.json`: a colour scheme, as the index lists it;
  * - `fonts/<id>/regular.ttf`, `bold.ttf` and `font.json` (its name);
  * - `widgets.json`: `{"added": [...], "removed": [...]}`, widgets changed from the index's default;
- * - `screensavers.json`: the same for screensavers.
+ * - `screensavers.json` and `schemes.json`: the same for screensavers and built-in colour schemes.
  * Icon packs are apps; Android keeps those. What is installed is snapshot state, so Home and
  * Settings repaint when it changes; [version] goes up with every change, for `remember` keys.
  */
@@ -43,6 +43,8 @@ object StoreLibrary {
     private var removed by mutableStateOf<Set<String>>(emptySet())
     private var saversAdded by mutableStateOf<Set<String>>(emptySet())
     private var saversRemoved by mutableStateOf<Set<String>>(emptySet())
+    private var schemesAdded by mutableStateOf<Set<String>>(emptySet())
+    private var schemesRemoved by mutableStateOf<Set<String>>(emptySet())
     @Volatile private var loaded = false
     private const val TAG = "StoreLibrary"
 
@@ -52,6 +54,7 @@ object StoreLibrary {
     private fun fontsDir(context: Context) = File(root(context), "fonts")
     private fun widgetsFile(context: Context) = File(root(context), "widgets.json")
     private fun saversFile(context: Context) = File(root(context), "screensavers.json")
+    private fun schemesFile(context: Context) = File(root(context), "schemes.json")
 
     fun ensureLoaded(context: Context) {
         if (!loaded) reload(context)
@@ -79,6 +82,10 @@ object StoreLibrary {
         val savers = runCatching { JSONObject(saversFile(context).readText()) }.getOrNull()
         saversAdded = savers?.optJSONArray("added").strings()
         saversRemoved = savers?.optJSONArray("removed").strings()
+        if (!schemesFile(context).exists()) keepSchemeInUse(context)
+        val schemes = runCatching { JSONObject(schemesFile(context).readText()) }.getOrNull()
+        schemesAdded = schemes?.optJSONArray("added").strings()
+        schemesRemoved = schemes?.optJSONArray("removed").strings()
         version++
     }
 
@@ -103,6 +110,14 @@ object StoreLibrary {
             root(context).mkdirs()
             writeChoices(saversFile(context), setOf(ScreensaverPrefs.load(context).mode.wire()), emptySet())
         }.onFailure { Log.w(TAG, "Could not write screensavers.json", it) }
+    }
+
+    /** First start with built-in schemes in the store: the one in use stays added, so an update never takes it away. */
+    private fun keepSchemeInUse(context: Context) {
+        runCatching {
+            root(context).mkdirs()
+            writeChoices(schemesFile(context), setOf(AppearancePrefs.load(context).theme.wire()), emptySet())
+        }.onFailure { Log.w(TAG, "Could not write schemes.json", it) }
     }
 
     private fun writeWidgets(context: Context, added: Set<String>, removed: Set<String>) =
@@ -222,6 +237,37 @@ object StoreLibrary {
             saversFile(context),
             if (on) saversAdded + id else saversAdded - id,
             if (on) saversRemoved - id else saversRemoved + id,
+        )
+        reload(context)
+    }
+
+    // Built-in colour schemes: offered in Appearance and the setup wizard once added.
+
+    /** Whether [theme] is on offer: added or removed by hand, else the index's default (added when unlisted). */
+    fun schemeAdded(theme: AppTheme, catalog: StoreCatalog? = null): Boolean {
+        val id = theme.wire()
+        return when {
+            id in schemesRemoved -> false
+            id in schemesAdded -> true
+            else -> catalog?.schemes?.firstOrNull { it.id == id }?.default ?: true
+        }
+    }
+
+    /** The built-in schemes to offer: those added, and [current] always, so the one in use stays choosable. */
+    fun schemes(context: Context, current: AppTheme? = null): List<AppTheme> {
+        ensureLoaded(context)
+        val catalog = StoreIndex.cached(context)
+        return AppTheme.entries.filter { it == current || schemeAdded(it, catalog) }
+    }
+
+    fun setSchemeAdded(context: Context, theme: AppTheme, on: Boolean) {
+        ensureLoaded(context)
+        val id = theme.wire()
+        root(context).mkdirs()
+        writeChoices(
+            schemesFile(context),
+            if (on) schemesAdded + id else schemesAdded - id,
+            if (on) schemesRemoved - id else schemesRemoved + id,
         )
         reload(context)
     }

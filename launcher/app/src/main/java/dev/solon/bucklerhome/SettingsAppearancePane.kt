@@ -40,7 +40,7 @@ fun AppearancePane() {
 
         PickerTitle("Colour scheme")
         CardColumns { width ->
-            AppTheme.entries.forEach { theme ->
+            StoreLibrary.schemes(context, appearance.theme).forEach { theme ->
                 PreviewCard(
                     label = theme.label,
                     selected = theme == appearance.theme && storeTheme == null,

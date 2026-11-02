@@ -158,6 +158,127 @@
       "since": "0.23.0"
     }
   ],
+  "schemes": [
+    {
+      "id": "scheme_buckler",
+      "label": "Buckler",
+      "about": "Teal and sage from the Buckler mark; the default.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_light",
+      "label": "Light",
+      "about": "Warm paper with a bronze accent, for bright rooms.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_dark",
+      "label": "Dark",
+      "about": "The original gold on navy.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_shield",
+      "label": "SHIELD",
+      "about": "NVIDIA green on black, like the stock SHIELD interface.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_gruvbox",
+      "label": "Gruvbox",
+      "about": "Retro warm browns with a yellow accent.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_snes_uk",
+      "label": "SNES (UK)",
+      "about": "The PAL pad's grey shell with red, yellow, green and blue buttons.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_snes_us",
+      "label": "SNES (US)",
+      "about": "The North American pad's pale grey with lavender-purple buttons.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_slate",
+      "label": "Slate",
+      "about": "Cool slate blues with a sky-blue accent.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_velvet",
+      "label": "Velvet",
+      "about": "Deep plum with violet, mint and pink.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_ember",
+      "label": "Ember",
+      "about": "Warm charcoal with hot pink and lime.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_tidepool",
+      "label": "Tidepool",
+      "about": "Deep sea teal with clear blue and olive.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_fjord",
+      "label": "Fjord",
+      "about": "Arctic greys with frost blue and moss.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_marshmallow",
+      "label": "Marshmallow",
+      "about": "Soft night with pastel lilac and mint.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_neon",
+      "label": "Neon",
+      "about": "Late-night navy with electric blue and lime.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_graphite",
+      "label": "Graphite",
+      "about": "Near-black with bright blue and green.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_rosewood",
+      "label": "Rosewood",
+      "about": "Dusky purple with rose and sea-foam.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "scheme_saffron",
+      "label": "Saffron",
+      "about": "Ink black with saffron orange and lime.",
+      "default": false,
+      "since": "0.1.0"
+    }
+  ],
   "themes": [
     {
       "id": "sakura",

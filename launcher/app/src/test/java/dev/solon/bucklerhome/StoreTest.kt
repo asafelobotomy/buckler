@@ -108,4 +108,18 @@ class StoreTest {
         assertEquals(setOf("news"), StoreLibrary.inUse(MainStage.NEWS, SideIdle.NOTHING))
         assertEquals(MainStage.GLANCE, SideIdle.GLANCE.widget)
     }
+
+    @Test
+    fun everyBuiltInSchemeIsInTheStoreAndFourComeAdded() {
+        assertEquals(AppTheme.entries.toSet(), bundled.schemes.mapNotNull { it.theme }.toSet())
+        val standard = bundled.schemes.filter { it.default }.mapNotNull { it.theme }.toSet()
+        assertEquals(setOf(AppTheme.BUCKLER, AppTheme.LIGHT, AppTheme.DARK, AppTheme.SHIELD), standard)
+    }
+
+    @Test
+    fun unlistedSchemesStayAdded() {
+        assertTrue(StoreLibrary.schemeAdded(AppTheme.GRUVBOX, StoreCatalog()))
+        val optIn = StoreCatalog(schemes = listOf(StoreScheme("scheme_gruvbox", "Gruvbox", "", default = false, since = "0.1.0")))
+        assertFalse(StoreLibrary.schemeAdded(AppTheme.GRUVBOX, optIn))
+    }
 }

@@ -37,6 +37,17 @@ data class StoreScreensaver(
     val mode: ScreensaverMode? get() = ScreensaverMode.entries.firstOrNull { it.wire() == id }
 }
 
+/** One of Buckler's own colour schemes ([theme]); its colours ship in the app, the store adds or removes it. */
+data class StoreScheme(
+    override val id: String,
+    override val label: String,
+    override val about: String,
+    val default: Boolean,
+    val since: String,
+) : StoreItem {
+    val theme: AppTheme? get() = AppTheme.entries.firstOrNull { it.wire() == id }
+}
+
 data class StoreTheme(
     override val id: String,
     override val label: String,
@@ -65,6 +76,7 @@ data class StoreIconPack(
 data class StoreCatalog(
     val widgets: List<StoreWidget> = emptyList(),
     val screensavers: List<StoreScreensaver> = emptyList(),
+    val schemes: List<StoreScheme> = emptyList(),
     val themes: List<StoreTheme> = emptyList(),
     val fonts: List<StoreFont> = emptyList(),
     val iconPacks: List<StoreIconPack> = emptyList(),
@@ -116,6 +128,7 @@ object StoreIndex {
         return StoreCatalog(
             widgets = root.optJSONArray("widgets").objects().mapNotNull(::widget),
             screensavers = root.optJSONArray("screensavers").objects().mapNotNull(::screensaver),
+            schemes = root.optJSONArray("schemes").objects().mapNotNull(::scheme),
             themes = root.optJSONArray("themes").objects().mapNotNull(::theme),
             fonts = root.optJSONArray("fonts").objects().mapNotNull(::font),
             iconPacks = root.optJSONArray("iconpacks").objects().mapNotNull(::iconPack),
@@ -139,6 +152,14 @@ object StoreIndex {
     )
 
     private fun screensaver(o: JSONObject): StoreScreensaver? = StoreScreensaver(
+        id = o.id() ?: return null,
+        label = o.optString("label").ifBlank { return null },
+        about = o.optString("about"),
+        default = o.optBoolean("default", false),
+        since = o.optString("since", "0"),
+    )
+
+    private fun scheme(o: JSONObject): StoreScheme? = StoreScheme(
         id = o.id() ?: return null,
         label = o.optString("label").ifBlank { return null },
         about = o.optString("about"),

@@ -3,8 +3,8 @@
 The store's catalog is index.json in github.com/asafelobotomy/bucklerStore; a copy ships with
 Buckler (data/store/index.json, also bundled in the APK). Installing puts files where buckler-home
 looks for them, `Android/data/dev.solon.bucklerhome/files/store/` on the TV (see StoreLibrary.kt):
-`themes/<id>.json`, `fonts/<id>/{regular,bold}.ttf` with `font.json`, `widgets.json` and
-`screensavers.json`.
+`themes/<id>.json`, `fonts/<id>/{regular,bold}.ttf` with `font.json`, `widgets.json`,
+`screensavers.json` and `schemes.json`.
 Icon packs are apps and go through `adb install`. Every download is checked against its sha256.
 """
 
@@ -28,9 +28,10 @@ from buckler.paths import DATA, apk_cache_dir
 INDEX_URL = "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/index.json"
 DEVICE_ROOT = "/sdcard/Android/data/dev.solon.bucklerhome/files/store"
 SCHEMA = 1
-KINDS = ("widgets", "screensavers", "themes", "fonts", "iconpacks")
-# Widgets and screensavers ship in Buckler; the store only records which are added or removed.
-CHOICE_FILES = {"widgets": "widgets.json", "screensavers": "screensavers.json"}
+KINDS = ("widgets", "screensavers", "schemes", "themes", "fonts", "iconpacks")
+# Widgets, screensavers and built-in colour schemes ship in Buckler; the store only records which
+# are added or removed.
+CHOICE_FILES = {"widgets": "widgets.json", "screensavers": "screensavers.json", "schemes": "schemes.json"}
 _ID = re.compile(r"^[a-z0-9][a-z0-9_-]{1,39}$")
 
 
@@ -153,6 +154,9 @@ def install(adb: Adb, item: StoreItem, cache: Path | None = None) -> str:
     if item.kind == "screensavers":
         set_widget(adb, item.id, True, "screensavers")
         return f"{item.label}: added to Buckler Settings → Screensaver"
+    if item.kind == "schemes":
+        set_widget(adb, item.id, True, "schemes")
+        return f"{item.label}: added to Buckler Settings → Appearance → Colour scheme"
     if item.kind == "themes":
         _push_text(adb, json.dumps(item.raw, indent=2) + "\n", f"{DEVICE_ROOT}/themes/{item.id}.json")
         return f"{item.label}: installed; choose it in Buckler Settings → Appearance"
@@ -182,6 +186,9 @@ def remove(adb: Adb, item: StoreItem) -> str:
     if item.kind == "screensavers":
         set_widget(adb, item.id, False, "screensavers")
         return f"{item.label}: removed from Buckler Settings → Screensaver (the one in use stays until changed)"
+    if item.kind == "schemes":
+        set_widget(adb, item.id, False, "schemes")
+        return f"{item.label}: removed from Buckler Settings → Appearance (the one in use stays until changed)"
     if item.kind == "themes":
         adb.shell("rm", "-f", f"{DEVICE_ROOT}/themes/{item.id}.json", check=False)
     elif item.kind == "fonts":
@@ -206,4 +213,6 @@ def installed(adb: Adb) -> dict[str, list[str]]:
         "widgets removed": read_widgets(adb)["removed"],
         "screensavers added": read_widgets(adb, "screensavers")["added"],
         "screensavers removed": read_widgets(adb, "screensavers")["removed"],
+        "schemes added": read_widgets(adb, "schemes")["added"],
+        "schemes removed": read_widgets(adb, "schemes")["removed"],
     }
