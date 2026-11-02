@@ -31,6 +31,9 @@ fun AppearancePane() {
     val appearance = AppearanceStore.config
     var tick by remember { mutableIntStateOf(0) }
     val cfg = remember(tick) { DisplayPrefs.load(context) }
+    // Store choices count only while installed; a removed one leaves the built-in choice in use.
+    val storeTheme = appearance.storeTheme?.takeIf { StoreLibrary.hasTheme(it) }
+    val storeFont = appearance.storeFont?.takeIf { StoreLibrary.hasFont(it) }
 
     Column {
         SectionTitle("Appearance")
@@ -40,12 +43,21 @@ fun AppearancePane() {
             AppTheme.entries.forEach { theme ->
                 PreviewCard(
                     label = theme.label,
-                    selected = theme == appearance.theme,
+                    selected = theme == appearance.theme && storeTheme == null,
                     width = width,
-                    onClick = { AppearanceStore.update(context) { it.copy(theme = theme) } },
+                    onClick = { AppearanceStore.update(context) { it.copy(theme = theme, storeTheme = null) } },
                 ) { ThemeMiniature(theme, appearance.highContrast) }
             }
+            StoreLibrary.installedThemes().forEach { theme ->
+                PreviewCard(
+                    label = theme.label,
+                    selected = theme.id == storeTheme,
+                    width = width,
+                    onClick = { AppearanceStore.update(context) { it.copy(storeTheme = theme.id) } },
+                ) { PaletteMiniature(Palettes.resolve(appearance.copy(storeTheme = theme.id))) }
+            }
         }
+        SettingsPaneLink("More colour schemes in bucklerStore", SettingsPane.STORE_THEMES)
 
         Spacer(modifier = Modifier.height(20.dp))
         PickerTitle("Font")
@@ -53,12 +65,22 @@ fun AppearancePane() {
             FontChoice.entries.forEach { font ->
                 PreviewCard(
                     label = font.label,
-                    selected = font == appearance.font,
+                    selected = font == appearance.font && storeFont == null,
                     width = width,
-                    onClick = { AppearanceStore.update(context) { it.copy(font = font) } },
+                    onClick = { AppearanceStore.update(context) { it.copy(font = font, storeFont = null) } },
                 ) { FontMiniature(font) }
             }
+            StoreLibrary.installedFonts().forEach { font ->
+                val family = StoreLibrary.fontFamily(font.id) ?: return@forEach
+                PreviewCard(
+                    label = font.label,
+                    selected = font.id == storeFont,
+                    width = width,
+                    onClick = { AppearanceStore.update(context) { it.copy(storeFont = font.id) } },
+                ) { FontMiniature(family) }
+            }
         }
+        SettingsPaneLink("More fonts in bucklerStore", SettingsPane.STORE_FONTS)
 
         Spacer(modifier = Modifier.height(20.dp))
         PickerTitle("Clock and date")

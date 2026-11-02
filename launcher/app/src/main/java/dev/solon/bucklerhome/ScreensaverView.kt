@@ -54,7 +54,7 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
     private val notice = textView(sizeSp = 20f, light = false).apply { alpha = 0.7f }
 
     init {
-        setBackgroundColor(Palettes.of(config.theme).bgTop.toArgb())
+        setBackgroundColor(Palettes.base(config.appearance).bgTop.toArgb())
     }
 
     fun start() {
@@ -325,7 +325,7 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
     private fun textView(sizeSp: Float, light: Boolean) = TextView(context).apply {
         setTextColor(Color.parseColor("#E8ECF2"))
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        typeface = config.font.typeface(context, light)
+        typeface = config.appearance.typeface(context, light)
         gravity = Gravity.CENTER
         setShadowLayer(6f, 0f, 2f, Color.BLACK)
     }

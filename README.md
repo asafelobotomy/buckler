@@ -69,6 +69,8 @@ buckler check                      # after OTAs: check --fix
 buckler unused                     # apps Buckler found unused; --apply disables them
 buckler clean                      # free app cache space on the TV
 buckler launcher iconpack install lawnicons   # an open icon pack (or arcticons)
+buckler store list                 # bucklerStore: widgets, colour schemes, fonts, icon packs
+buckler store install sakura lexend
 # Optional Private DNS (you choose the DoT host):
 # buckler dns set --hostname family.cloudflare-dns.com
 ```
@@ -98,6 +100,7 @@ Stock factory reset still needs a manual `setup` afterward; kitetvOS will re-ent
 src/buckler/  CLI (Click + system adb)
   data/profiles/  privacy-core, speech, minimal, extras, home-clean, never
   data/catalog/   open app swaps, suggestions and icon packs (pinned sha256)
+  data/store/     bundled copy of bucklerStore's index.json (also launcher/app/src/main/assets/store_index.json)
   data/schema/    desired-state.v1.json (stock ↔ kitetvOS contract)
 launcher/     Compose-for-TV app (buckler-home)
 covers/       Curated cover index (keyless Change cover pack)
@@ -110,7 +113,7 @@ tests/        policy / handover / journal / schema unit tests
 
 A Compose-for-TV Home with a live header and Side Stage, a Main Stage (News, Now Playing, Lyrics,
 Weather, Suggested, At a Glance, Calendar, Weather map, Companion), shelves in three cover layouts,
-icon packs, Buckler Settings, a setup wizard that makes the SHIELD changes from the TV itself, and
+icon packs, add-ons from [bucklerStore](https://github.com/asafelobotomy/bucklerStore) (widgets, colour schemes, fonts, icon packs), Buckler Settings, a setup wizard that makes the SHIELD changes from the TV itself, and
 GitHub updates. The full reference is [docs/launcher.md](docs/launcher.md).
 
 ## Development

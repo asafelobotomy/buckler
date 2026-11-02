@@ -54,8 +54,14 @@ data class ScreensaverConfig(
     val dateStyle: DateStyle = DateStyle.SHORT,
     val font: FontChoice = FontChoice.SYSTEM,
     val theme: AppTheme = AppTheme.BUCKLER,
+    val storeTheme: String? = null,
+    val storeFont: String? = null,
     val reduceMotion: Boolean = false,
 ) {
+    /** The colour scheme and font, bucklerStore's included, as Home has them. */
+    val appearance: AppearanceConfig
+        get() = AppearanceConfig(theme = theme, font = font, storeTheme = storeTheme, storeFont = storeFont)
+
     /** [option]'s value for the screensaver being shown. */
     fun value(option: SaverOption): Int = options[mode]?.get(option) ?: option.default
 
@@ -80,6 +86,7 @@ object ScreensaverPrefs {
     fun load(context: Context): ScreensaverConfig {
         val p = prefs(context)
         val appearance = AppearancePrefs.load(context)
+        StoreLibrary.ensureLoaded(context)
         val display = DisplayPrefs.load(context)
         return ScreensaverConfig(
             mode = ScreensaverMode.fromName(p.getString(KEY_MODE, null)),
@@ -91,6 +98,8 @@ object ScreensaverPrefs {
             dateStyle = display.dateStyle,
             font = appearance.font,
             theme = appearance.theme,
+            storeTheme = appearance.storeTheme,
+            storeFont = appearance.storeFont,
             reduceMotion = appearance.reduceMotion,
         )
     }

@@ -98,6 +98,10 @@ data class AppearanceConfig(
     val reduceMotion: Boolean = false,
     /** Speak the label of the focused control with text-to-speech. */
     val spokenFocus: Boolean = false,
+    /** A colour scheme from bucklerStore, in place of [theme] while it is installed. */
+    val storeTheme: String? = null,
+    /** A font from bucklerStore, in place of [font] while it is installed. */
+    val storeFont: String? = null,
 )
 
 object AppearancePrefs {
@@ -109,6 +113,8 @@ object AppearancePrefs {
     private const val KEY_STRONG_FOCUS = "a11y_strong_focus"
     private const val KEY_REDUCE_MOTION = "a11y_reduce_motion"
     private const val KEY_SPOKEN_FOCUS = "a11y_spoken_focus"
+    private const val KEY_STORE_THEME = "appearance_store_theme"
+    private const val KEY_STORE_FONT = "appearance_store_font"
 
     fun load(context: Context): AppearanceConfig {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -120,6 +126,8 @@ object AppearancePrefs {
             strongFocus = p.getBoolean(KEY_STRONG_FOCUS, false),
             reduceMotion = p.getBoolean(KEY_REDUCE_MOTION, false),
             spokenFocus = p.getBoolean(KEY_SPOKEN_FOCUS, false),
+            storeTheme = p.getString(KEY_STORE_THEME, null),
+            storeFont = p.getString(KEY_STORE_FONT, null),
         )
     }
 
@@ -132,6 +140,8 @@ object AppearancePrefs {
             .putBoolean(KEY_STRONG_FOCUS, config.strongFocus)
             .putBoolean(KEY_REDUCE_MOTION, config.reduceMotion)
             .putBoolean(KEY_SPOKEN_FOCUS, config.spokenFocus)
+            .putString(KEY_STORE_THEME, config.storeTheme)
+            .putString(KEY_STORE_FONT, config.storeFont)
             .apply()
     }
 }
@@ -150,6 +160,7 @@ object AppearanceStore {
     fun ensureLoaded(context: Context) {
         if (loaded) return
         loaded = true
+        StoreLibrary.ensureLoaded(context)
         config = AppearancePrefs.load(context)
         LauncherIcon.apply(context, config.theme)
     }

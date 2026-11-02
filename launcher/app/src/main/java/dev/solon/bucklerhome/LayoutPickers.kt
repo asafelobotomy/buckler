@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -107,8 +109,10 @@ fun LayoutAndSizePickers(
 fun MainStagePicker(mode: MainStage, title: String = "Main stage", onMode: (MainStage) -> Unit) {
     Column {
         PickerTitle(title)
+        val context = LocalContext.current
+        val offered = remember(mode, StoreLibrary.version) { StoreLibrary.stages(context, mode) }
         FlowRow(horizontalArrangement = CardGap, verticalArrangement = CardGap) {
-            MainStage.entries.forEach { option ->
+            offered.forEach { option ->
                 SettingsAction(option.label, selected = option == mode) { onMode(option) }
             }
         }

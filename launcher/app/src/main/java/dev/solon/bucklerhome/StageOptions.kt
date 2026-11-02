@@ -270,7 +270,7 @@ fun SideStageDialog(onChanged: () -> Unit, onDismiss: () -> Unit) {
                 }
                 HoldMenuHeading("While nothing plays")
                 FlowRow(horizontalArrangement = Flow, verticalArrangement = Flow) {
-                    SideIdle.entries.forEach { idle ->
+                    StoreLibrary.sideIdles(context, cfg.sideIdle).forEach { idle ->
                         SettingsAction(
                             idle.label,
                             focusRequester = currentFocus.takeIf { idle == cfg.sideIdle },

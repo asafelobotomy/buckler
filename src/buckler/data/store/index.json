@@ -1,0 +1,465 @@
+{
+  "schema": 1,
+  "widgets": [
+    {
+      "id": "news",
+      "label": "News",
+      "about": "Headlines from the sources you pick, one story at a time.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "now_playing",
+      "label": "Now Playing",
+      "about": "The song or show playing on the TV, with its artwork and controls.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "lyrics",
+      "label": "Lyrics",
+      "about": "Time-synced lyrics for the song playing, karaoke style.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "weather",
+      "label": "Weather",
+      "about": "Today and the days ahead for your city (Open-Meteo).",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "suggested",
+      "label": "Suggested",
+      "about": "Things to watch from your apps' own recommendations.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "glance",
+      "label": "At a Glance",
+      "about": "The next thing on your calendar, reminders and the weather in one line.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "calendar",
+      "label": "Calendar",
+      "about": "The week ahead from the calendars the TV syncs.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "weather_map",
+      "label": "Weather map",
+      "about": "A live map of rain and pressure around your city.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "companion",
+      "label": "Companion",
+      "about": "A little animated friend that reacts to the time and weather.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "multiview",
+      "label": "Multiview",
+      "about": "Several live streams side by side.",
+      "default": false,
+      "since": "0.21.0"
+    },
+    {
+      "id": "comics",
+      "label": "Comics",
+      "about": "Public-domain newspaper strips, cleaned up, with a reader to zoom panel by panel.",
+      "default": false,
+      "since": "0.23.0"
+    },
+    {
+      "id": "spurious",
+      "label": "Spurious correlations",
+      "about": "Two unrelated things that rose and fell together, from Tyler Vigen's charts.",
+      "default": false,
+      "since": "0.23.0"
+    }
+  ],
+  "themes": [
+    {
+      "id": "sakura",
+      "label": "Sakura",
+      "about": "Night-time plum with cherry-blossom pink and leaf green.",
+      "dark": true,
+      "colors": {
+        "bgTop": "#1E1620",
+        "bgMid": "#261C29",
+        "bgBottom": "#1E1620",
+        "brand": "#F4A6C6",
+        "onBrand": "#2A1020",
+        "text": "#F6EDF2",
+        "muted": "#C9B6C2",
+        "hint": "#9A8794",
+        "section": "#9FD69A",
+        "tile": "#33263A",
+        "footer": "#403047",
+        "border": "#5A4762",
+        "ring": "#FFFFFF"
+      }
+    },
+    {
+      "id": "matcha",
+      "label": "Matcha",
+      "about": "Soft whisked-green tea on warm paper; a light scheme.",
+      "dark": false,
+      "colors": {
+        "bgTop": "#F3F1E6",
+        "bgMid": "#E9E7D8",
+        "bgBottom": "#F3F1E6",
+        "brand": "#3F6B2A",
+        "onBrand": "#FFFFFF",
+        "text": "#1C2117",
+        "muted": "#434B3B",
+        "hint": "#5E6656",
+        "section": "#7A4B12",
+        "tile": "#DDDBC9",
+        "footer": "#CFCDB8",
+        "border": "#A9A68E",
+        "ring": "#000000"
+      }
+    },
+    {
+      "id": "arcade",
+      "label": "Arcade",
+      "about": "Cabinet black with hot magenta and cyan, like an 80s attract screen.",
+      "dark": true,
+      "colors": {
+        "bgTop": "#0B0A12",
+        "bgMid": "#120F1D",
+        "bgBottom": "#0B0A12",
+        "brand": "#FF4FD8",
+        "onBrand": "#1A0517",
+        "text": "#F1EEFF",
+        "muted": "#B4ADD6",
+        "hint": "#857DAA",
+        "section": "#3FE6F2",
+        "tile": "#1D1930",
+        "footer": "#28233F",
+        "border": "#433C63",
+        "ring": "#3FE6F2"
+      }
+    },
+    {
+      "id": "sunset",
+      "label": "Sunset",
+      "about": "Dusky indigo fading to coral and amber.",
+      "dark": true,
+      "colors": {
+        "bgTop": "#1A1830",
+        "bgMid": "#2A1F3A",
+        "bgBottom": "#1A1830",
+        "brand": "#FF8A65",
+        "onBrand": "#260C04",
+        "text": "#FBEFE8",
+        "muted": "#D3BFC0",
+        "hint": "#A08E98",
+        "section": "#FFC861",
+        "tile": "#2E2843",
+        "footer": "#3A3250",
+        "border": "#56496B",
+        "ring": "#FFFFFF"
+      }
+    },
+    {
+      "id": "forest",
+      "label": "Forest",
+      "about": "Deep pine with moss and birch-bark cream.",
+      "dark": true,
+      "colors": {
+        "bgTop": "#101A14",
+        "bgMid": "#15221A",
+        "bgBottom": "#101A14",
+        "brand": "#8FC77E",
+        "onBrand": "#0D1A0B",
+        "text": "#ECF1E6",
+        "muted": "#B0BFA9",
+        "hint": "#7F907A",
+        "section": "#E0C68A",
+        "tile": "#1E2E23",
+        "footer": "#283B2D",
+        "border": "#3D5543",
+        "ring": "#FFFFFF"
+      }
+    },
+    {
+      "id": "abyss",
+      "label": "Abyss",
+      "about": "Ocean-floor blue-black with bioluminescent aqua.",
+      "dark": true,
+      "colors": {
+        "bgTop": "#060E17",
+        "bgMid": "#0A1622",
+        "bgBottom": "#060E17",
+        "brand": "#4FE0C8",
+        "onBrand": "#03201B",
+        "text": "#E4F2F5",
+        "muted": "#9DB8C2",
+        "hint": "#6E8C98",
+        "section": "#8AB4FF",
+        "tile": "#13222F",
+        "footer": "#1B2D3C",
+        "border": "#2E4659",
+        "ring": "#FFFFFF"
+      }
+    },
+    {
+      "id": "mono",
+      "label": "Mono",
+      "about": "Pure greyscale with a white accent, for a calm, colourless Home.",
+      "dark": true,
+      "colors": {
+        "bgTop": "#111111",
+        "bgMid": "#181818",
+        "bgBottom": "#111111",
+        "brand": "#E6E6E6",
+        "onBrand": "#111111",
+        "text": "#F2F2F2",
+        "muted": "#B0B0B0",
+        "hint": "#858585",
+        "section": "#CFCFCF",
+        "tile": "#222222",
+        "footer": "#2D2D2D",
+        "border": "#474747",
+        "ring": "#FFFFFF"
+      }
+    },
+    {
+      "id": "parchment",
+      "label": "Parchment",
+      "about": "Old paper and sepia ink with an oxblood accent; a light scheme.",
+      "dark": false,
+      "colors": {
+        "bgTop": "#F6EEDC",
+        "bgMid": "#EEE3CB",
+        "bgBottom": "#F6EEDC",
+        "brand": "#8A2C25",
+        "onBrand": "#FFFFFF",
+        "text": "#2A1E14",
+        "muted": "#53432F",
+        "hint": "#6E5D47",
+        "section": "#2F5E5A",
+        "tile": "#E3D6BA",
+        "footer": "#D6C7A6",
+        "border": "#B3A27F",
+        "ring": "#000000"
+      }
+    }
+  ],
+  "fonts": [
+    {
+      "id": "lexend",
+      "label": "Lexend",
+      "about": "Wide, even letters designed to make reading easier.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/lexend/regular.ttf",
+          "sha256": "c9bec1855dadfefbc3c23a7f6371d8fd221d77f83fef66d1285c259ce12635d0",
+          "size": 61452
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/lexend/bold.ttf",
+          "sha256": "bba5e0d5b641a8a329e07a1ed66dc4ee8a0e11391dfbb42c15e2d132f2054bf6",
+          "size": 61712
+        }
+      }
+    },
+    {
+      "id": "lora",
+      "label": "Lora",
+      "about": "A calligraphic serif, warm at TV sizes.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/lora/regular.ttf",
+          "sha256": "16c8b6a25e77a50dc27f3b32494e6b9553d177675f140ba7ed0b183229ba60c9",
+          "size": 74364
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/lora/bold.ttf",
+          "sha256": "8f325cc87aa97ea01310feb396c62beb03cb8a39bd6c0b15adc949a3c80e23c5",
+          "size": 74060
+        }
+      }
+    },
+    {
+      "id": "space-grotesk",
+      "label": "Space Grotesk",
+      "about": "A quirky geometric sans with a technical edge.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/space-grotesk/regular.ttf",
+          "sha256": "718a162dc668e936b9cc90b0ef36165996108d30d7c4c5d5c9e345555a45d0d9",
+          "size": 56048
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/space-grotesk/bold.ttf",
+          "sha256": "dcabd710a1d8b4f0ecc89c8c093f990d914d1ecb80a5b34721b18ed3f0b3e370",
+          "size": 55824
+        }
+      }
+    },
+    {
+      "id": "ibm-plex-sans",
+      "label": "IBM Plex Sans",
+      "about": "Neutral and engineered, with distinctive details.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/ibm-plex-sans/regular.ttf",
+          "sha256": "d4a73361090b94a2d64950bfe747e1cc54661861439a4a2f9c2f615f80a296c1",
+          "size": 90524
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/ibm-plex-sans/bold.ttf",
+          "sha256": "7c12ba1459bc0c911a009f2ff09f6097e2a64d59403d013ddc730e0819d30799",
+          "size": 90708
+        }
+      }
+    },
+    {
+      "id": "jetbrains-mono",
+      "label": "JetBrains Mono",
+      "about": "A coder's monospace with tall lowercase letters.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/jetbrains-mono/regular.ttf",
+          "sha256": "ab629bcf23566000db4bf795072e5e8aea2e1d5b77df893dd00e7342e137fd0f",
+          "size": 70512
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/jetbrains-mono/bold.ttf",
+          "sha256": "4ca13cbf71b3f3e1a82c4fe87d4c382c914a58ddefeedc3fe461766e29121389",
+          "size": 70488
+        }
+      }
+    },
+    {
+      "id": "quicksand",
+      "label": "Quicksand",
+      "about": "Rounded and friendly.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/quicksand/regular.ttf",
+          "sha256": "24f71f208937d3acba57770795cd4c4cce4f78d8b4d5089a1d76178de39e8dfd",
+          "size": 63544
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/quicksand/bold.ttf",
+          "sha256": "8710f1d2df2c761ad24b9cbe2add91a0f64099b0e4bd9bccb5d5d2d9fd44106a",
+          "size": 63196
+        }
+      }
+    },
+    {
+      "id": "bitter",
+      "label": "Bitter",
+      "about": "A sturdy slab serif made for screens.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/bitter/regular.ttf",
+          "sha256": "262cb67bf3b5846164a011f20e9e1d34cdf2217664732e5ab9eb6f7da97743a7",
+          "size": 76348
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/bitter/bold.ttf",
+          "sha256": "c2af733388b66d6a177344e2f48c21212b388c24cb0573415f4a6fa5c73d2643",
+          "size": 77192
+        }
+      }
+    },
+    {
+      "id": "outfit",
+      "label": "Outfit",
+      "about": "Clean geometric shapes, modern and light.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/outfit/regular.ttf",
+          "sha256": "71c985b0c3653b8580abf9ce258656bc9713637b8a9f12094ea972025ab26ccc",
+          "size": 44572
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/outfit/bold.ttf",
+          "sha256": "142230e791cc754b01697dae3d833aed6672a605428b5aa3a29850e0bc6190e7",
+          "size": 45012
+        }
+      }
+    },
+    {
+      "id": "source-sans-3",
+      "label": "Source Sans 3",
+      "about": "Adobe's open, highly legible UI sans.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/source-sans-3/regular.ttf",
+          "sha256": "911ad1d9b7531b80e30af6ffbff7552b2ec6f3bf2b6e0423a29827d42a5d2d30",
+          "size": 79636
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/source-sans-3/bold.ttf",
+          "sha256": "905c9d5d16c9b74ead49d9e40bcd4402ebff8975717ffd65b87b30c4c7c02b6c",
+          "size": 79692
+        }
+      }
+    },
+    {
+      "id": "comfortaa",
+      "label": "Comfortaa",
+      "about": "Soft, round and playful.",
+      "license": "OFL-1.1",
+      "files": {
+        "regular": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/comfortaa/regular.ttf",
+          "sha256": "eac2db439257d9b86aaa103dc75009c3c7f5481ae6e052110b3f6e695a206a10",
+          "size": 55912
+        },
+        "bold": {
+          "url": "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/fonts/comfortaa/bold.ttf",
+          "sha256": "a787a06765704756ab3541fa43a238ffa8ad422b401b5abba711b898926e560a",
+          "size": 56128
+        }
+      }
+    }
+  ],
+  "iconpacks": [
+    {
+      "id": "lawnicons",
+      "label": "Lawnicons",
+      "package": "app.lawnchair.lawnicons",
+      "version": "2.19.0",
+      "url": "https://github.com/LawnchairLauncher/lawnicons/releases/download/v2.19.0/Lawnicons.2.19.0.apk",
+      "sha256": "5ed67a0338c207bd0f8c44392dedbae8d0449fef5c8d773a202451d42bbd8cdd",
+      "size": 19000000,
+      "license": "Apache-2.0",
+      "about": "Single-colour outline icons (about 23,000 app mappings)."
+    },
+    {
+      "id": "arcticons",
+      "label": "Arcticons",
+      "package": "com.donnnno.arcticons",
+      "version": "15.3.2",
+      "url": "https://f-droid.org/repo/com.donnnno.arcticons_1570.apk",
+      "sha256": "653ea050715c4d40c15da7e6cefad17e389afcd6a518636f6115de2ae1310fc1",
+      "size": 71000000,
+      "license": "CC BY-SA 4.0 icons, GPL-3.0 app",
+      "about": "White line icons (about 49,000 app mappings)."
+    }
+  ]
+}

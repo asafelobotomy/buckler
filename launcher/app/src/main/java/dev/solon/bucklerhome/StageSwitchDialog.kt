@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -65,7 +66,7 @@ fun StageSwitchDialog(
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 HoldMenuTitle("Main stage", "Hold OK on the stage to open this again.")
                 FlowRow(horizontalArrangement = flow, verticalArrangement = flow) {
-                    MainStage.entries.forEach { mode ->
+                    StoreLibrary.stages(LocalContext.current, current).forEach { mode ->
                         SettingsAction(
                             mode.label,
                             focusRequester = currentFocus.takeIf { mode == current },

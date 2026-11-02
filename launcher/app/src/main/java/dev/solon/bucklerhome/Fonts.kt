@@ -62,3 +62,9 @@ fun FontChoice.typeface(context: Context, light: Boolean): Typeface = when (this
     FontChoice.MONO -> Typeface.MONOSPACE
     else -> bundled[this]?.let { ResourcesCompat.getFont(context, it.first) } ?: Typeface.SANS_SERIF
 }
+
+/** The chosen font: a bucklerStore one while it is installed, else the built-in [AppearanceConfig.font]. */
+fun AppearanceConfig.fontFamily(): FontFamily = storeFont?.let { StoreLibrary.fontFamily(it) } ?: font.family()
+
+fun AppearanceConfig.typeface(context: Context, light: Boolean): Typeface =
+    storeFont?.let { StoreLibrary.typeface(it) } ?: font.typeface(context, light)

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import click
 
-from buckler import cli_device, cli_launcher, cli_unused  # registers commands on `cli`
+from buckler import cli_device, cli_launcher, cli_store, cli_unused  # registers commands on `cli`
 from buckler.adb import AdbError
 from buckler.cli_common import cli, make_adb
 from buckler.journal import latest_journal
@@ -181,7 +181,7 @@ def profiles_cmd() -> None:
         click.echo(name)
 
 
-__all__ = ["cli", "cli_device", "cli_launcher", "cli_unused"]
+__all__ = ["cli", "cli_device", "cli_launcher", "cli_store", "cli_unused"]
 
 if __name__ == "__main__":
     cli()

@@ -59,8 +59,9 @@ fun rememberShieldRunner(): ShieldRunner {
 }
 
 /**
- * Settings → Device (Global): the setup wizard, and the changes `buckler setup` makes from a
- * computer, made from the TV itself over Network debugging. The wizard builds on these; here each
+ * Settings → Device (Global): date and time, keyboards, the way into the rest of Android's
+ * settings, the setup wizard, and the changes `buckler setup` makes from a computer, made from the
+ * TV itself over Network debugging. The wizard builds on these; here each
  * is a row. SHIELD clean-up, beside it, turns apps off.
  */
 @Composable
@@ -73,8 +74,8 @@ fun ShieldPane() {
     DateTimeSection()
     Spacer(modifier = Modifier.height(18.dp))
     KeyboardSection()
-    Spacer(modifier = Modifier.height(18.dp))
-    PowerSection(runner)
+    Spacer(modifier = Modifier.height(12.dp))
+    SystemScreenLink("All of Android's settings", SystemScreen.ALL)
     Spacer(modifier = Modifier.height(18.dp))
     PickerTitle("Setup")
     SettingsRow("The setup wizard walks through Buckler's look and, on a SHIELD, its clean-up, showing every change before making it.")
@@ -99,7 +100,7 @@ fun ShieldPane() {
     SystemScreenLink("SHIELD developer options", SystemScreen.SHIELD_DEVELOPER)
 
     Spacer(modifier = Modifier.height(18.dp))
-    PickerTitle("Buckler")
+    PickerTitle("Buckler's permissions")
     val missing = remember(runner.status) { ShieldOps.missingPermissions(context) + ShieldOps.missingAppops(context) }
     SettingsRow(
         when {

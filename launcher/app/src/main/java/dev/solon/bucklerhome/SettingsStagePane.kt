@@ -31,7 +31,7 @@ fun MainStagePane() {
 
     SectionTitle("Main Stage")
     SettingsRow("The band under the header. On Home, hold OK on it to switch widget.")
-    SettingsChoice("Shows", MainStage.entries, layout.mainStage, { it.label }) { persist(layout.copy(mainStage = it)) }
+    SettingsChoice("Shows", StoreLibrary.stages(context, layout.mainStage), layout.mainStage, { it.label }) { persist(layout.copy(mainStage = it)) }
     SettingsPaneLink("${layout.mainStage.label} options", SettingsPane.forStage(layout.mainStage))
     Spacer(modifier = Modifier.height(18.dp))
     StageSizePicker(layout.stageSize, title = "Size") { persist(layout.copy(stageSize = it)) }
