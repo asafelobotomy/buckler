@@ -11,6 +11,43 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import java.io.File
 
+/**
+ * One download-and-install at a time: Buckler's own update and bucklerStore's downloads (a font, an
+ * icon pack). A Buckler update restarts Buckler, which would cut short a store download or install
+ * still under way, and two installs at once only confuse Android's confirmation prompts. Whoever
+ * holds the gate says what it is doing, so the other can say what it is waiting for.
+ */
+object InstallGate {
+    @Volatile
+    var holder: String? = null
+        private set
+
+    /** Take the gate for [what]; null when taken, else what already holds it. */
+    @Synchronized
+    fun tryEnter(what: String): String? {
+        holder?.let { return it }
+        holder = what
+        return null
+    }
+
+    @Synchronized
+    fun leave(what: String) {
+        if (holder == what) holder = null
+    }
+
+    /** Run [block] holding the gate; returns null (without running it) when something else holds it. */
+    inline fun <T> withGate(what: String, block: () -> T): Result<T>? {
+        if (tryEnter(what) != null) return null
+        return try {
+            Result.success(block())
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            leave(what)
+        }
+    }
+}
+
 object ApkInstaller {
     private const val TAG = "ApkInstaller"
 

@@ -1,6 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -9,22 +8,22 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
- * On returning Home, says once when something people use from bucklerStore was updated ("3D Maze
- * was updated: …"), or has an update to download ([StoreUpdates]). Waits longer than the unused-apps
- * notice so the two never show together. Fetches the store's index first when it is over a day old.
+ * On returning Home, offers [HomeNotices] a line, once, when something people use from bucklerStore
+ * was updated ("3D Maze was updated: …"), or has an update to download ([StoreUpdates]). Fetches
+ * the store's index first when it is over a day old, or Buckler itself was updated since.
  */
 @Composable
 fun StoreUpdateNotice(resumeTick: Int) {
     val context = LocalContext.current
     LaunchedEffect(resumeTick) {
         delay(SETTLE_MS)
-        val text = withContext(Dispatchers.IO) {
+        val news = withContext(Dispatchers.IO) {
             StoreIndex.refreshIfStale(context)
-            val news = StoreUpdates.untold(context, StoreUpdates.pending(context))
-            StoreUpdates.noticeText(news)?.also { StoreUpdates.markTold(context, news) }
+            StoreUpdates.untold(context, StoreUpdates.pending(context))
         }
-        if (text != null) Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+        val text = StoreUpdates.noticeText(news) ?: return@LaunchedEffect
+        HomeNotices.offer(resumeTick, HomeNotices.Priority.STORE_UPDATES, text) { StoreUpdates.markTold(context, news) }
     }
 }
 
-private const val SETTLE_MS = 9_000L
+private const val SETTLE_MS = 4_000L

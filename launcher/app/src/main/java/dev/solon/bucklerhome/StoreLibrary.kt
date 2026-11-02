@@ -163,7 +163,10 @@ object StoreLibrary {
     }
 
     /** Download both files, refusing any whose SHA-256 is not the index's. Call off the main thread. */
-    fun installFont(context: Context, font: StoreFont): Boolean {
+    fun installFont(context: Context, font: StoreFont): Boolean =
+        InstallGate.withGate(font.label) { installFontNow(context, font) }?.getOrDefault(false) ?: false
+
+    private fun installFontNow(context: Context, font: StoreFont): Boolean {
         val dir = File(fontsDir(context), font.id).also { it.mkdirs() }
         val ok = download(font.regular, File(dir, "regular.ttf")) && download(font.bold, File(dir, "bold.ttf"))
         if (ok) {

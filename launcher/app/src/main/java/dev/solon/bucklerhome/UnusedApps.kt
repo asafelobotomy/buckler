@@ -250,8 +250,12 @@ object UnusedApps {
         val p = prefs(context)
         val list = apps.joinToString(",") { it.packageName }
         if (now - p.getLong(KEY_NOTICED_AT, 0L) < 7 * DAY_MS || list == p.getString(KEY_NOTICED_LIST, null)) return null
-        p.edit().putLong(KEY_NOTICED_AT, now).putString(KEY_NOTICED_LIST, list).apply()
         return noticeMessage(apps.map { it.label }, days)
+    }
+
+    /** Record that the notice about [apps] was shown, so it waits a week (or a changed list). */
+    fun markNoticed(context: Context, apps: List<AppUsage>, now: Long = System.currentTimeMillis()) {
+        prefs(context).edit().putLong(KEY_NOTICED_AT, now).putString(KEY_NOTICED_LIST, apps.joinToString(",") { it.packageName }).apply()
     }
 
     internal fun noticeMessage(labels: List<String>, days: Int): String {

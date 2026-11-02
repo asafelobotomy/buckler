@@ -129,7 +129,10 @@ object StoreIndex {
     private const val PREFS = "buckler_store"
     private const val KEY_CACHE = "index_json"
     private const val KEY_FETCHED_AT = "index_fetched_at"
+    private const val KEY_FETCHED_BY = "index_fetched_by"
     private const val STALE_MS = 24 * 3_600_000L
+    private const val KEY_RETRY_AT = "index_retry_at"
+    private const val RETRY_MS = 3_600_000L
     private const val ASSET = "store_index.json"
     private const val SCHEMA = 1
     private const val TAG = "StoreIndex"
@@ -138,10 +141,17 @@ object StoreIndex {
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** The last index fetched, or the bundled one. */
+    /**
+     * The last index fetched, or the bundled one. An index fetched under an older Buckler gives way
+     * to the copy this Buckler ships with until the next fetch: Buckler is published after the store,
+     * so its own copy is at least as new as one fetched before it was installed.
+     */
     fun cached(context: Context): StoreCatalog {
-        val raw = prefs(context).getString(KEY_CACHE, null)
+        val p = prefs(context)
+        val fetched = p.getString(KEY_CACHE, null)?.takeIf { p.getInt(KEY_FETCHED_BY, 0) == BuildConfig.VERSION_CODE }
+        val raw = fetched
             ?: runCatching { context.assets.open(ASSET).bufferedReader().readText() }.getOrNull()
+            ?: p.getString(KEY_CACHE, null)
             ?: return StoreCatalog()
         parsed?.let { (text, catalog) -> if (text == raw) return catalog }
         return parse(raw).also { parsed = raw to it }
@@ -153,18 +163,27 @@ object StoreIndex {
             .onFailure { Log.w(TAG, "Store index refresh failed", it) }.getOrNull()
         val body = response?.takeIf { it.code in 200..299 }?.body ?: return false
         if (parse(body).let { it.widgets.isEmpty() && it.themes.isEmpty() && it.fonts.isEmpty() }) return false
-        prefs(context).edit().putString(KEY_CACHE, body).putLong(KEY_FETCHED_AT, System.currentTimeMillis()).apply()
+        prefs(context).edit()
+            .putString(KEY_CACHE, body)
+            .putLong(KEY_FETCHED_AT, System.currentTimeMillis())
+            .putInt(KEY_FETCHED_BY, BuildConfig.VERSION_CODE)
+            .apply()
         return true
     }
 
     /**
-     * [refresh] when the index held is over a day old (or was never fetched), so news of an update
-     * reaches Home without anyone opening the store. One small, cached file, at most daily.
+     * [refresh] when the index held is over a day old, was never fetched, or was fetched by an older
+     * Buckler (just updated: what the store says about it may have changed), so news of an update
+     * reaches Home without anyone opening the store. One small, cached file, at most daily otherwise.
      */
     fun refreshIfStale(context: Context) {
-        val at = prefs(context).getLong(KEY_FETCHED_AT, 0L)
-        if (System.currentTimeMillis() - at < STALE_MS) return
-        if (!refresh(context)) prefs(context).edit().putLong(KEY_FETCHED_AT, System.currentTimeMillis() - STALE_MS + 3_600_000L).apply()
+        val p = prefs(context)
+        val now = System.currentTimeMillis()
+        // After a failed fetch (offline, say), wait an hour before the next try.
+        if (now < p.getLong(KEY_RETRY_AT, 0L)) return
+        val sameBuckler = p.getInt(KEY_FETCHED_BY, 0) == BuildConfig.VERSION_CODE
+        if (sameBuckler && now - p.getLong(KEY_FETCHED_AT, 0L) < STALE_MS) return
+        if (!refresh(context)) p.edit().putLong(KEY_RETRY_AT, now + RETRY_MS).apply()
     }
 
     /** Anything malformed is left out rather than failing the whole index. */

@@ -84,6 +84,8 @@ fun HomeScreen(
     UnusedAppsNotice(resumeTick)
     StoreUpdateNotice(resumeTick)
     RemoteButtonsNotice(resumeTick)
+    // One of those per return Home, and none over Buckler's own update dialog.
+    HomeNoticeHost(resumeTick, held = availableUpdate?.let { it != updateDismissed } == true)
     val packageChanges = rememberPackageChanges()
     LaunchedEffect(resumeTick, packageChanges) {
         config = DisplayPrefs.load(context)

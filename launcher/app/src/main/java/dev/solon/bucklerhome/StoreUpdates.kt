@@ -56,6 +56,13 @@ object StoreUpdates {
         else -> StoreUpdate.Kind.UPDATED
     }
 
+    /**
+     * The [added] built-ins whose newest revision comes with Buckler [release] and not with the
+     * installed [appVersion]: what an update to it brings people beyond Buckler itself.
+     */
+    fun broughtBy(added: List<StoreBuiltIn>, appVersion: String, release: String): List<StoreBuiltIn> =
+        added.filter { !carries(it, appVersion) && UpdateChecker.compareSemver(it.requires, release.removePrefix("v")) <= 0 }
+
     /** Whether a download installed at [installed] (null: not installed) is behind the index's [latest]. */
     fun downloadBehind(installed: Int?, latest: Int): Boolean = installed != null && installed < latest
 

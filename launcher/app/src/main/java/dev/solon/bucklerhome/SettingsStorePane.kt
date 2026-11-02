@@ -300,6 +300,7 @@ private fun StoreFontPage(font: StoreFont) {
     if (installed && !busy && update != null) {
         // Downloaded again and checked against the index; installFont writes the new revision.
         SettingsAction("Update") {
+            if (busyWithAnother(context)) return@SettingsAction
             busy = true
             scope.launch {
                 val ok = withContext(Dispatchers.IO) { StoreLibrary.installFont(context, font) }
@@ -326,6 +327,7 @@ private fun StoreFontPage(font: StoreFont) {
         return
     }
     fun install(use: Boolean) {
+        if (busyWithAnother(context)) return
         busy = true
         scope.launch {
             val ok = withContext(Dispatchers.IO) { StoreLibrary.installFont(context, font) }
@@ -360,6 +362,7 @@ fun StoreIconPacksPane() {
             busy == pack.id -> SettingsAction(pack.label, value = "Downloading…") {}
             have && pack.id !in updates -> SettingsPaneLink(pack.label, SettingsPane.COVERS, "Installed")
             else -> SettingsAction(pack.label, value = if (have) "Update" else "Install") {
+                if (busyWithAnother(context)) return@SettingsAction
                 busy = pack.id
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) { installIconPack(context, pack) }
@@ -374,10 +377,16 @@ fun StoreIconPacksPane() {
 }
 
 /** Download, check against the index's SHA-256, and hand to Android; false when any step fails. */
-private fun installIconPack(context: Context, pack: StoreIconPack): Boolean {
+private fun installIconPack(context: Context, pack: StoreIconPack): Boolean = InstallGate.withGate(pack.label) {
     // In the folder the FileProvider shares, should Android's installer need to open it.
     val dir = File(context.cacheDir, "updates").also { it.mkdirs() }
     val apk = File(dir, "${pack.id}.apk")
-    if (!StoreLibrary.download(pack.apk, apk)) return false
-    return ApkInstaller.installPackage(context, apk, pack.packageName)
+    StoreLibrary.download(pack.apk, apk) && ApkInstaller.installPackage(context, apk, pack.packageName)
+}?.getOrDefault(false) ?: false
+
+/** True (after saying so) when a Buckler update or another download is under way: start nothing now. */
+private fun busyWithAnother(context: Context): Boolean {
+    val other = InstallGate.holder ?: return false
+    Toast.makeText(context, "Waiting for $other to finish first", Toast.LENGTH_LONG).show()
+    return true
 }

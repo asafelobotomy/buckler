@@ -1,6 +1,5 @@
 package dev.solon.bucklerhome
 
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -19,8 +18,9 @@ fun RemoteButtonsNotice(resumeTick: Int) {
         // Buckler tries to bring them back by itself first; only say so if that did not work.
         while (RemoteMap.healing) delay(SETTLE_MS)
         if (!RemoteMap.needsRestart(context)) return@LaunchedEffect
-        shown = true
-        Toast.makeText(context, "Remote buttons stopped. Settings → Remote & accessories → Turn on again.", Toast.LENGTH_LONG).show()
+        HomeNotices.offer(resumeTick, HomeNotices.Priority.REMOTE_BUTTONS, "Remote buttons stopped. Settings → Remote & accessories → Turn on again.") {
+            shown = true
+        }
     }
 }
 

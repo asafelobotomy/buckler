@@ -49,6 +49,21 @@ fun UpdateAvailableDialog(
                     color = ColorMuted,
                     modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
                 )
+                // Store items people use whose newest version needs this update, so the two say one thing.
+                val brings = remember(release.tag) {
+                    StoreLibrary.ensureLoaded(context)
+                    val catalog = StoreIndex.cached(context)
+                    StoreUpdates.broughtBy(StoreLibrary.addedBuiltIns(catalog), BuildConfig.VERSION_NAME, release.tag)
+                }
+                if (brings.isNotEmpty()) {
+                    Text(
+                        text = "Also brings the newest ${brings.joinToString(", ") { it.label }}" +
+                            (brings.singleOrNull()?.changes?.ifBlank { null }?.let { ": $it" } ?: "."),
+                        fontSize = 14.sp,
+                        color = ColorText,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
                 status?.let {
                     Text(text = it, fontSize = 14.sp, color = ColorBrand, modifier = Modifier.padding(bottom = 12.dp))
                 }
@@ -65,31 +80,24 @@ fun UpdateAvailableDialog(
                             ).show()
                             return@SettingsAction
                         }
+                        // Installing restarts Buckler: let a store download or install under way finish first.
+                        InstallGate.holder?.let { other ->
+                            status = "Waiting for $other to finish first — try again in a moment"
+                            return@SettingsAction
+                        }
                         busy = true
                         status = "Downloading…"
                         scope.launch {
-                            val file = withContext(Dispatchers.IO) {
-                                ApkInstaller.downloadApk(
-                                    context,
-                                    url,
-                                    release.apkName ?: "buckler-home-update.apk",
-                                )
-                            }
-                            if (file == null) {
-                                busy = false
-                                status = "Download failed"
-                                return@launch
-                            }
-                            status = "Installing…"
-                            val ok = withContext(Dispatchers.IO) {
-                                ApkInstaller.install(context, file)
+                            val outcome = withContext(Dispatchers.IO) {
+                                InstallGate.withGate("the Buckler update") {
+                                    val file = ApkInstaller.downloadApk(context, url, release.apkName ?: "buckler-home-update.apk")
+                                        ?: return@withGate "Download failed"
+                                    withContext(Dispatchers.Main) { status = "Installing…" }
+                                    if (ApkInstaller.install(context, file)) "Install started — confirm if prompted" else "Install failed"
+                                }
                             }
                             busy = false
-                            if (ok) {
-                                status = "Install started — confirm if prompted"
-                            } else {
-                                status = "Install failed"
-                            }
+                            status = outcome?.getOrNull() ?: "Waiting for ${InstallGate.holder ?: "another download"} to finish first"
                         }
                     }
                     SettingsAction("Snooze 7 days") {
