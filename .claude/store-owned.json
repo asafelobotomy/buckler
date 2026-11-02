@@ -7,7 +7,15 @@
       "launcher/app/src/main/java/dev/solon/bucklerhome/NetEaseLyrics.kt",
       "launcher/app/src/main/java/dev/solon/bucklerhome/LyricsKaraoke.kt",
       "launcher/app/src/test/java/dev/solon/bucklerhome/KaraokeTest.kt",
-      "launcher/app/src/test/java/dev/solon/bucklerhome/NetEaseLyricsTest.kt"
+      "launcher/app/src/test/java/dev/solon/bucklerhome/NetEaseLyricsTest.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/LyricsTest.kt",
+      "scripts/lyrics_bench/README.md",
+      "scripts/lyrics_bench/bench.py",
+      "scripts/lyrics_bench/clip.py",
+      "scripts/lyrics_bench/truth.py",
+      "scripts/lyrics_bench/recorder.patch",
+      "scripts/lyrics_bench/results-2026-10-28.json",
+      "scripts/lyrics_bench/results-2026-10-28-narrowed.json"
     ],
     "glance": [
       "launcher/app/src/main/java/dev/solon/bucklerhome/GlanceData.kt",
@@ -55,7 +63,9 @@
       "launcher/app/src/main/java/dev/solon/bucklerhome/ComicInk.kt",
       "launcher/app/src/main/java/dev/solon/bucklerhome/ComicReader.kt",
       "launcher/app/src/main/java/dev/solon/bucklerhome/ComicStrips.kt",
-      "launcher/app/src/main/java/dev/solon/bucklerhome/MainStageComics.kt"
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MainStageComics.kt",
+      "scripts/gen_comic_panels.py",
+      "scripts/comic_panels_review.json"
     ],
     "spurious": [
       "launcher/app/src/main/java/dev/solon/bucklerhome/SpuriousCorrelations.kt",
@@ -63,13 +73,15 @@
       "launcher/app/src/test/java/dev/solon/bucklerhome/CuriositiesTest.kt"
     ],
     "saver_dvd": [
-      "launcher/app/src/main/java/dev/solon/bucklerhome/DvdBounce.kt"
+      "launcher/app/src/main/java/dev/solon/bucklerhome/DvdBounce.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/DvdBounceTest.kt"
     ],
     "saver_maze": [
       "launcher/app/src/main/java/dev/solon/bucklerhome/MazeSaver.kt",
       "launcher/app/src/main/java/dev/solon/bucklerhome/MazeGrid.kt",
       "launcher/app/src/main/java/dev/solon/bucklerhome/MazeEggs.kt",
-      "launcher/app/src/test/java/dev/solon/bucklerhome/MazeEggsTest.kt"
+      "launcher/app/src/test/java/dev/solon/bucklerhome/MazeEggsTest.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/MazeGridTest.kt"
     ],
     "saver_pipes": [
       "launcher/app/src/main/java/dev/solon/bucklerhome/PipesSaver.kt"

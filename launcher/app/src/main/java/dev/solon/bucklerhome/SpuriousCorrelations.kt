@@ -65,9 +65,7 @@ object SpuriousCorrelations {
     /** "Votes in Texas (Total votes)" → "Total votes". */
     private fun unit(label: String): String = Regex("\\(([^()]*)\\)\\s*$").find(label)?.groupValues?.get(1).orEmpty()
 
-    private fun plain(html: String): String = html.replace(Regex("<[^>]+>"), "")
-        .replace("&amp;", "&").replace("&#039;", "'").replace("&#39;", "'").replace("&quot;", "\"")
-        .replace("&lt;", "<").replace("&gt;", ">").trim()
+    private fun plain(html: String): String = decodeHtmlEntities(html.replace(Regex("<[^>]+>"), "")).trim()
 
     private fun file(context: Context) = File(context.cacheDir, "spurious.json")
 

@@ -8,7 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class LyricsAndPhotosTest {
+class LyricsTest {
     @Test
     fun lrcLinesAreTimedAndSorted() {
         val lines = LyricsClient.parseLrc(
@@ -70,11 +70,5 @@ class LyricsAndPhotosTest {
         assertEquals(-185L, LyricsPrefs.playerShift("com.spotify.tv.android"))
         assertEquals(0L, LyricsPrefs.playerShift("org.example.player"))
         assertEquals(0L, LyricsPrefs.playerShift(""))
-    }
-
-    @Test
-    fun photoCategoriesTakeTurns() {
-        val mixed = ScreensaverImages.takeTurns(listOf(listOf("n1", "n2", "n3"), listOf("c1"), emptyList()))
-        assertEquals(listOf("n1", "c1", "n2", "n3"), mixed)
     }
 }

@@ -24,7 +24,7 @@ object IptvPlaylist {
             connectTimeout = 15_000
             readTimeout = 60_000
             instanceFollowRedirects = true
-            setRequestProperty("User-Agent", "buckler-home/${BuildConfig.VERSION_NAME}")
+            setRequestProperty("User-Agent", HttpJson.USER_AGENT)
         }
         if (conn.responseCode !in 200..299) return null
         val tmp = File(context.cacheDir, "multiview-playlist.tmp")

@@ -1,7 +1,6 @@
 package dev.solon.bucklerhome
 
 import android.content.Context
-import java.net.URLEncoder
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -32,7 +31,7 @@ object StremioClient {
 
     /** The account's key once the code is approved; null while it is waiting. */
     fun finishLink(link: StremioLink): String? = runCatching {
-        val res = HttpJson.get("$LINK/read?type=Read&code=${enc(link.code)}")
+        val res = HttpJson.get("$LINK/read?type=Read&code=${HttpJson.encode(link.code)}")
         JSONObject(res.body).optJSONObject("result")?.optString("authKey")?.takeIf { it.isNotBlank() }
     }.getOrNull()
 
@@ -83,7 +82,7 @@ object StremioClient {
             val base = addon.optString("transportUrl").removeSuffix("/manifest.json").takeIf { it.startsWith("http") } ?: continue
             val streams = runCatching {
                 // Ids keep their colons ("tt123:1:2"), as add-ons expect.
-                JSONObject(HttpJson.get("$base/stream/$type/${enc(videoId).replace("%3A", ":")}.json").body).optJSONArray("streams")
+                JSONObject(HttpJson.get("$base/stream/$type/${HttpJson.encode(videoId).replace("%3A", ":")}.json").body).optJSONArray("streams")
             }.getOrNull() ?: continue
             pickDirect(streams)?.let { return StremioStream(it, null) }
             if (streams.length() > 0) torrentsOnly = true
@@ -120,8 +119,6 @@ object StremioClient {
         .filter { it.optJSONObject("behaviorHints")?.has("proxyHeaders") != true }
         .mapNotNull { it.optString("url").takeIf { u -> u.startsWith("http://") || u.startsWith("https://") } }
         .firstOrNull()
-
-    private fun enc(value: String) = URLEncoder.encode(value, "UTF-8")
 }
 
 /** Stremio's sign-in, kept with the other Multiview secrets. */
