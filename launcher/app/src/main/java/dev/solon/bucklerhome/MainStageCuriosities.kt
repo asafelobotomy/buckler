@@ -1,8 +1,6 @@
 package dev.solon.bucklerhome
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,7 +17,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,7 +34,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -53,16 +49,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.LocalTextStyle
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private const val CURIOSITY_RETRY_MS = 5 * 60_000L
+internal const val CURIOSITY_RETRY_MS = 5 * 60_000L
 
 /** ◀ ▶ as -1 / +1 on key down (and swallowed on key up), else null for keys the stage passes on. */
-private fun Modifier.stepKeys(onStep: (Int) -> Unit): Modifier = onPreviewKeyEvent { event ->
+internal fun Modifier.stepKeys(onStep: (Int) -> Unit): Modifier = onPreviewKeyEvent { event ->
     val step = when (event.key) {
         Key.DirectionLeft -> -1
         Key.DirectionRight -> 1
@@ -70,90 +64,6 @@ private fun Modifier.stepKeys(onStep: (Int) -> Unit): Modifier = onPreviewKeyEve
     }
     if (event.type == KeyEventType.KeyDown) onStep(step)
     true
-}
-
-/**
- * Main Stage → Comics: public-domain newspaper strips from Wikimedia Commons ([ComicStrips]), a
- * new one every [StagePrefs.comicTurn]. ◀ ▶ and OK step through them.
- */
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun ComicsStage(stageFocus: FocusRequester, onDown: () -> Unit, onHold: () -> Unit, metrics: StageMetrics) {
-    val context = LocalContext.current
-    val visible = rememberLifecycleAtLeast(Lifecycle.State.STARTED)
-    val turn = remember(rememberPrefsChanges()) { StagePrefs.comicTurn(context) }
-    val strips by produceState(emptyList<CommonsImage>(), visible) {
-        if (!visible || value.isNotEmpty()) return@produceState
-        while (value.isEmpty()) {
-            value = withContext(Dispatchers.IO) { ComicStrips.index(context) }
-            if (value.isEmpty()) delay(CURIOSITY_RETRY_MS)
-        }
-    }
-    var index by remember { mutableIntStateOf(0) }
-    // Bumped by ◀ ▶ so the timer restarts and a picked strip stays its full time.
-    var stepped by remember { mutableIntStateOf(0) }
-    LaunchedEffect(strips, turn, stepped, visible) {
-        if (!visible || strips.size < 2) return@LaunchedEffect
-        while (true) {
-            delay(turn.millis)
-            index = (index + 1) % strips.size
-        }
-    }
-    fun step(by: Int) {
-        if (strips.size < 2) return
-        index = (index + by).mod(strips.size)
-        stepped++
-    }
-    val strip = strips.getOrNull(index.mod(strips.size.coerceAtLeast(1)))
-    // Downloaded with Buckler's user agent (Wikimedia asks for one) into the photo cache, then shown
-    // from disk; one that fails is skipped. The next is fetched ahead so it shows at once.
-    val file by produceState<File?>(null, strip) {
-        value = null
-        strip ?: return@produceState
-        value = withContext(Dispatchers.IO) { ScreensaverImages.download(context, strip) }
-        if (value == null) {
-            delay(2_000)
-            step(1)
-            return@produceState
-        }
-        strips.getOrNull((index + 1).mod(strips.size))?.let { next ->
-            withContext(Dispatchers.IO) { ScreensaverImages.download(context, next) }
-        }
-    }
-    // The card takes the strip's paper colour, so the strip sits on it without a visible edge.
-    val paper by produceState<Color?>(null, file) {
-        val shown = file ?: return@produceState
-        value = withContext(Dispatchers.IO) { ComicStrips.paperColour(shown) }?.let(::Color)
-    }
-    val cardColour by animateColorAsState(paper ?: ColorTile, animationSpec = tween(600), label = "paper")
-    // Always a note line, so the stage keeps its height while the first strip loads.
-    val note = strip?.credit?.let { if (strips.size > 1) "$it  ◀ ▶" else it } ?: "Public-domain newspaper strips"
-    Column(modifier = Modifier.fillMaxWidth()) {
-        StageHeading("Comics", note)
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .stepKeys(::step)
-                .stageTarget(stageFocus, onDown, strip?.credit ?: "Comics", onLongPress = onHold) { step(1) }
-                .fillMaxWidth()
-                .height(metrics.cardHeight)
-                .clip(RoundedCornerShape(12.dp))
-                .background(cardColour),
-        ) {
-            val shown = file
-            when {
-                shown != null -> AsyncImage(
-                    model = shown,
-                    contentDescription = strip?.credit,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().padding(6.dp),
-                )
-                strips.isEmpty() && !ScreensaverImages.online(context) ->
-                    Text("Comics need the internet.", color = ColorMuted, fontSize = 15.sp)
-                else -> Text("Loading a strip…", color = ColorMuted, fontSize = 15.sp)
-            }
-        }
-    }
 }
 
 /**

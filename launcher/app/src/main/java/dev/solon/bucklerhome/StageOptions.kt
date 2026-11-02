@@ -108,9 +108,22 @@ fun StageOptions(stage: MainStage, onChanged: () -> Unit) {
         MainStage.GLANCE, MainStage.CALENDAR -> CalendarsShown(tick) { changed() }
         MainStage.WEATHER_MAP -> OptionsNote("◀ ▶ on the map step through the hours.")
         MainStage.COMPANION -> CompanionChoice(cfg.companion) { changed() }
-        MainStage.COMICS -> StageTurnChoice("A new strip every:", StagePrefs.comicTurn(context)) {
-            StagePrefs.setComicTurn(context, it)
-            changed()
+        MainStage.COMICS -> {
+            OptionsNote("Strips:")
+            FlowRow(horizontalArrangement = Flow, verticalArrangement = Flow) {
+                val source = StagePrefs.comicSource(context)
+                ComicSource.entries.forEach { option ->
+                    SettingsAction(option.label, selected = option == source) {
+                        StagePrefs.setComicSource(context, option)
+                        changed()
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            StageTurnChoice("A new strip every:", StagePrefs.comicTurn(context)) {
+                StagePrefs.setComicTurn(context, it)
+                changed()
+            }
         }
         MainStage.SPURIOUS -> StageTurnChoice("A new correlation every:", StagePrefs.spuriousTurn(context)) {
             StagePrefs.setSpuriousTurn(context, it)

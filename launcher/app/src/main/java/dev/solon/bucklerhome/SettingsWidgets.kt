@@ -280,10 +280,21 @@ fun CuriositiesPane() {
     val spurious = remember(tick) { StagePrefs.spuriousTurn(context) }
     SectionTitle("Comics & correlations")
     SettingsRow(
-        "Comics: newspaper strips from the 1910s and 1920s, now in the public domain (Wikimedia Commons). " +
+        "Comics: newspaper strips now in the public domain, the line drawing lifted off its yellowed paper. " +
             "Spurious correlations: two unrelated things that rose and fell together, from Tyler Vigen's " +
             "collection (CC BY 4.0). On either stage ◀ ▶ step through them.",
     )
+    val source = remember(tick) { StagePrefs.comicSource(context) }
+    SettingsChoice(
+        "Comics: strips",
+        ComicSource.entries,
+        source,
+        { it.label },
+        note = "Mickey Mouse 1930 is a checked set, shown panel by panel; the assorted strips are shown whole.",
+    ) {
+        StagePrefs.setComicSource(context, it)
+        tick++
+    }
     SettingsChoice("Comics: new strip every", StageTurn.entries, comic, { it.label }) {
         StagePrefs.setComicTurn(context, it)
         tick++

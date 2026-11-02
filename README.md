@@ -129,8 +129,8 @@ is never offered GitHub updates: update it from this machine). On SHIELD it hold
 40% less memory. It stays profileable, so CPU and frames can still be measured; use the debug
 build when you need `run-as` or a debugger.
 
-Most `scripts/` run with the project's own dependencies. `gen_fonts.py` also needs `fontTools`, and
-`scripts/lyrics_bench/` (a retired benchmark, kept for its results) needs `torch` and `demucs`.
+Most `scripts/` run with the project's own dependencies. `gen_fonts.py` also needs `fontTools`,
+`gen_comic_panels.py` needs `pillow`, and `scripts/lyrics_bench/` (a retired benchmark, kept for its results) needs `torch` and `demucs`.
 
 **Dev tip:** run tests with the project venv (`uv run pytest` or `.venv/bin/python -m pytest` — `pythonpath = ["src"]` is set in `pyproject.toml`).
 
