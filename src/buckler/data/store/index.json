@@ -70,6 +70,20 @@
       "about": "Several live streams side by side.",
       "default": false,
       "since": "0.21.0"
+    },
+    {
+      "id": "comics",
+      "label": "Comics",
+      "about": "Public-domain newspaper strips, cleaned up, with a reader to zoom panel by panel.",
+      "default": false,
+      "since": "0.23.0"
+    },
+    {
+      "id": "spurious",
+      "label": "Spurious correlations",
+      "about": "Two unrelated things that rose and fell together, from Tyler Vigen's charts.",
+      "default": false,
+      "since": "0.23.0"
     }
   ],
   "themes": [
