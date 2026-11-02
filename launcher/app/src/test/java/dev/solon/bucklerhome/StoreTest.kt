@@ -75,4 +75,17 @@ class StoreTest {
         val optIn = StoreCatalog(widgets = listOf(StoreWidget("lyrics", "Lyrics", "", default = false, since = "0.1.0")))
         assertFalse(StoreLibrary.widgetAdded(MainStage.LYRICS, optIn))
     }
+
+    @Test
+    fun onlyTheFourStandardWidgetsComeAdded() {
+        val standard = bundled.widgets.filter { it.default }.mapNotNull { it.stage }.toSet()
+        assertEquals(setOf(MainStage.NEWS, MainStage.NOW_PLAYING, MainStage.WEATHER, MainStage.SUGGESTED), standard)
+    }
+
+    @Test
+    fun widgetsOnScreenCountAsInUse() {
+        assertEquals(setOf("lyrics", "companion"), StoreLibrary.inUse(MainStage.LYRICS, SideIdle.COMPANION))
+        assertEquals(setOf("news"), StoreLibrary.inUse(MainStage.NEWS, SideIdle.NOTHING))
+        assertEquals(MainStage.GLANCE, SideIdle.GLANCE.widget)
+    }
 }

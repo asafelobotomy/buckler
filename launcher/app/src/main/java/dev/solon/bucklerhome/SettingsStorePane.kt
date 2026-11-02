@@ -76,9 +76,12 @@ private fun installedOf(installed: Int, total: Int) = if (installed == 0) "$tota
 fun StoreWidgetsPane() {
     val context = LocalContext.current
     val catalog = rememberCatalog()
-    val current = remember(StoreLibrary.version) { HomeLayout.stored(context).mainStage }
+    val inUse = remember(StoreLibrary.version) { StoreLibrary.inUse(HomeLayout.stored(context).mainStage, StagePrefs.sideIdle(context)) }
     SectionTitle("Widgets")
-    SettingsRow("Added widgets are offered for the Main Stage (hold OK on it, or Appearance → Main Stage).")
+    SettingsRow(
+        "Added widgets are offered for the Main Stage (hold OK on it, or Appearance → Main Stage); At a Glance and " +
+            "Companion for the header's Side Stage too. News, Now Playing, Weather and Suggested come added.",
+    )
     catalog.widgets.forEach { widget ->
         val stage = widget.stage
         if (stage == null) {
@@ -87,8 +90,8 @@ fun StoreWidgetsPane() {
         }
         val on = StoreLibrary.widgetAdded(stage, catalog)
         SettingsCheck(widget.label, on) {
-            if (on && stage == current) {
-                Toast.makeText(context, "${widget.label} is on Home now: choose another Main Stage first", Toast.LENGTH_LONG).show()
+            if (on && stage.wire() in inUse) {
+                Toast.makeText(context, "${widget.label} is on Home now: choose another widget there first", Toast.LENGTH_LONG).show()
             } else {
                 StoreLibrary.setWidgetAdded(context, stage, !on)
             }

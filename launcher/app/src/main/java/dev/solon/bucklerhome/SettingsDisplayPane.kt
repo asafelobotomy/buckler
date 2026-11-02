@@ -61,7 +61,7 @@ fun HeaderPane() {
     if (stage == MainStage.NOW_PLAYING && cfg.nowPlaying) {
         SettingsRow("Hidden while the Main Stage shows Now Playing, so it is not on screen twice.")
     }
-    SettingsChoice("While nothing plays", SideIdle.entries, cfg.sideIdle, { it.label }) {
+    SettingsChoice("While nothing plays", StoreLibrary.sideIdles(context, cfg.sideIdle), cfg.sideIdle, { it.label }) {
         StagePrefs.setSideIdle(context, it)
         tick++
     }

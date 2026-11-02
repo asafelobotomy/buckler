@@ -19,7 +19,7 @@
       "id": "lyrics",
       "label": "Lyrics",
       "about": "Time-synced lyrics for the song playing, karaoke style.",
-      "default": true,
+      "default": false,
       "since": "0.1.0"
     },
     {
@@ -40,35 +40,35 @@
       "id": "glance",
       "label": "At a Glance",
       "about": "The next thing on your calendar, reminders and the weather in one line.",
-      "default": true,
+      "default": false,
       "since": "0.1.0"
     },
     {
       "id": "calendar",
       "label": "Calendar",
       "about": "The week ahead from the calendars the TV syncs.",
-      "default": true,
+      "default": false,
       "since": "0.1.0"
     },
     {
       "id": "weather_map",
       "label": "Weather map",
       "about": "A live map of rain and pressure around your city.",
-      "default": true,
+      "default": false,
       "since": "0.1.0"
     },
     {
       "id": "companion",
       "label": "Companion",
       "about": "A little animated friend that reacts to the time and weather.",
-      "default": true,
+      "default": false,
       "since": "0.1.0"
     },
     {
       "id": "multiview",
       "label": "Multiview",
       "about": "Several live streams side by side.",
-      "default": true,
+      "default": false,
       "since": "0.21.0"
     }
   ],

@@ -67,10 +67,35 @@ object StoreLibrary {
             val label = runCatching { JSONObject(File(dir, "font.json").readText()).optString("label") }.getOrNull()
             InstalledFont(dir.name, label?.ifBlank { null } ?: dir.name, regular, bold)
         }.associateBy { it.id }
+        if (!widgetsFile(context).exists()) keepInUse(context)
         val widgets = runCatching { JSONObject(widgetsFile(context).readText()) }.getOrNull()
         added = widgets?.optJSONArray("added").strings()
         removed = widgets?.optJSONArray("removed").strings()
         version++
+    }
+
+    /**
+     * First start with the store: widgets that are not standard any more stay added where they are in
+     * use (the Main Stage, or the Side Stage while nothing plays), so an update hides nothing on screen.
+     */
+    private fun keepInUse(context: Context) {
+        val inUse = inUse(HomeLayout.stored(context).mainStage, StagePrefs.sideIdle(context))
+        runCatching {
+            root(context).mkdirs()
+            writeWidgets(context, inUse, emptySet())
+        }.onFailure { Log.w(TAG, "Could not write widgets.json", it) }
+    }
+
+    /** Widget ids on screen with this Main Stage and Side Stage idle choice. */
+    internal fun inUse(stage: MainStage, side: SideIdle): Set<String> = setOfNotNull(stage.wire(), side.widget?.wire())
+
+    private fun writeWidgets(context: Context, added: Set<String>, removed: Set<String>) {
+        widgetsFile(context).writeText(
+            JSONObject()
+                .put("added", JSONArray(added.sorted()))
+                .put("removed", JSONArray(removed.sorted()))
+                .toString(2),
+        )
     }
 
     private fun JSONArray?.strings(): Set<String> =
@@ -147,13 +172,15 @@ object StoreLibrary {
         val nextAdded = if (on) added + id else added - id
         val nextRemoved = if (on) removed - id else removed + id
         root(context).mkdirs()
-        widgetsFile(context).writeText(
-            JSONObject()
-                .put("added", JSONArray(nextAdded.sorted()))
-                .put("removed", JSONArray(nextRemoved.sorted()))
-                .toString(2),
-        )
+        writeWidgets(context, nextAdded, nextRemoved)
         reload(context)
+    }
+
+    /** The Side Stage's idle choices: Nothing, and At a Glance or Companion while added (or chosen now). */
+    fun sideIdles(context: Context, current: SideIdle): List<SideIdle> {
+        ensureLoaded(context)
+        val catalog = StoreIndex.cached(context)
+        return SideIdle.entries.filter { idle -> idle == current || idle.widget?.let { widgetAdded(it, catalog) } != false }
     }
 
     // Downloads.
@@ -196,3 +223,11 @@ object StoreLibrary {
             .put("dark", p.dark).put("colors", colors)
     }
 }
+
+/** The Main Stage widget this Side Stage idle choice is a small copy of; the store adds and removes both. */
+val SideIdle.widget: MainStage?
+    get() = when (this) {
+        SideIdle.GLANCE -> MainStage.GLANCE
+        SideIdle.COMPANION -> MainStage.COMPANION
+        SideIdle.NOTHING -> null
+    }
