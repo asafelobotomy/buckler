@@ -15,6 +15,9 @@ enum class ScreensaverMode(val label: String) {
     WEATHER("Rolling weather"),
     ;
 
+    /** Its id in bucklerStore: "saver_" and its name, so it cannot clash with a widget's (Weather). */
+    fun wire(): String = "saver_${name.lowercase()}"
+
     companion object {
         fun fromName(raw: String?): ScreensaverMode = entries.firstOrNull { it.name == raw } ?: CLOCK
     }

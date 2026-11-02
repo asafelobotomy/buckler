@@ -26,6 +26,17 @@ data class StoreWidget(
     val stage: MainStage? get() = MainStage.entries.firstOrNull { it.wire() == id }
 }
 
+/** One of Buckler's own screensavers ([mode]); its code ships in the app, the store adds or removes it. */
+data class StoreScreensaver(
+    override val id: String,
+    override val label: String,
+    override val about: String,
+    val default: Boolean,
+    val since: String,
+) : StoreItem {
+    val mode: ScreensaverMode? get() = ScreensaverMode.entries.firstOrNull { it.wire() == id }
+}
+
 data class StoreTheme(
     override val id: String,
     override val label: String,
@@ -53,6 +64,7 @@ data class StoreIconPack(
 
 data class StoreCatalog(
     val widgets: List<StoreWidget> = emptyList(),
+    val screensavers: List<StoreScreensaver> = emptyList(),
     val themes: List<StoreTheme> = emptyList(),
     val fonts: List<StoreFont> = emptyList(),
     val iconPacks: List<StoreIconPack> = emptyList(),
@@ -103,6 +115,7 @@ object StoreIndex {
         if (root.optInt("schema", 0) != SCHEMA) return StoreCatalog()
         return StoreCatalog(
             widgets = root.optJSONArray("widgets").objects().mapNotNull(::widget),
+            screensavers = root.optJSONArray("screensavers").objects().mapNotNull(::screensaver),
             themes = root.optJSONArray("themes").objects().mapNotNull(::theme),
             fonts = root.optJSONArray("fonts").objects().mapNotNull(::font),
             iconPacks = root.optJSONArray("iconpacks").objects().mapNotNull(::iconPack),
@@ -118,6 +131,14 @@ object StoreIndex {
     private fun JSONObject.id(): String? = optString("id").takeIf { ID.matches(it) }
 
     private fun widget(o: JSONObject): StoreWidget? = StoreWidget(
+        id = o.id() ?: return null,
+        label = o.optString("label").ifBlank { return null },
+        about = o.optString("about"),
+        default = o.optBoolean("default", false),
+        since = o.optString("since", "0"),
+    )
+
+    private fun screensaver(o: JSONObject): StoreScreensaver? = StoreScreensaver(
         id = o.id() ?: return null,
         label = o.optString("label").ifBlank { return null },
         about = o.optString("about"),

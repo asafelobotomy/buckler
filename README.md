@@ -113,7 +113,7 @@ tests/        policy / handover / journal / schema unit tests
 
 A Compose-for-TV Home with a live header and Side Stage, a Main Stage (News, Now Playing, Lyrics,
 Weather, Suggested, At a Glance, Calendar, Weather map, Companion), shelves in three cover layouts,
-icon packs, add-ons from [bucklerStore](https://github.com/asafelobotomy/bucklerStore) (widgets, colour schemes, fonts, icon packs), Buckler Settings, a setup wizard that makes the SHIELD changes from the TV itself, and
+icon packs, add-ons from [bucklerStore](https://github.com/asafelobotomy/bucklerStore) (widgets, screensavers, colour schemes, fonts, icon packs), Buckler Settings, a setup wizard that makes the SHIELD changes from the TV itself, and
 GitHub updates. The full reference is [docs/launcher.md](docs/launcher.md).
 
 ## Development

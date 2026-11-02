@@ -83,6 +83,26 @@ class StoreTest {
     }
 
     @Test
+    fun everyScreensaverIsInTheStore() {
+        // A screensaver the store does not list could never be removed, nor re-added after.
+        assertEquals(ScreensaverMode.entries.toSet(), bundled.screensavers.mapNotNull { it.mode }.toSet())
+    }
+
+    @Test
+    fun theStandardScreensaversComeAdded() {
+        val standard = bundled.screensavers.filter { it.default }.mapNotNull { it.mode }.toSet()
+        assertEquals(
+            setOf(ScreensaverMode.CLOCK, ScreensaverMode.PHOTOS, ScreensaverMode.UPLOADED, ScreensaverMode.NOW_PLAYING),
+            standard,
+        )
+        assertTrue(StoreLibrary.saverAdded(ScreensaverMode.CLOCK, bundled))
+        assertFalse(StoreLibrary.saverAdded(ScreensaverMode.MAZE, bundled))
+        // Ids carry a prefix so a screensaver never shares one with a widget (Weather and Rolling weather).
+        assertEquals("saver_weather", ScreensaverMode.WEATHER.wire())
+        assertTrue(bundled.widgets.none { w -> bundled.screensavers.any { it.id == w.id } })
+    }
+
+    @Test
     fun widgetsOnScreenCountAsInUse() {
         assertEquals(setOf("lyrics", "companion"), StoreLibrary.inUse(MainStage.LYRICS, SideIdle.COMPANION))
         assertEquals(setOf("news"), StoreLibrary.inUse(MainStage.NEWS, SideIdle.NOTHING))

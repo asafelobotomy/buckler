@@ -106,14 +106,16 @@ private fun snapshot(view: ScreensaverView): ImageBitmap? {
 }
 
 /**
- * Every screensaver as a card ([ScreensaverCard]): stills, with the highlighted one running.
- * Used by the setup wizard and by Settings → Screensaver.
+ * Every screensaver bucklerStore has added (and [selected], always) as a card ([ScreensaverCard]):
+ * stills, with the highlighted one running. Used by the setup wizard and by Settings → Screensaver.
  */
 @Composable
 fun ScreensaverPicker(selected: ScreensaverMode, onPick: (ScreensaverMode) -> Unit) {
     var running by remember { mutableStateOf<ScreensaverMode?>(null) }
+    val context = LocalContext.current
+    val offered = remember(StoreLibrary.version, selected) { StoreLibrary.savers(context, selected) }
     CardColumns(columns = 3) { width ->
-        ScreensaverMode.entries.forEach { mode ->
+        offered.forEach { mode ->
             PreviewCard(
                 mode.label,
                 mode == selected,

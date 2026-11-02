@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -185,8 +186,15 @@ private fun PanelScreen(node: PanelNode, above: PanelNode?, returnTo: String?, o
             }
             is PanelNode.Section -> {
                 PanelTitle(node.section.label, null)
+                // A screensaver's own page shows only while bucklerStore offers it (or it is in use).
+                val context = LocalContext.current
+                val savers = remember(StoreLibrary.version) {
+                    StoreLibrary.savers(context, ScreensaverPrefs.load(context).mode).toSet()
+                }
                 val pages = listOf(node.section.name to node.section.ownPage) +
-                    SettingsPane.entries.filter { it.parent == node.section }.map { it.name to it.label }
+                    SettingsPane.entries
+                        .filter { it.parent == node.section && it.saver?.let { mode -> mode in savers } != false }
+                        .map { it.name to it.label }
                 PanelList(pages.map { (key, label) -> PanelRow(key, label) }, returnTo) { key ->
                     onOpen(key, PanelNode.Page(SettingsPane.valueOf(key)))
                 }

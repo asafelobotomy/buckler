@@ -90,6 +90,7 @@ enum class SettingsPane(
     CURIOSITIES("Comics & correlations", WIDGETS),
     STORE("bucklerStore", ownPage = "Overview"),
     STORE_WIDGETS("Widgets", STORE),
+    STORE_SCREENSAVERS("Screensavers", STORE),
     STORE_THEMES("Colour schemes", STORE),
     STORE_FONTS("Fonts", STORE),
     STORE_ICON_PACKS("Icon packs", STORE),
@@ -160,6 +161,7 @@ fun SettingsPageContent(pane: SettingsPane) {
         SettingsPane.CURIOSITIES -> CuriositiesPane()
         SettingsPane.STORE -> StorePane()
         SettingsPane.STORE_WIDGETS -> StoreWidgetsPane()
+        SettingsPane.STORE_SCREENSAVERS -> StoreScreensaversPane()
         SettingsPane.STORE_THEMES -> StoreThemesPane()
         SettingsPane.STORE_FONTS -> StoreFontsPane()
         SettingsPane.STORE_ICON_PACKS -> StoreIconPacksPane()

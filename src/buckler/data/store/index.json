@@ -86,6 +86,78 @@
       "since": "0.23.0"
     }
   ],
+  "screensavers": [
+    {
+      "id": "saver_clock",
+      "label": "Drifting clock",
+      "about": "A large clock that glides to a new spot now and then, so nothing burns in.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_dvd",
+      "label": "DVD bounce",
+      "about": "The Buckler mark and the clock bounce around, changing colour on every edge.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_photos",
+      "label": "Photos (online)",
+      "about": "Featured pictures from Wikimedia Commons in the categories you pick, credited on screen.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_uploaded",
+      "label": "My photos",
+      "about": "A slideshow of photos you upload from your phone.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_now_playing",
+      "label": "Now Playing",
+      "about": "Whatever is playing, large, with its artwork; a clock when nothing plays.",
+      "default": true,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_maze",
+      "label": "3D Maze",
+      "about": "A walk through a brick maze, after the Windows 95 3D Maze.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_pipes",
+      "label": "3D Pipes",
+      "about": "Pipes grow and twist through 3D space, after the Windows 3D Pipes.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_mystify",
+      "label": "Mystify",
+      "about": "Bouncing, colour-shifting outlines with trails, after Windows Mystify.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_starfield",
+      "label": "Starfield",
+      "about": "Flying through a field of stars, after Windows Starfield.",
+      "default": false,
+      "since": "0.1.0"
+    },
+    {
+      "id": "saver_weather",
+      "label": "Rolling weather",
+      "about": "The weather in turn - now, the next hours and days, the pressure map and a heat map.",
+      "default": false,
+      "since": "0.23.0"
+    }
+  ],
   "themes": [
     {
       "id": "sakura",

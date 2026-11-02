@@ -3,7 +3,8 @@
 The store's catalog is index.json in github.com/asafelobotomy/bucklerStore; a copy ships with
 Buckler (data/store/index.json, also bundled in the APK). Installing puts files where buckler-home
 looks for them, `Android/data/dev.solon.bucklerhome/files/store/` on the TV (see StoreLibrary.kt):
-`themes/<id>.json`, `fonts/<id>/{regular,bold}.ttf` with `font.json`, and `widgets.json`.
+`themes/<id>.json`, `fonts/<id>/{regular,bold}.ttf` with `font.json`, `widgets.json` and
+`screensavers.json`.
 Icon packs are apps and go through `adb install`. Every download is checked against its sha256.
 """
 
@@ -27,7 +28,9 @@ from buckler.paths import DATA, apk_cache_dir
 INDEX_URL = "https://raw.githubusercontent.com/asafelobotomy/bucklerStore/main/index.json"
 DEVICE_ROOT = "/sdcard/Android/data/dev.solon.bucklerhome/files/store"
 SCHEMA = 1
-KINDS = ("widgets", "themes", "fonts", "iconpacks")
+KINDS = ("widgets", "screensavers", "themes", "fonts", "iconpacks")
+# Widgets and screensavers ship in Buckler; the store only records which are added or removed.
+CHOICE_FILES = {"widgets": "widgets.json", "screensavers": "screensavers.json"}
 _ID = re.compile(r"^[a-z0-9][a-z0-9_-]{1,39}$")
 
 
@@ -123,8 +126,8 @@ def _push_text(adb: Adb, text: str, remote: str) -> None:
         adb.push(str(local), remote)
 
 
-def read_widgets(adb: Adb) -> dict[str, list[str]]:
-    raw = adb.shell("cat", f"{DEVICE_ROOT}/widgets.json", check=False)
+def read_widgets(adb: Adb, kind: str = "widgets") -> dict[str, list[str]]:
+    raw = adb.shell("cat", f"{DEVICE_ROOT}/{CHOICE_FILES[kind]}", check=False)
     try:
         doc = json.loads(raw)
     except json.JSONDecodeError:
@@ -132,13 +135,13 @@ def read_widgets(adb: Adb) -> dict[str, list[str]]:
     return {key: sorted({str(v) for v in doc.get(key, [])}) for key in ("added", "removed")}
 
 
-def set_widget(adb: Adb, ident: str, on: bool) -> None:
-    state = read_widgets(adb)
+def set_widget(adb: Adb, ident: str, on: bool, kind: str = "widgets") -> None:
+    state = read_widgets(adb, kind)
     added, removed = set(state["added"]), set(state["removed"])
     (added.add if on else added.discard)(ident)
     (removed.discard if on else removed.add)(ident)
     doc = {"added": sorted(added), "removed": sorted(removed)}
-    _push_text(adb, json.dumps(doc, indent=2) + "\n", f"{DEVICE_ROOT}/widgets.json")
+    _push_text(adb, json.dumps(doc, indent=2) + "\n", f"{DEVICE_ROOT}/{CHOICE_FILES[kind]}")
 
 
 def install(adb: Adb, item: StoreItem, cache: Path | None = None) -> str:
@@ -147,6 +150,9 @@ def install(adb: Adb, item: StoreItem, cache: Path | None = None) -> str:
     if item.kind == "widgets":
         set_widget(adb, item.id, True)
         return f"{item.label}: added to the Main Stage's choices"
+    if item.kind == "screensavers":
+        set_widget(adb, item.id, True, "screensavers")
+        return f"{item.label}: added to Buckler Settings → Screensaver"
     if item.kind == "themes":
         _push_text(adb, json.dumps(item.raw, indent=2) + "\n", f"{DEVICE_ROOT}/themes/{item.id}.json")
         return f"{item.label}: installed; choose it in Buckler Settings → Appearance"
@@ -173,6 +179,9 @@ def remove(adb: Adb, item: StoreItem) -> str:
     if item.kind == "widgets":
         set_widget(adb, item.id, False)
         return f"{item.label}: removed from the Main Stage's choices (one on screen stays until changed)"
+    if item.kind == "screensavers":
+        set_widget(adb, item.id, False, "screensavers")
+        return f"{item.label}: removed from Buckler Settings → Screensaver (the one in use stays until changed)"
     if item.kind == "themes":
         adb.shell("rm", "-f", f"{DEVICE_ROOT}/themes/{item.id}.json", check=False)
     elif item.kind == "fonts":
@@ -195,4 +204,6 @@ def installed(adb: Adb) -> dict[str, list[str]]:
         "fonts": names("fonts"),
         "widgets added": read_widgets(adb)["added"],
         "widgets removed": read_widgets(adb)["removed"],
+        "screensavers added": read_widgets(adb, "screensavers")["added"],
+        "screensavers removed": read_widgets(adb, "screensavers")["removed"],
     }

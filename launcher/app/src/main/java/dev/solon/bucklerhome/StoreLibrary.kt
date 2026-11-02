@@ -27,7 +27,8 @@ class InstalledFont(val id: String, val label: String, val regular: File, val bo
  * there from a computer too:
  * - `themes/<id>.json`: a colour scheme, as the index lists it;
  * - `fonts/<id>/regular.ttf`, `bold.ttf` and `font.json` (its name);
- * - `widgets.json`: `{"added": [...], "removed": [...]}`, widgets changed from the index's default.
+ * - `widgets.json`: `{"added": [...], "removed": [...]}`, widgets changed from the index's default;
+ * - `screensavers.json`: the same for screensavers.
  * Icon packs are apps; Android keeps those. What is installed is snapshot state, so Home and
  * Settings repaint when it changes; [version] goes up with every change, for `remember` keys.
  */
@@ -40,6 +41,8 @@ object StoreLibrary {
     private var fonts by mutableStateOf<Map<String, InstalledFont>>(emptyMap())
     private var added by mutableStateOf<Set<String>>(emptySet())
     private var removed by mutableStateOf<Set<String>>(emptySet())
+    private var saversAdded by mutableStateOf<Set<String>>(emptySet())
+    private var saversRemoved by mutableStateOf<Set<String>>(emptySet())
     @Volatile private var loaded = false
     private const val TAG = "StoreLibrary"
 
@@ -48,6 +51,7 @@ object StoreLibrary {
     private fun themesDir(context: Context) = File(root(context), "themes")
     private fun fontsDir(context: Context) = File(root(context), "fonts")
     private fun widgetsFile(context: Context) = File(root(context), "widgets.json")
+    private fun saversFile(context: Context) = File(root(context), "screensavers.json")
 
     fun ensureLoaded(context: Context) {
         if (!loaded) reload(context)
@@ -71,6 +75,10 @@ object StoreLibrary {
         val widgets = runCatching { JSONObject(widgetsFile(context).readText()) }.getOrNull()
         added = widgets?.optJSONArray("added").strings()
         removed = widgets?.optJSONArray("removed").strings()
+        if (!saversFile(context).exists()) keepSaverInUse(context)
+        val savers = runCatching { JSONObject(saversFile(context).readText()) }.getOrNull()
+        saversAdded = savers?.optJSONArray("added").strings()
+        saversRemoved = savers?.optJSONArray("removed").strings()
         version++
     }
 
@@ -89,8 +97,19 @@ object StoreLibrary {
     /** Widget ids on screen with this Main Stage and Side Stage idle choice. */
     internal fun inUse(stage: MainStage, side: SideIdle): Set<String> = setOfNotNull(stage.wire(), side.widget?.wire())
 
-    private fun writeWidgets(context: Context, added: Set<String>, removed: Set<String>) {
-        widgetsFile(context).writeText(
+    /** First start with screensavers in the store: the one in use stays added, so an update never switches it off. */
+    private fun keepSaverInUse(context: Context) {
+        runCatching {
+            root(context).mkdirs()
+            writeChoices(saversFile(context), setOf(ScreensaverPrefs.load(context).mode.wire()), emptySet())
+        }.onFailure { Log.w(TAG, "Could not write screensavers.json", it) }
+    }
+
+    private fun writeWidgets(context: Context, added: Set<String>, removed: Set<String>) =
+        writeChoices(widgetsFile(context), added, removed)
+
+    private fun writeChoices(file: File, added: Set<String>, removed: Set<String>) {
+        file.writeText(
             JSONObject()
                 .put("added", JSONArray(added.sorted()))
                 .put("removed", JSONArray(removed.sorted()))
@@ -173,6 +192,37 @@ object StoreLibrary {
         val nextRemoved = if (on) removed - id else removed + id
         root(context).mkdirs()
         writeWidgets(context, nextAdded, nextRemoved)
+        reload(context)
+    }
+
+    // Screensavers: Buckler's own, offered in Settings → Screensaver and the setup wizard once added.
+
+    /** Whether [mode] is on offer: added or removed by hand, else the index's default (added when unlisted). */
+    fun saverAdded(mode: ScreensaverMode, catalog: StoreCatalog? = null): Boolean {
+        val id = mode.wire()
+        return when {
+            id in saversRemoved -> false
+            id in saversAdded -> true
+            else -> catalog?.screensavers?.firstOrNull { it.id == id }?.default ?: true
+        }
+    }
+
+    /** The screensavers to offer: those added, and [current] always, so the one in use stays choosable. */
+    fun savers(context: Context, current: ScreensaverMode? = null): List<ScreensaverMode> {
+        ensureLoaded(context)
+        val catalog = StoreIndex.cached(context)
+        return ScreensaverMode.entries.filter { it == current || saverAdded(it, catalog) }
+    }
+
+    fun setSaverAdded(context: Context, mode: ScreensaverMode, on: Boolean) {
+        ensureLoaded(context)
+        val id = mode.wire()
+        root(context).mkdirs()
+        writeChoices(
+            saversFile(context),
+            if (on) saversAdded + id else saversAdded - id,
+            if (on) saversRemoved - id else saversRemoved + id,
+        )
         reload(context)
     }
 

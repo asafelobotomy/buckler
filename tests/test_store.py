@@ -17,6 +17,7 @@ from buckler.store import DEVICE_ROOT, StoreError, find, install, load_index, pa
 ROOT = Path(__file__).resolve().parents[1]
 ASSET = ROOT / "launcher/app/src/main/assets/store_index.json"
 MAIN_STAGE = ROOT / "launcher/app/src/main/java/dev/solon/bucklerhome/MainStage.kt"
+SAVER_PREFS = ROOT / "launcher/app/src/main/java/dev/solon/bucklerhome/ScreensaverPrefs.kt"
 
 
 @dataclass
@@ -62,6 +63,14 @@ def test_every_main_stage_is_a_store_widget() -> None:
     assert stages == widgets
 
 
+def test_every_screensaver_is_in_the_store() -> None:
+    block = re.search(r"enum class ScreensaverMode\(.*?\{(.*?);", SAVER_PREFS.read_text(encoding="utf-8"), re.DOTALL)
+    assert block
+    modes = {"saver_" + name.lower() for name in re.findall(r"^\s+([A-Z_]+)\(", block.group(1), re.MULTILINE)}
+    savers = {item.id for item in load_index() if item.kind == "screensavers"}
+    assert modes == savers
+
+
 def test_store_icon_packs_match_the_catalog() -> None:
     catalog = {p.id: (p.package, p.url, p.sha256) for p in load_iconpacks()}
     listed = {i.id: (i.raw["package"], i.raw["url"], i.raw["sha256"]) for i in load_index() if i.kind == "iconpacks"}
@@ -95,6 +104,16 @@ def test_widgets_toggle_in_one_file() -> None:
     assert json.loads(adb.files[f"{DEVICE_ROOT}/widgets.json"]) == {"added": [], "removed": ["lyrics"]}
     install(adb, lyrics)  # type: ignore[arg-type]
     assert json.loads(adb.files[f"{DEVICE_ROOT}/widgets.json"]) == {"added": ["lyrics"], "removed": []}
+
+
+def test_screensavers_toggle_in_their_own_file() -> None:
+    adb = StoreAdb()
+    maze = find(load_index(), "saver_maze")
+    install(adb, maze)  # type: ignore[arg-type]
+    assert json.loads(adb.files[f"{DEVICE_ROOT}/screensavers.json"]) == {"added": ["saver_maze"], "removed": []}
+    remove(adb, maze)  # type: ignore[arg-type]
+    assert json.loads(adb.files[f"{DEVICE_ROOT}/screensavers.json"]) == {"added": [], "removed": ["saver_maze"]}
+    assert f"{DEVICE_ROOT}/widgets.json" not in adb.files
 
 
 def test_font_install_verifies_and_pushes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

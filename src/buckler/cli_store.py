@@ -1,4 +1,4 @@
-"""`buckler store`: bucklerStore's widgets, colour schemes, fonts and icon packs, from a computer."""
+"""`buckler store`: bucklerStore's widgets, screensavers, colour schemes, fonts and icon packs, from a computer."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ _LIVE = click.option("--live", is_flag=True, help="Use the current catalog from 
 
 @cli.group("store")
 def store_group() -> None:
-    """bucklerStore: add widgets, colour schemes, fonts and icon packs to buckler-home."""
+    """bucklerStore: add widgets, screensavers, colour schemes, fonts and icon packs to buckler-home."""
 
 
 @store_group.command("list")
@@ -47,7 +47,7 @@ def store_install(ctx: click.Context, ids: tuple[str, ...], live: bool) -> None:
 @_LIVE
 @click.pass_context
 def store_remove(ctx: click.Context, ids: tuple[str, ...], live: bool) -> None:
-    """Remove items installed from the store (a widget: take it off the Main Stage's choices)."""
+    """Remove items installed from the store (a widget or screensaver: take it off Buckler's choices)."""
     _each(ctx, ids, live, remove)
 
 

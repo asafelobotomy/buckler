@@ -43,7 +43,7 @@ private fun rememberCatalog(): StoreCatalog {
     return remember(StoreSession.refreshed) { StoreIndex.cached(context) }
 }
 
-/** Settings → bucklerStore: widgets, colour schemes, fonts and icon packs to add to Buckler. */
+/** Settings → bucklerStore: widgets, screensavers, colour schemes, fonts and icon packs to add to Buckler. */
 @Composable
 fun StorePane() {
     val context = LocalContext.current
@@ -51,11 +51,13 @@ fun StorePane() {
     val catalog = rememberCatalog()
     SectionTitle("bucklerStore")
     SettingsRow(
-        "Add widgets, colour schemes, fonts and icon packs. Each download is checked against the store's " +
+        "Add widgets, screensavers, colour schemes, fonts and icon packs. Each download is checked against the store's " +
             "list before Buckler uses it. From a computer: buckler store install <name>.",
     )
     val widgets = catalog.widgets.count { w -> w.stage?.let { StoreLibrary.widgetAdded(it, catalog) } == true }
     SettingsPaneLink("Widgets", SettingsPane.STORE_WIDGETS, "$widgets of ${catalog.widgets.size} added")
+    val savers = catalog.screensavers.count { s -> s.mode?.let { StoreLibrary.saverAdded(it, catalog) } == true }
+    SettingsPaneLink("Screensavers", SettingsPane.STORE_SCREENSAVERS, "$savers of ${catalog.screensavers.size} added")
     SettingsPaneLink("Colour schemes", SettingsPane.STORE_THEMES, installedOf(catalog.themes.count { StoreLibrary.hasTheme(it.id) }, catalog.themes.size))
     SettingsPaneLink("Fonts", SettingsPane.STORE_FONTS, installedOf(catalog.fonts.count { StoreLibrary.hasFont(it.id) }, catalog.fonts.size))
     SettingsPaneLink("Icon packs", SettingsPane.STORE_ICON_PACKS, "${catalog.iconPacks.size} open packs")
@@ -97,6 +99,35 @@ fun StoreWidgetsPane() {
             }
         }
         SettingsRow(widget.about)
+    }
+}
+
+/** Settings → bucklerStore → Screensavers: Buckler's own screensavers, each offered in Settings → Screensaver or not. */
+@Composable
+fun StoreScreensaversPane() {
+    val context = LocalContext.current
+    val catalog = rememberCatalog()
+    val inUse = remember(StoreLibrary.version) { ScreensaverPrefs.load(context).mode }
+    SectionTitle("Screensavers")
+    SettingsRow(
+        "Added screensavers are offered in Settings → Screensaver and the setup wizard, each with its own page. " +
+            "The drifting clock, online photos, My photos and Now Playing come added.",
+    )
+    catalog.screensavers.forEach { saver ->
+        val mode = saver.mode
+        if (mode == null) {
+            SettingsRow("${saver.label}: needs Buckler ${saver.since} or newer. ${saver.about}")
+            return@forEach
+        }
+        val on = StoreLibrary.saverAdded(mode, catalog)
+        SettingsCheck(saver.label, on) {
+            if (on && mode == inUse) {
+                Toast.makeText(context, "${saver.label} is the screensaver now: choose another first", Toast.LENGTH_LONG).show()
+            } else {
+                StoreLibrary.setSaverAdded(context, mode, !on)
+            }
+        }
+        SettingsRow(saver.about)
     }
 }
 
