@@ -176,7 +176,9 @@ private fun describe(mode: ScreensaverMode, cfg: ScreensaverConfig, photoCount: 
     ScreensaverMode.NOW_PLAYING ->
         "Whatever is playing: album art for music, artwork for films and TV, the thumbnail for " +
             "YouTube, a LIVE card for Twitch and TiviMate. A clock when nothing plays (needs media access)."
-    ScreensaverMode.MAZE -> "A walk through a brick maze, after the Windows 95 3D Maze."
+    ScreensaverMode.MAZE ->
+        "A walk through a brick maze, after the Windows 95 3D Maze, to a spinning Buckler mark in a new " +
+            "colour each time. Look out for the gems, and for graffiti."
     ScreensaverMode.PIPES -> "Pipes grow and twist through 3D space, after the Windows 3D Pipes."
     ScreensaverMode.MYSTIFY -> "Bouncing, colour-shifting outlines with trails, after Windows Mystify."
     ScreensaverMode.STARFIELD -> "Flying through a field of stars, after Windows Starfield."

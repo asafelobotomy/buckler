@@ -16,6 +16,17 @@ class MazeGrid(val size: Int, private val walls: BooleanArray) {
 
     fun isWall(x: Int, y: Int): Boolean = x !in 0 until size || y !in 0 until size || walls[y * size + x]
 
+    /**
+     * Whether the face of wall ([x], [y]) seen from the open cell ([fromX], [fromY]) has a real edge at
+     * its end towards [along] (-1 or 1, along the face): the wall ends there (an outer corner), or
+     * another wall meets it (an inner corner). Where the wall simply runs on, there is no edge.
+     */
+    fun faceEdge(x: Int, y: Int, fromX: Int, fromY: Int, along: Int): Boolean {
+        // Along the face: across the direction the face was seen from.
+        val (ax, ay) = if (fromX != x) 0 to along else along to 0
+        return !isWall(x + ax, y + ay) || isWall(fromX + ax, fromY + ay)
+    }
+
     companion object {
         /** East, south, west, north in screen coordinates (y grows downwards); index + 1 turns right. */
         val DIRS = arrayOf(intArrayOf(1, 0), intArrayOf(0, 1), intArrayOf(-1, 0), intArrayOf(0, -1))

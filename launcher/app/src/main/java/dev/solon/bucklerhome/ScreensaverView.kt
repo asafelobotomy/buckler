@@ -76,7 +76,7 @@ class ScreensaverView(context: Context, private val config: ScreensaverConfig) :
             ScreensaverMode.NOW_PLAYING -> startNowPlaying()
             ScreensaverMode.WEATHER -> startWeather()
             ScreensaverMode.MAZE -> startScene(
-                MazeScene(context, config.value(SaverOption.MAZE_SIZE), config.value(SaverOption.WALLS), config.speed),
+                MazeScene(context, config.value(SaverOption.MAZE_SIZE), config.value(SaverOption.WALLS), config.speed, config.reduceMotion),
             )
             ScreensaverMode.PIPES -> startScene(PipesScene(context, config.value(SaverOption.PIPES), config.speed))
             ScreensaverMode.MYSTIFY -> startScene(
