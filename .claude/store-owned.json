@@ -1,0 +1,88 @@
+{
+  "about": "Buckler code that belongs to bucklerStore items. Sessions working in this repo may not change these files; a session in ~/Projects/bucklerStore does (see CLAUDE.md there). Tests that cover only one item are listed with it. Keys are store ids from bucklerStore's index.json; paths are relative to this repo. Files shared with Buckler's own features (MainStage.kt, ScreensaverView.kt, MainStageScenes.kt, MainStageGlance.kt, GlanceWeather.kt, MainStagePlayer.kt, JellyfinClient.kt, Palette.kt) stay Buckler's.",
+  "items": {
+    "lyrics": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MainStageLyrics.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/LyricsClient.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/NetEaseLyrics.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/LyricsKaraoke.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/KaraokeTest.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/NetEaseLyricsTest.kt"
+    ],
+    "glance": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/GlanceData.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/GlanceRules.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/GlanceTest.kt"
+    ],
+    "calendar": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MainStageCalendar.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/SettingsCalendarSection.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/Agenda.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/LocalReminders.kt"
+    ],
+    "weather_map": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/WeatherMapView.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/WeatherMapCanvas.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/WeatherMapData.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/Coastlines.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/Isobars.kt",
+      "launcher/app/src/main/assets/coastlines.bin",
+      "scripts/gen_coastlines.py",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/WeatherMapTest.kt"
+    ],
+    "companion": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/Companion.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/CompanionCat.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/CompanionFox.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/CompanionGarden.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/CompanionProps.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/CompanionShield.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/CompanionWeather.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/CompanionTest.kt"
+    ],
+    "multiview": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/Multiview.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MultiviewStage.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MultiviewPlayerActivity.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/SettingsMultiview.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/IptvPlaylist.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/StremioClient.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/SettingsStremio.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/MultiviewTest.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/StremioTest.kt"
+    ],
+    "comics": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/ComicInk.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/ComicReader.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/ComicStrips.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MainStageComics.kt"
+    ],
+    "spurious": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/SpuriousCorrelations.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MainStageCuriosities.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/CuriositiesTest.kt"
+    ],
+    "saver_dvd": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/DvdBounce.kt"
+    ],
+    "saver_maze": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MazeSaver.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MazeGrid.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/MazeEggs.kt",
+      "launcher/app/src/test/java/dev/solon/bucklerhome/MazeEggsTest.kt"
+    ],
+    "saver_pipes": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/PipesSaver.kt"
+    ],
+    "saver_mystify": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/RetroSavers.kt"
+    ],
+    "saver_starfield": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/RetroSavers.kt"
+    ],
+    "saver_weather": [
+      "launcher/app/src/main/java/dev/solon/bucklerhome/WeatherSaver.kt",
+      "launcher/app/src/main/java/dev/solon/bucklerhome/WeatherHeatMap.kt"
+    ]
+  }
+}
